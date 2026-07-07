@@ -1,24 +1,87 @@
-name: Render a video & YouTube Upload
+name: Hybrid Cloud Video Pipeline
 
 on:
   workflow_dispatch:
     inputs:
-      vault_name:
-        description: 'Name of the vault folder'
+      action_type:
+        description: 'Action Type'
         required: true
-      total_frames:
-        description: 'Total number of frames to render'
+        default: 'RENDER_ONLY'
+        type: choice
+        options:
+          - CREATE_FRESH
+          - CREATE_AUTOMATIC
+          - RESUME
+          - RENDER_ONLY
+      channel_name:
+        description: 'Channel to operate on'
         required: true
-
-env:
-  CHANNEL_NAME: 'ClassZ'
+        default: 'ClassZ'
+        type: choice
+        options:
+          - ClassZ
+          - Midi-Fi
+      topic:
+        description: 'Topic Name'
+        required: false
+        type: string
 
 jobs:
-  render_chunk:
+  creation_job:
+    if: inputs.action_type != 'RENDER_ONLY'
+    runs-on: ubuntu-latest
+    outputs:
+      vault_name: ${{ steps.orchestrator.outputs.vault_name }}
+      total_frames: ${{ steps.orchestrator.outputs.total_frames }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install System Dependencies
+        run: sudo apt-get install rclone jq ffmpeg -y
+
+      - name: Configure rclone Silently
+        env:
+          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          ACCESS_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.token')
+          REFRESH_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.refresh_token')
+          EXPIRY=$(echo $G_DRIVE_TOKEN | jq -r '.expiry')
+          RCLONE_TOKEN="{\"access_token\":\"$ACCESS_TOKEN\",\"token_type\":\"Bearer\",\"refresh_token\":\"$REFRESH_TOKEN\",\"expiry\":\"$EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [mydrive]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $RCLONE_TOKEN
+          EOF
+
+      - name: Run Python Orchestrator
+        id: orchestrator
+        env:
+          ACTION_TYPE: ${{ inputs.action_type }}
+          CHANNEL_NAME: ${{ inputs.channel_name }}
+          TOPIC: ${{ inputs.topic }}
+        run: |
+          pip install requests
+          python .github/scripts/orchestrator.py
+
+  render_matrix:
+    needs: [creation_job]
+    if: always() && !cancelled() && !failure()
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
     steps:
       - uses: actions/checkout@v4
 
@@ -46,15 +109,30 @@ jobs:
           token = $RCLONE_TOKEN
           EOF
 
-      - name: Download Asset Chunk from GDrive
-        run: |
-          mkdir -p public/channels/${{ env.CHANNEL_NAME }}/"${{ github.event.inputs.vault_name }}"
-          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}" "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}"
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+
+      - name: Set Vault Inputs
+        id: vault_inputs
+        run: |
+          if [ "${{ inputs.action_type }}" == "RENDER_ONLY" ]; then
+             echo "vault_name=${{ inputs.topic }}" >> $GITHUB_ENV
+             # For RENDER_ONLY, we need total_frames. The script should supply it or we fetch it.
+             # We fetch master_timeline.json
+             rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ inputs.topic }}/master_timeline.json" .
+             TOTAL=$(jq '.timeline | length' master_timeline.json)
+             echo "total_frames=$TOTAL" >> $GITHUB_ENV
+          else
+             echo "vault_name=${{ needs.creation_job.outputs.vault_name }}" >> $GITHUB_ENV
+             echo "total_frames=${{ needs.creation_job.outputs.total_frames }}" >> $GITHUB_ENV
+          fi
+
+      - name: Download Asset Chunk from GDrive
+        run: |
+          mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
 
       - name: Install Dependencies
         run: npm ci
@@ -62,9 +140,9 @@ jobs:
       - name: Calculate Chunk Frames
         id: calc
         run: |
-          TOTAL_FRAMES=${{ github.event.inputs.total_frames }}
+          TOTAL_FRAMES=${{ env.total_frames }}
           CHUNK_IDX=${{ matrix.chunk }}
-          NUM_CHUNKS=19
+          NUM_CHUNKS=18
           
           FRAMES_PER_CHUNK=$((TOTAL_FRAMES / NUM_CHUNKS))
           START_FRAME=$((CHUNK_IDX * FRAMES_PER_CHUNK))
@@ -80,7 +158,7 @@ jobs:
 
       - name: Render Chunk
         run: |
-          npx remotion render src/index.tsx MainRender chunk_${{ matrix.chunk }}.mp4 --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --gl=angle
+          npx remotion render src/index.tsx MainRender chunk_${{ matrix.chunk }}.mp4 --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --gl=angle --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
 
       - name: Upload Chunk Artifact
         uses: actions/upload-artifact@v4
@@ -90,7 +168,8 @@ jobs:
           retention-days: 1
 
   stitch_and_upload:
-    needs: render_chunk
+    needs: [creation_job, render_matrix]
+    if: always() && !cancelled() && !failure()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -126,10 +205,19 @@ jobs:
           token = $RCLONE_TOKEN
           EOF
 
+      - name: Set Vault Inputs
+        id: vault_inputs
+        run: |
+          if [ "${{ inputs.action_type }}" == "RENDER_ONLY" ]; then
+             echo "vault_name=${{ inputs.topic }}" >> $GITHUB_ENV
+          else
+             echo "vault_name=${{ needs.creation_job.outputs.vault_name }}" >> $GITHUB_ENV
+          fi
+
       - name: Download Audio Assets from GDrive
         run: |
-          mkdir -p public/channels/${{ env.CHANNEL_NAME }}/"${{ github.event.inputs.vault_name }}"
-          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}" "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}" --include "master_audio.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png"
+          mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png"
 
       - name: Download all chunks
         uses: actions/download-artifact@v4
@@ -139,12 +227,12 @@ jobs:
       - name: Stitch & Export Final Video
         run: |
           echo "" > file_list.txt
-          for i in {0..18}; do
+          for i in {0..17}; do
             echo "file 'chunks/chunk-$i/chunk_$i.mp4'" >> file_list.txt
           done
           
           ffmpeg -f concat -safe 0 -i file_list.txt -c copy final_video_noaudio.mp4
-          ffmpeg -i final_video_noaudio.mp4 -i "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}/master_audio.wav" -c:v copy -c:a aac -shortest final_video.mp4
+          ffmpeg -i final_video_noaudio.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -c:v copy -c:a aac -shortest final_video.mp4
           
       - name: Generate Auth Files
         env:
@@ -153,15 +241,18 @@ jobs:
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
           mkdir -p tokens
-          echo $G_DRIVE_TOKEN > tokens/${{ env.CHANNEL_NAME }}_token.json
+          echo $G_DRIVE_TOKEN > tokens/${{ inputs.channel_name }}_token.json
           
           cat << EOF > client_secrets.json
           {"installed":{"client_id":"$CLIENT_ID","project_id":"test","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"$CLIENT_SECRET","redirect_uris":["http://localhost"]}}
           EOF
 
+      - name: Download Scripts
+        run: rclone copy "mydrive:Colab_AutoVideoCreator" . --include "youtube_uploader.py" --include "blog_generator.py"
+
       - name: YouTube Upload & Cleanup
         env:
           CURRENT_AUTO_MODE: "1"
-          AUTO_TARGET_FOLDER: "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}"
+          AUTO_TARGET_FOLDER: "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
         run: |
           python youtube_uploader.py
