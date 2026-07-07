@@ -46,14 +46,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y
 
-      - name: Setup Ollama
-        run: |
-          curl -fsSL https://ollama.com/install.sh | sh
-          sudo systemctl start ollama || (ollama serve &)
-          sleep 5
-          ollama pull qwen2.5:7b
-          ollama pull llava
-
       - name: Configure rclone Silently
         env:
           G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
@@ -74,6 +66,36 @@ jobs:
           scope = drive
           token = $RCLONE_TOKEN
           EOF
+
+      - name: Check Checkpoints (Universal Smart Exclusion)
+        id: checkpoint
+        run: |
+          # Default to false
+          echo "SKIP_LLM=false" >> $GITHUB_ENV
+          echo "SKIP_TTS=false" >> $GITHUB_ENV
+          
+          echo "Probing Google Drive for checkpoints..."
+          
+          # Check if script.txt exists (implies we can skip Ollama and Browser Profile)
+          if rclone lsf "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ inputs.topic }}/script.txt" >/dev/null 2>&1; then
+             echo "Detected script.txt! Bypassing Ollama and Playwright."
+             echo "SKIP_LLM=true" >> $GITHUB_ENV
+          fi
+          
+          # Check if voiceover.wav exists (implies we can skip TTS processing)
+          if rclone lsf "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ inputs.topic }}/voiceover.wav" >/dev/null 2>&1; then
+             echo "Detected voiceover.wav! Bypassing TTS generation."
+             echo "SKIP_TTS=true" >> $GITHUB_ENV
+          fi
+
+      - name: Setup Ollama
+        if: env.SKIP_LLM != 'true'
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          sudo systemctl start ollama || (ollama serve &)
+          sleep 5
+          ollama pull qwen2.5:7b
+          ollama pull llava
 
       - name: Run Python Orchestrator
         id: orchestrator

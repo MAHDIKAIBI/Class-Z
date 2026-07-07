@@ -14,11 +14,20 @@ print(f"Topic: {topic}")
 
 # 1. Download Core Scripts
 print("Downloading core scripts from Google Drive...")
-subprocess.run([
+skip_llm = os.environ.get("SKIP_LLM", "false") == "true"
+
+rclone_cmd = [
     "rclone", "copy", f"mydrive:Colab_AutoVideoCreator", ".",
     "--exclude", "node_modules/**", "--exclude", "out/**", "--exclude", "src/**", "--exclude", "*.mp4",
     "--transfers", "16", "--checkers", "16", "--stats", "10s", "-v"
-], check=True)
+]
+
+if skip_llm:
+    print("  [*] SKIP_LLM is true. Excluding browser profile from download.")
+    rclone_cmd.insert(-4, "--exclude")
+    rclone_cmd.insert(-4, "gemini_selenium_profile/**")
+
+subprocess.run(rclone_cmd, check=True)
 
 # 2. Setup Python environment
 print("Installing Python dependencies...")

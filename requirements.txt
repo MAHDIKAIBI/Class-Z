@@ -10,8 +10,21 @@ torch
 ultralytics
 easyocr
 opencv-python
-pillowimagehash
+pillow
+imagehash
 # Gemini browser automation (V8 pipeline)
 undetected-chromedriver
 selenium
 pyperclip
+
+torchaudio
+soundfile
+
+playwright-stealth
+pyloudnorm
+pydub
+scipy
+pedalboard
+qwen-tts
+openai-whisper
+pyrubberband
