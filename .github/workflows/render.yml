@@ -389,7 +389,9 @@ jobs:
           EOF
 
       - name: Download Scripts
-        run: rclone copy "mydrive:Colab_AutoVideoCreator" . --include "youtube_uploader.py" --include "blog_generator.py"
+        run: |
+          rclone copy "mydrive:Colab_AutoVideoCreator/youtube_uploader.py" .
+          rclone copy "mydrive:Colab_AutoVideoCreator/blog_generator.py" . || true
 
       - name: YouTube Upload & Cleanup
         env:
