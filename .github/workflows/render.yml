@@ -262,7 +262,7 @@ jobs:
           if [ "${{ inputs.action_type }}" == "RENDER_ONLY" ]; then
              echo "vault_name=${{ inputs.topic }}" >> $GITHUB_ENV
              rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ inputs.topic }}/master_timeline.json" .
-             TOTAL=$(jq '.timeline | length' master_timeline.json)
+             TOTAL=$(jq 'if .meta.total_duration_ms then (((.meta.total_duration_ms / 1000) * 30) | round) + 60 else 360 end' master_timeline.json)
              echo "total_frames=$TOTAL" >> $GITHUB_ENV
           else
              echo "vault_name=${{ needs.creation_job.outputs.vault_name }}" >> $GITHUB_ENV

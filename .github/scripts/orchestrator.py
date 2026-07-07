@@ -31,7 +31,11 @@ if ready_to_render:
         subprocess.run(["rclone", "cat", f"mydrive:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=True)
         with open("timeline.json", "r") as f:
             data = json.load(f)
-            total_frames = str(len(data.get("timeline", [])))
+            total_ms = data.get("meta", {}).get("total_duration_ms")
+            if total_ms:
+                total_frames = str(round((total_ms / 1000) * 30) + 60)
+            else:
+                total_frames = "360"
     except Exception as e:
         print(f"Failed to calculate frames from drive: {e}")
         
@@ -92,7 +96,11 @@ total_frames = "0"
 try:
     with open(f"public/channels/{channel_name}/{vault_name}/master_timeline.json", "r") as f:
         data = json.load(f)
-        total_frames = str(len(data.get("timeline", [])))
+        total_ms = data.get("meta", {}).get("total_duration_ms")
+        if total_ms:
+            total_frames = str(round((total_ms / 1000) * 30) + 60)
+        else:
+            total_frames = "360"
 except Exception as e:
     print(f"Failed to calculate frames: {e}")
 
