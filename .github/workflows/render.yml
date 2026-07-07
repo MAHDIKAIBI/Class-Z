@@ -73,7 +73,7 @@ jobs:
           TOPIC: ${{ inputs.topic }}
         run: |
           pip install requests
-          python .github/scripts/orchestrator.py
+          python -u .github/scripts/orchestrator.py
 
   render_matrix:
     needs: [creation_job]

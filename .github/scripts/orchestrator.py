@@ -16,7 +16,8 @@ print(f"Topic: {topic}")
 print("Downloading core scripts from Google Drive...")
 subprocess.run([
     "rclone", "copy", f"mydrive:Colab_AutoVideoCreator", ".",
-    "--exclude", "node_modules/**", "--exclude", "out/**", "--exclude", "public/**", "--exclude", "src/**", "--exclude", "*.mp4", "--exclude", "*.wav"
+    "--exclude", "node_modules/**", "--exclude", "out/**", "--exclude", "public/**", "--exclude", "src/**", "--exclude", "*.mp4", "--exclude", "*.wav",
+    "--transfers", "16", "--checkers", "16", "--stats", "10s", "-v"
 ], check=True)
 
 # 2. Setup Python environment
