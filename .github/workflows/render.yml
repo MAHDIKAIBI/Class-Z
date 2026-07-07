@@ -379,38 +379,7 @@ jobs:
           ffmpeg -i final_video_noaudio.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -c:v copy -c:a aac -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
           
           
-      - name: Generate Auth Files
-        env:
-          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-        run: |
-          mkdir -p tokens
-          echo $G_DRIVE_TOKEN > tokens/${{ inputs.channel_name }}_token.json
-          
-          cat << EOF > client_secrets.json
-          {"installed":{"client_id":"$CLIENT_ID","project_id":"test","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"$CLIENT_SECRET","redirect_uris":["http://localhost"]}}
-          EOF
-
-      - name: Download Scripts
-        run: |
-          rclone copy "mydrive:Colab_AutoVideoCreator/youtube_uploader.py" .
-          rclone copy "mydrive:Colab_AutoVideoCreator/blog_generator.py" . || true
-
-      - name: YouTube Upload & Cleanup
-        env:
-          CURRENT_AUTO_MODE: "1"
-          AUTO_TARGET_FOLDER: "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
-        run: |
-          python youtube_uploader.py
-          
       - name: Sync Final Video to Google Drive
         run: |
-          echo "Moving completed project to Google Drive 'uploaded' folder..."
-          rclone move "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/uploaded/${{ env.vault_name }}" -v
-          
-      - name: Delete WIP Folder from Drive
-        run: |
-          echo "Cleaning up WIP folders..."
-          rclone purge "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" || true
-          rclone purge "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
+          echo "Saving final video to Google Drive 'to upload' folder..."
+          rclone copy "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4" "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" -v
