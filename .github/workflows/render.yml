@@ -512,7 +512,7 @@ jobs:
       - name: Download Audio Assets from GDrive
         run: |
           mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
-          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png"
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png"
 
       - name: Download all chunks
         uses: actions/download-artifact@v4
@@ -531,7 +531,7 @@ jobs:
           done
           
           ffmpeg -f concat -safe 0 -i file_list.txt -c copy final_video_noaudio.mp4
-          ffmpeg -i final_video_noaudio.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
+          ffmpeg -i final_video_noaudio.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/voiceover.wav" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
           
           
       - name: Sync Final Video to Google Drive
