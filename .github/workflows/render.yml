@@ -27,6 +27,88 @@ on:
         type: string
 
 jobs:
+  ollama_server:
+    if: inputs.action_type != 'RENDER_ONLY'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install rclone jq curl wget -y
+
+      - name: Configure rclone Silently
+        env:
+          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          ACCESS_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.token')
+          REFRESH_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.refresh_token')
+          EXPIRY=$(echo $G_DRIVE_TOKEN | jq -r '.expiry')
+          RCLONE_TOKEN="{\"access_token\":\"$ACCESS_TOKEN\",\"token_type\":\"Bearer\",\"refresh_token\":\"$REFRESH_TOKEN\",\"expiry\":\"$EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [mydrive]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $RCLONE_TOKEN
+          EOF
+
+      - name: Check Checkpoints (Universal Smart Exclusion)
+        id: checkpoint
+        run: |
+          echo "READY_TO_RENDER=false" >> $GITHUB_ENV
+          
+          if rclone cat "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ inputs.topic }}/master_timeline.json" > timeline.json 2>/dev/null; then
+             MISSING_VIDEOS=$(jq '[.timeline[] | select(.downloaded_video == null)] | length' timeline.json)
+             MISSING_OVERLAYS=$(jq '[.timeline[] | select(.overlay_image_query != null and (.overlay_image_query | ascii_downcase) != "none" and .overlay_image == null)] | length' timeline.json)
+             if [ "$MISSING_VIDEOS" -eq 0 ] && [ "$MISSING_OVERLAYS" -eq 0 ]; then
+                 echo "READY_TO_RENDER=true" >> $GITHUB_ENV
+             fi
+          fi
+
+      - name: Setup Ollama & Cloudflared
+        if: env.READY_TO_RENDER != 'true'
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          sudo systemctl start ollama || (ollama serve &)
+          sleep 5
+          ollama pull qwen2.5:7b
+          ollama pull llava
+          
+          curl -L -o cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
+          
+          cloudflared tunnel --url http://localhost:11434 > tunnel.log 2>&1 &
+          sleep 10
+          OLLAMA_URL=$(grep -o 'https://[-0-9a-zA-Z]*\.trycloudflare\.com' tunnel.log | head -n 1)
+          
+          if [ -z "$OLLAMA_URL" ]; then
+             echo "Failed to establish tunnel!"
+             cat tunnel.log
+             exit 1
+          fi
+          
+          echo "Ollama API is live at: $OLLAMA_URL"
+          echo "$OLLAMA_URL" > ollama_url.txt
+          rclone copyto ollama_url.txt "mydrive:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt"
+
+      - name: Keep Alive (Wait for shutdown)
+        if: env.READY_TO_RENDER != 'true'
+        run: |
+          while true; do
+            if rclone lsf "mydrive:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" >/dev/null 2>&1; then
+              echo "Shutdown signal received! Terminating server."
+              rclone delete "mydrive:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" || true
+              rclone delete "mydrive:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
+              break
+            fi
+            sleep 15
+          done
+
   creation_job:
     if: inputs.action_type != 'RENDER_ONLY'
     runs-on: ubuntu-latest
@@ -70,7 +152,6 @@ jobs:
       - name: Check Checkpoints (Universal Smart Exclusion)
         id: checkpoint
         run: |
-          echo "SKIP_LLM=false" >> $GITHUB_ENV
           echo "SKIP_PROFILE=false" >> $GITHUB_ENV
           echo "READY_TO_RENDER=false" >> $GITHUB_ENV
           
@@ -92,7 +173,6 @@ jobs:
              if [ "$MISSING_VIDEOS" -eq 0 ] && [ "$MISSING_OVERLAYS" -eq 0 ]; then
                  echo "100% READY TO RENDER! Bypassing Ollama and Playwright entirely."
                  echo "READY_TO_RENDER=true" >> $GITHUB_ENV
-                 echo "SKIP_LLM=true" >> $GITHUB_ENV
                  echo "SKIP_PROFILE=true" >> $GITHUB_ENV
              fi
           fi
@@ -105,14 +185,20 @@ jobs:
              fi
           fi
 
-      - name: Setup Ollama
-        if: env.SKIP_LLM != 'true'
+      - name: Await Ollama Server
+        if: env.READY_TO_RENDER != 'true'
         run: |
-          curl -fsSL https://ollama.com/install.sh | sh
-          sudo systemctl start ollama || (ollama serve &)
-          sleep 5
-          ollama pull qwen2.5:7b
-          ollama pull llava
+          echo "Polling Google Drive for Ollama Server API..."
+          while true; do
+            if rclone lsf "mydrive:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" >/dev/null 2>&1; then
+              rclone cat "mydrive:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
+              OLLAMA_URL=$(cat ollama_url.txt)
+              echo "Connected to Ollama Brain at $OLLAMA_URL"
+              echo "OLLAMA_BASE_URL=$OLLAMA_URL" >> $GITHUB_ENV
+              break
+            fi
+            sleep 10
+          done
 
       - name: Run Python Orchestrator
         id: orchestrator
@@ -120,9 +206,16 @@ jobs:
           ACTION_TYPE: ${{ inputs.action_type }}
           CHANNEL_NAME: ${{ inputs.channel_name }}
           TOPIC: ${{ inputs.topic }}
+          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
         run: |
           pip install requests
           python -u .github/scripts/orchestrator.py
+          
+      - name: Send Shutdown Signal
+        if: always() && env.READY_TO_RENDER != 'true'
+        run: |
+          echo "shutdown" > shutdown.txt
+          rclone copyto shutdown.txt "mydrive:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
 
   render_matrix:
     needs: [creation_job]
@@ -168,8 +261,6 @@ jobs:
         run: |
           if [ "${{ inputs.action_type }}" == "RENDER_ONLY" ]; then
              echo "vault_name=${{ inputs.topic }}" >> $GITHUB_ENV
-             # For RENDER_ONLY, we need total_frames. The script should supply it or we fetch it.
-             # We fetch master_timeline.json
              rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ inputs.topic }}/master_timeline.json" .
              TOTAL=$(jq '.timeline | length' master_timeline.json)
              echo "total_frames=$TOTAL" >> $GITHUB_ENV
