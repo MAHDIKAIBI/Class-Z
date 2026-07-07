@@ -383,3 +383,8 @@ jobs:
         run: |
           echo "Saving final video to Google Drive 'to upload' folder..."
           rclone copy "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4" "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" -v
+          
+      - name: Clean Up Public Assets Folder
+        run: |
+          echo "Cleaning up raw rendering assets from Google Drive..."
+          rclone purge "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
