@@ -65,4 +65,19 @@ if "GITHUB_OUTPUT" in os.environ:
         f.write(f"vault_name={vault_name}\n")
         f.write(f"total_frames={total_frames}\n")
 
+# 6. Upload Generated Assets Back to Google Drive
+print("Uploading generated assets back to Google Drive...")
+try:
+    # Upload public channels (Voiceovers, timeline, images)
+    subprocess.run(["rclone", "copy", f"public/channels/{channel_name}/{vault_name}", f"mydrive:Colab_AutoVideoCreator/public/channels/{channel_name}/{vault_name}"], check=True)
+    
+    # Upload WIP state and metadata
+    subprocess.run(["rclone", "copy", f"channels/{channel_name}/to upload/{vault_name}", f"mydrive:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{vault_name}"], check=True)
+    
+    # Also sync topics.txt in case it was modified (e.g. topic popped from queue)
+    if os.path.exists("topics.txt"):
+        subprocess.run(["rclone", "copyto", "topics.txt", "mydrive:Colab_AutoVideoCreator/topics.txt"], check=True)
+except Exception as e:
+    print(f"Failed to upload assets back to Drive: {e}")
+
 print("=== CLOUD ORCHESTRATOR COMPLETE ===")
