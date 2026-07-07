@@ -1,0 +1,167 @@
+name: Render a video & YouTube Upload
+
+on:
+  workflow_dispatch:
+    inputs:
+      vault_name:
+        description: 'Name of the vault folder'
+        required: true
+      total_frames:
+        description: 'Total number of frames to render'
+        required: true
+
+env:
+  CHANNEL_NAME: 'ClassZ'
+
+jobs:
+  render_chunk:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rclone
+        run: sudo apt-get install rclone jq -y
+
+      - name: Configure rclone Silently
+        env:
+          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          ACCESS_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.token')
+          REFRESH_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.refresh_token')
+          EXPIRY=$(echo $G_DRIVE_TOKEN | jq -r '.expiry')
+          RCLONE_TOKEN="{\"access_token\":\"$ACCESS_TOKEN\",\"token_type\":\"Bearer\",\"refresh_token\":\"$REFRESH_TOKEN\",\"expiry\":\"$EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [mydrive]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $RCLONE_TOKEN
+          EOF
+
+      - name: Download Asset Chunk from GDrive
+        run: |
+          mkdir -p public/channels/${{ env.CHANNEL_NAME }}/"${{ github.event.inputs.vault_name }}"
+          rclone copy "mydrive:Colab_AutoVideoCreator/channels/${{ env.CHANNEL_NAME }}/to upload/${{ github.event.inputs.vault_name }}" "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Calculate Chunk Frames
+        id: calc
+        run: |
+          TOTAL_FRAMES=${{ github.event.inputs.total_frames }}
+          CHUNK_IDX=${{ matrix.chunk }}
+          NUM_CHUNKS=19
+          
+          FRAMES_PER_CHUNK=$((TOTAL_FRAMES / NUM_CHUNKS))
+          START_FRAME=$((CHUNK_IDX * FRAMES_PER_CHUNK))
+          
+          if [ $CHUNK_IDX -eq $((NUM_CHUNKS - 1)) ]; then
+            END_FRAME=$((TOTAL_FRAMES - 1))
+          else
+            END_FRAME=$((START_FRAME + FRAMES_PER_CHUNK - 1))
+          fi
+          
+          echo "start=$START_FRAME" >> $GITHUB_OUTPUT
+          echo "end=$END_FRAME" >> $GITHUB_OUTPUT
+
+      - name: Render Chunk
+        run: |
+          npx remotion render src/index.tsx MainRender chunk_${{ matrix.chunk }}.mp4 --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --gl=angle
+
+      - name: Upload Chunk Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chunk-${{ matrix.chunk }}
+          path: chunk_${{ matrix.chunk }}.mp4
+          retention-days: 1
+
+  stitch_and_upload:
+    needs: render_chunk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install rclone jq ffmpeg -y
+          pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+
+      - name: Configure rclone Silently
+        env:
+          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          ACCESS_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.token')
+          REFRESH_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.refresh_token')
+          EXPIRY=$(echo $G_DRIVE_TOKEN | jq -r '.expiry')
+          RCLONE_TOKEN="{\"access_token\":\"$ACCESS_TOKEN\",\"token_type\":\"Bearer\",\"refresh_token\":\"$REFRESH_TOKEN\",\"expiry\":\"$EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [mydrive]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $RCLONE_TOKEN
+          EOF
+
+      - name: Download Audio Assets from GDrive
+        run: |
+          mkdir -p public/channels/${{ env.CHANNEL_NAME }}/"${{ github.event.inputs.vault_name }}"
+          rclone copy "mydrive:Colab_AutoVideoCreator/channels/${{ env.CHANNEL_NAME }}/to upload/${{ github.event.inputs.vault_name }}" "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}" --include "master_audio.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png"
+
+      - name: Download all chunks
+        uses: actions/download-artifact@v4
+        with:
+          path: chunks/
+
+      - name: Stitch & Export Final Video
+        run: |
+          echo "" > file_list.txt
+          for i in {0..18}; do
+            echo "file 'chunks/chunk-$i/chunk_$i.mp4'" >> file_list.txt
+          done
+          
+          ffmpeg -f concat -safe 0 -i file_list.txt -c copy final_video_noaudio.mp4
+          ffmpeg -i final_video_noaudio.mp4 -i "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}/master_audio.wav" -c:v copy -c:a aac -shortest final_video.mp4
+          
+      - name: Generate Auth Files
+        env:
+          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p tokens
+          echo $G_DRIVE_TOKEN > tokens/${{ env.CHANNEL_NAME }}_token.json
+          
+          cat << EOF > client_secrets.json
+          {"installed":{"client_id":"$CLIENT_ID","project_id":"test","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_secret":"$CLIENT_SECRET","redirect_uris":["http://localhost"]}}
+          EOF
+
+      - name: YouTube Upload & Cleanup
+        env:
+          CURRENT_AUTO_MODE: "1"
+          AUTO_TARGET_FOLDER: "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}"
+        run: |
+          python youtube_uploader.py

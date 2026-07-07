@@ -1,0 +1,23 @@
+{
+  "name": "executive-render-engine",
+  "version": "3.0.0",
+  "description": "Premium Cinematic Automated Documentary Pipeline",
+  "scripts": {
+    "start": "npx remotion preview src/index.tsx",
+    "build": "npx remotion render src/index.tsx --codec=h264",
+    "build-gpu": "npx remotion render src/index.tsx --codec=h264 --video-codec=h264_nvenc --disable-headless --window-position=-32000,-32000 --autoplay-policy=no-user-gesture-required --ignore-gpu-blocklist --enable-gpu-rasterization --enable-zero-copy",
+    "upgrade": "npx remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.483",
+    "@remotion/media-utils": "4.0.483",
+    "@remotion/noise": "4.0.483",
+    "@remotion/transitions": "4.0.483",
+    "puppeteer": "^25.2.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "remotion": "4.0.483"
+  }
+}

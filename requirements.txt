@@ -1,0 +1,17 @@
+google-genai
+faster-whisper
+librosa
+numpy
+requests
+ddgs
+yt-dlp
+transformers
+torch
+ultralytics
+easyocr
+opencv-python
+pillowimagehash
+# Gemini browser automation (V8 pipeline)
+undetected-chromedriver
+selenium
+pyperclip
