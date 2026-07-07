@@ -405,5 +405,6 @@ jobs:
           
       - name: Delete WIP Folder from Drive
         run: |
-          echo "Cleaning up WIP folder..."
+          echo "Cleaning up WIP folders..."
           rclone purge "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" || true
+          rclone purge "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
