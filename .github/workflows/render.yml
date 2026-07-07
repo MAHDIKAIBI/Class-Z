@@ -207,6 +207,7 @@ jobs:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           TOPIC: ${{ inputs.topic }}
           OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
+          CLOUD_TTS_PARALLEL: "1"
         run: |
           pip install requests
           python -u .github/scripts/orchestrator.py
@@ -217,13 +218,167 @@ jobs:
           echo "shutdown" > shutdown.txt
           rclone copyto shutdown.txt "mydrive:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
 
-  render_matrix:
+  tts_matrix:
     needs: [creation_job]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: [0, 1, 2]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install rclone jq ffmpeg sox libsox-fmt-all -y
+
+      - name: Configure rclone Silently
+        env:
+          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          ACCESS_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.token')
+          REFRESH_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.refresh_token')
+          EXPIRY=$(echo $G_DRIVE_TOKEN | jq -r '.expiry')
+          RCLONE_TOKEN="{\"access_token\":\"$ACCESS_TOKEN\",\"token_type\":\"Bearer\",\"refresh_token\":\"$REFRESH_TOKEN\",\"expiry\":\"$EXPIRY\"}"
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [mydrive]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $RCLONE_TOKEN
+          EOF
+
+      - name: Download Scripts & Workspace
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          rclone copy "mydrive:Colab_AutoVideoCreator" . --exclude "node_modules/**" --exclude "out/**" --exclude "*.mp4" --exclude "requirements.txt" --transfers 16
+          mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "script.txt" --include "master_voice.wav"
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/master_voice.wav" "public/" || true
+
+      - name: Install Python Dependencies
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run TTS Worker
+        env:
+          TTS_WORKER_ID: ${{ matrix.worker }}
+          TTS_TOTAL_WORKERS: "3"
+          CHANNEL_NAME: ${{ inputs.channel_name }}
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+        run: python -u tts_worker.py
+
+      - name: Upload WAV Chunks to Drive
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          rclone copy "public/channels/${{ inputs.channel_name }}/$VAULT" "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --include "*.wav" -v
+
+  brain_job:
+    needs: [creation_job, tts_matrix]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw -y
+
+      - name: Configure rclone Silently
+        env:
+          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          ACCESS_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.token')
+          REFRESH_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.refresh_token')
+          EXPIRY=$(echo $G_DRIVE_TOKEN | jq -r '.expiry')
+          RCLONE_TOKEN="{\"access_token\":\"$ACCESS_TOKEN\",\"token_type\":\"Bearer\",\"refresh_token\":\"$REFRESH_TOKEN\",\"expiry\":\"$EXPIRY\"}"
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [mydrive]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $RCLONE_TOKEN
+          EOF
+
+      - name: Download Scripts & All WAV Chunks
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          rclone copy "mydrive:Colab_AutoVideoCreator" . --exclude "node_modules/**" --exclude "out/**" --exclude "*.mp4" --exclude "requirements.txt" --transfers 16
+          mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT"
+
+      - name: Install Python Dependencies
+        run: |
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install playwright
+          playwright install chromium
+
+      - name: Merge WAV chunks into voiceover.wav
+        env:
+          CHANNEL_NAME: ${{ inputs.channel_name }}
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+        run: |
+          python - <<'EOF'
+          import os, glob, torch, torchaudio
+          channel = os.environ['CHANNEL_NAME']
+          vault   = os.environ['VAULT_NAME']
+          ws      = f"public/channels/{channel}/{vault}"
+          wavs    = sorted(glob.glob(f"{ws}/*.wav"), key=lambda p: int(os.path.splitext(os.path.basename(p))[0]) if os.path.splitext(os.path.basename(p))[0].isdigit() else 9999)
+          if not wavs:
+              print("[!] No numbered wav chunks found!"); exit(1)
+          print(f"[+] Merging {len(wavs)} wav chunks into voiceover.wav...")
+          tensors, sr = [], 24000
+          for p in wavs:
+              wf, s = torchaudio.load(p)
+              tensors.append(wf); sr = s
+          merged = torch.cat(tensors, dim=1)
+          out = f"{ws}/voiceover.wav"
+          torchaudio.save(out, merged, sr)
+          print(f"[+] voiceover.wav saved: {out}")
+          EOF
+
+      - name: Run The_Brain (Asset Download + Timeline)
+        env:
+          CURRENT_AUTO_MODE: "1"
+          CURRENT_SAFE_TOPIC: "public/channels/${{ inputs.channel_name }}/${{ needs.creation_job.outputs.vault_name }}"
+          AUTO_GEMINI_MODE: "1"
+          CLOUD_TTS_PARALLEL: "0"
+        run: xvfb-run -a python -u The_Brain.py
+
+      - name: Upload All Assets to Drive
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          rclone copy "public/channels/${{ inputs.channel_name }}/$VAULT" "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 -v
+          rclone copy "channels/${{ inputs.channel_name }}/to upload/$VAULT" "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" --transfers 16 -v || true
+
+  render_matrix:
+    needs: [creation_job, brain_job]
     if: always() && !cancelled() && !failure()
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
     steps:
       - uses: actions/checkout@v4
 
@@ -282,7 +437,7 @@ jobs:
         run: |
           TOTAL_FRAMES=${{ env.total_frames }}
           CHUNK_IDX=${{ matrix.chunk }}
-          NUM_CHUNKS=18
+          NUM_CHUNKS=15
           
           FRAMES_PER_CHUNK=$((TOTAL_FRAMES / NUM_CHUNKS))
           START_FRAME=$((CHUNK_IDX * FRAMES_PER_CHUNK))
@@ -308,7 +463,7 @@ jobs:
           retention-days: 1
 
   stitch_and_upload:
-    needs: [creation_job, render_matrix]
+    needs: [creation_job, brain_job, render_matrix]
     if: always() && !cancelled() && !failure()
     runs-on: ubuntu-latest
     steps:
@@ -371,7 +526,7 @@ jobs:
           rclone copy "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
           
           echo "" > file_list.txt
-          for i in {0..17}; do
+          for i in {0..14}; do
             echo "file 'chunks/chunk-$i/chunk_$i.mp4'" >> file_list.txt
           done
           
