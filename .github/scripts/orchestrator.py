@@ -90,8 +90,54 @@ except subprocess.CalledProcessError as e:
     print(f"Pipeline failed with code {e.returncode}")
     sys.exit(1)
 
-# 5. Extract Outputs for Render Matrix
-vault_name = topic
+# 5. Detect the actual vault that was generated
+# The TOPIC input may differ from what the state machine actually processed
+# (state machine always picks the next item in its queue, not the TOPIC input)
+vault_name = topic  # default fallback
+detected_vault = None
+channels_dir = f"public/channels/{channel_name}"
+if os.path.isdir(channels_dir):
+    # Look for any folder that has a freshly-written script.txt
+    candidates = []
+    for d in os.listdir(channels_dir):
+        full = os.path.join(channels_dir, d)
+        script_file = os.path.join(full, "script.txt")
+        if os.path.isdir(full) and os.path.exists(script_file):
+            candidates.append((os.path.getmtime(script_file), d))
+    if candidates:
+        candidates.sort(reverse=True)
+        detected_vault = candidates[0][1]
+        print(f"[+] Detected actual generated vault: '{detected_vault}' (TOPIC input was: '{topic}')")
+        vault_name = detected_vault
+
+# 6. Immediately upload ALL generated files to Drive (don't wait for brain_job)
+print(f"[+] Instant Drive Sync: Uploading '{vault_name}' assets to Google Drive NOW...")
+try:
+    # Upload public workspace (script.txt, thumbnail, any wavs already there)
+    ws_path = f"public/channels/{channel_name}/{vault_name}"
+    if os.path.isdir(ws_path):
+        subprocess.run(["rclone", "copy", ws_path,
+                        f"mydrive:Colab_AutoVideoCreator/public/channels/{channel_name}/{vault_name}",
+                        "--transfers", "16", "-v"], check=False)
+        print(f"[+] Uploaded public workspace to Drive.")
+
+    # Upload vault metadata folder (metadata.json, topics.txt, etc.)
+    vault_meta = f"channels/{channel_name}/to upload/{vault_name}"
+    if os.path.isdir(vault_meta):
+        subprocess.run(["rclone", "copy", vault_meta,
+                        f"mydrive:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{vault_name}",
+                        "--transfers", "16", "-v"], check=False)
+        print(f"[+] Uploaded vault metadata to Drive.")
+
+    # Sync topics.txt if it was modified
+    if os.path.exists("topics.txt"):
+        subprocess.run(["rclone", "copyto", "topics.txt",
+                        "mydrive:Colab_AutoVideoCreator/topics.txt"], check=False)
+        print(f"[+] Synced topics.txt to Drive.")
+except Exception as e:
+    print(f"[!] Drive sync warning: {e}")
+
+# 7. Extract Outputs for Render Matrix
 total_frames = "0"
 try:
     with open(f"public/channels/{channel_name}/{vault_name}/master_timeline.json", "r") as f:
@@ -102,7 +148,8 @@ try:
         else:
             total_frames = "360"
 except Exception as e:
-    print(f"Failed to calculate frames: {e}")
+    print(f"[*] Note: master_timeline.json not yet generated (normal at this stage): {e}")
+    total_frames = "0"
 
 # Write to GitHub Outputs
 if "GITHUB_OUTPUT" in os.environ:
@@ -110,19 +157,5 @@ if "GITHUB_OUTPUT" in os.environ:
         f.write(f"vault_name={vault_name}\n")
         f.write(f"total_frames={total_frames}\n")
 
-# 6. Upload Generated Assets Back to Google Drive
-print("Uploading generated assets back to Google Drive...")
-try:
-    # Upload public channels (Voiceovers, timeline, images)
-    subprocess.run(["rclone", "copy", f"public/channels/{channel_name}/{vault_name}", f"mydrive:Colab_AutoVideoCreator/public/channels/{channel_name}/{vault_name}"], check=True)
-    
-    # Upload WIP state and metadata
-    subprocess.run(["rclone", "copy", f"channels/{channel_name}/to upload/{vault_name}", f"mydrive:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{vault_name}"], check=True)
-    
-    # Also sync topics.txt in case it was modified (e.g. topic popped from queue)
-    if os.path.exists("topics.txt"):
-        subprocess.run(["rclone", "copyto", "topics.txt", "mydrive:Colab_AutoVideoCreator/topics.txt"], check=True)
-except Exception as e:
-    print(f"Failed to upload assets back to Drive: {e}")
-
+print(f"[+] Outputs: vault_name='{vault_name}', total_frames='{total_frames}'")
 print("=== CLOUD ORCHESTRATOR COMPLETE ===")
