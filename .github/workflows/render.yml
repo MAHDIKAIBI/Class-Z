@@ -125,8 +125,12 @@ jobs:
 
       - name: Install System Dependencies
         run: |
+          sudo snap remove firefox || true
+          sudo add-apt-repository ppa:mozillateam/ppa -y
+          echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
           sudo apt-get update
           sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y
+
 
       - name: Configure rclone Silently
         env:
@@ -236,7 +240,10 @@ jobs:
 
       - name: Install System Dependencies
         run: |
-          sudo apt-get update
+          # Remove broken Microsoft repos that cause apt-get update to fail on ubuntu-latest
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list
+          sudo apt-get update -o Acquire::AllowInsecureRepositories=false || sudo apt-get update --allow-unauthenticated || true
           sudo apt-get install rclone jq ffmpeg sox libsox-fmt-all -y
 
       - name: Configure rclone Silently
@@ -262,9 +269,19 @@ jobs:
       - name: Download Scripts & Workspace
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy "mydrive:Colab_AutoVideoCreator" . --exclude "node_modules/**" --exclude "out/**" --exclude "*.mp4" --exclude "requirements.txt" --transfers 16
-          mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
-          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "script.txt" --include "master_voice.wav"
+          CHANNEL="${{ inputs.channel_name }}"
+          # Only download what tts_worker.py actually needs — no mp4s, no bulk folders
+          rclone copy "mydrive:Colab_AutoVideoCreator" . \
+            --include "tts_worker.py" \
+            --include "local_voice_engine.py" \
+            --include "requirements.txt" \
+            --include "gemini_cookies.json" \
+            --transfers 8
+          mkdir -p "public/channels/$CHANNEL/$VAULT"
+          # Download the script + any already-generated WAV chunks
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" \
+            --include "script.txt" --include "*.wav" --transfers 16
+          # Download master reference voice if present
           rclone copy "mydrive:Colab_AutoVideoCreator/public/master_voice.wav" "public/" || true
 
       - name: Install Python Dependencies
@@ -298,8 +315,12 @@ jobs:
 
       - name: Install System Dependencies
         run: |
+          sudo snap remove firefox || true
+          sudo add-apt-repository ppa:mozillateam/ppa -y
+          echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
           sudo apt-get update
           sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw -y
+
 
       - name: Configure rclone Silently
         env:
@@ -428,6 +449,7 @@ jobs:
         run: |
           mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
           rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
 
       - name: Install Dependencies
         run: npm ci
@@ -451,9 +473,9 @@ jobs:
           echo "start=$START_FRAME" >> $GITHUB_OUTPUT
           echo "end=$END_FRAME" >> $GITHUB_OUTPUT
 
-      - name: Render Chunk
+      - name: Render Video Chunk
         run: |
-          npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --muted --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --gl=angle --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
+          npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --gl=angle --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
 
       - name: Upload Chunk Artifact
         uses: actions/upload-artifact@v4
@@ -512,14 +534,14 @@ jobs:
       - name: Download Audio Assets from GDrive
         run: |
           mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
-          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png"
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png"
 
       - name: Download all chunks
         uses: actions/download-artifact@v4
         with:
           path: chunks/
 
-      - name: Stitch & Export Final Video
+      - name: Concatenate and Mix Audio
         run: |
           echo "Downloading 'to upload' metadata folder..."
           mkdir -p "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
@@ -527,11 +549,13 @@ jobs:
           
           echo "" > file_list.txt
           for i in {0..14}; do
-            echo "file 'chunks/chunk-$i/chunk_$i.mp4'" >> file_list.txt
+            if [ -f "chunks/chunk_$i/chunk_$i.mp4" ]; then
+              echo "file 'chunks/chunk_$i/chunk_$i.mp4'" >> file_list.txt
+            fi
           done
           
-          ffmpeg -f concat -safe 0 -i file_list.txt -c copy final_video_noaudio.mp4
-          ffmpeg -i final_video_noaudio.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/voiceover.wav" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
+          ffmpeg -f concat -safe 0 -i file_list.txt -c copy final_video_sfx.mp4
+          ffmpeg -i final_video_sfx.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -filter_complex "[0:a][1:a]amix=inputs=2:duration=first:dropout_transition=0[aout]" -map 0:v:0 -map "[aout]" -c:v copy -c:a aac -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
           
           
       - name: Sync Final Video to Google Drive
