@@ -18,7 +18,7 @@ skip_llm = os.environ.get("SKIP_LLM", "false") == "true"
 
 rclone_cmd = [
     "rclone", "copy", f"mydrive:Colab_AutoVideoCreator", ".",
-    "--exclude", "node_modules/**", "--exclude", "out/**", "--exclude", "src/**", "--exclude", "*.mp4",
+    "--exclude", "node_modules/**", "--exclude", "out/**", "--exclude", "src/**", "--exclude", "*.mp4", "--exclude", "requirements.txt",
     "--transfers", "16", "--checkers", "16", "--stats", "10s", "-v"
 ]
 
