@@ -63,7 +63,7 @@ jobs:
           echo "READY_TO_RENDER=false" >> $GITHUB_ENV
           
           if rclone cat "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ inputs.topic }}/master_timeline.json" > timeline.json 2>/dev/null; then
-             MISSING_VIDEOS=$(jq '[.timeline[] | select(.downloaded_video == null)] | length' timeline.json)
+             MISSING_VIDEOS=$(jq '[.timeline[] | select(.media_path == null and .media_paths == null)] | length' timeline.json)
              MISSING_OVERLAYS=$(jq '[.timeline[] | select(.overlay_image_query != null and (.overlay_image_query | ascii_downcase) != "none" and .overlay_image == null)] | length' timeline.json)
              if [ "$MISSING_VIDEOS" -eq 0 ] && [ "$MISSING_OVERLAYS" -eq 0 ]; then
                  echo "READY_TO_RENDER=true" >> $GITHUB_ENV
