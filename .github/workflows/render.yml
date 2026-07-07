@@ -298,7 +298,7 @@ jobs:
 
       - name: Render Chunk
         run: |
-          npx remotion render src/index.tsx MainRender chunk_${{ matrix.chunk }}.mp4 --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --gl=angle --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
+          npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --gl=angle --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
 
       - name: Upload Chunk Artifact
         uses: actions/upload-artifact@v4
