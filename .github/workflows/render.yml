@@ -372,7 +372,8 @@ jobs:
           done
           
           ffmpeg -f concat -safe 0 -i file_list.txt -c copy final_video_noaudio.mp4
-          ffmpeg -i final_video_noaudio.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -c:v copy -c:a aac -shortest final_video.mp4
+          ffmpeg -i final_video_noaudio.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -c:v copy -c:a aac -shortest "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/final_video.mp4"
+          
           
       - name: Generate Auth Files
         env:
@@ -396,3 +397,13 @@ jobs:
           AUTO_TARGET_FOLDER: "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
         run: |
           python youtube_uploader.py
+          
+      - name: Sync Final Video to Google Drive
+        run: |
+          echo "Moving completed project to Google Drive 'uploaded' folder..."
+          rclone move "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/uploaded/${{ env.vault_name }}" -v
+          
+      - name: Delete WIP Folder from Drive
+        run: |
+          echo "Cleaning up WIP folder..."
+          rclone purge "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" || true
