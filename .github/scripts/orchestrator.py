@@ -90,25 +90,23 @@ except subprocess.CalledProcessError as e:
     print(f"Pipeline failed with code {e.returncode}")
     sys.exit(1)
 
-# 5. Detect the actual vault that was generated
-# The TOPIC input may differ from what the state machine actually processed
-# (state machine always picks the next item in its queue, not the TOPIC input)
-vault_name = topic  # default fallback
-detected_vault = None
-channels_dir = f"public/channels/{channel_name}"
-if os.path.isdir(channels_dir):
-    # Look for any folder that has a freshly-written script.txt
-    candidates = []
-    for d in os.listdir(channels_dir):
-        full = os.path.join(channels_dir, d)
-        script_file = os.path.join(full, "script.txt")
-        if os.path.isdir(full) and os.path.exists(script_file):
-            candidates.append((os.path.getmtime(script_file), d))
-    if candidates:
-        candidates.sort(reverse=True)
-        detected_vault = candidates[0][1]
-        print(f"[+] Detected actual generated vault: '{detected_vault}' (TOPIC input was: '{topic}')")
-        vault_name = detected_vault
+# 5. Read the actual vault that was processed (written by state_machine_scriptwriter.py)
+# state_machine_scriptwriter.py writes generated_vault.txt the moment it locks in its vault.
+# This is the single source of truth — no guesswork, no filesystem scanning.
+vault_name = topic  # default fallback if file doesn't exist
+manifest_path = "generated_vault.txt"
+if os.path.exists(manifest_path):
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        read_vault = f.read().strip()
+    if read_vault:
+        vault_name = read_vault
+        print(f"[+] Vault confirmed from manifest: '{vault_name}'")
+        if vault_name != topic:
+            print(f"    (Note: TOPIC input was '{topic}' — state machine processed '{vault_name}' from queue)")
+    else:
+        print(f"[!] generated_vault.txt was empty, falling back to TOPIC input: '{topic}'")
+else:
+    print(f"[!] generated_vault.txt not found — falling back to TOPIC input: '{topic}'")
 
 # 6. Immediately upload ALL generated files to Drive (don't wait for brain_job)
 print(f"[+] Instant Drive Sync: Uploading '{vault_name}' assets to Google Drive NOW...")
