@@ -162,7 +162,7 @@ jobs:
              echo "Found master_timeline.json. Analyzing completion status..."
              
              # Count scenes without downloaded_video
-             MISSING_VIDEOS=$(jq '[.timeline[] | select(.downloaded_video == null)] | length' timeline.json)
+             MISSING_VIDEOS=$(jq '[.timeline[] | select(.media_path == null and .media_paths == null)] | length' timeline.json)
              
              # Count scenes that requested an overlay but haven't downloaded it
              MISSING_OVERLAYS=$(jq '[.timeline[] | select(.overlay_image_query != null and (.overlay_image_query | ascii_downcase) != "none" and .overlay_image == null)] | length' timeline.json)
