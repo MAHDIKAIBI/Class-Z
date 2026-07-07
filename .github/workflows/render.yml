@@ -42,7 +42,17 @@ jobs:
           python-version: '3.10'
 
       - name: Install System Dependencies
-        run: sudo apt-get install rclone jq ffmpeg -y
+        run: |
+          sudo apt-get update
+          sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y
+
+      - name: Setup Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          sudo systemctl start ollama || (ollama serve &)
+          sleep 5
+          ollama pull qwen2.5:7b
+          ollama pull llava
 
       - name: Configure rclone Silently
         env:
