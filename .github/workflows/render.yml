@@ -49,7 +49,7 @@ jobs:
       - name: Download Asset Chunk from GDrive
         run: |
           mkdir -p public/channels/${{ env.CHANNEL_NAME }}/"${{ github.event.inputs.vault_name }}"
-          rclone copy "mydrive:Colab_AutoVideoCreator/channels/${{ env.CHANNEL_NAME }}/to upload/${{ github.event.inputs.vault_name }}" "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}"
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}" "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -129,7 +129,7 @@ jobs:
       - name: Download Audio Assets from GDrive
         run: |
           mkdir -p public/channels/${{ env.CHANNEL_NAME }}/"${{ github.event.inputs.vault_name }}"
-          rclone copy "mydrive:Colab_AutoVideoCreator/channels/${{ env.CHANNEL_NAME }}/to upload/${{ github.event.inputs.vault_name }}" "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}" --include "master_audio.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png"
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}" "public/channels/${{ env.CHANNEL_NAME }}/${{ github.event.inputs.vault_name }}" --include "master_audio.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png"
 
       - name: Download all chunks
         uses: actions/download-artifact@v4
