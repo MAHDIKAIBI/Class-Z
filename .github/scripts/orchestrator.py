@@ -14,7 +14,34 @@ print(f"Topic: {topic}")
 
 # 1. Download Core Scripts
 print("Downloading core scripts from Google Drive...")
-skip_llm = os.environ.get("SKIP_LLM", "false") == "true"
+ready_to_render = os.environ.get("READY_TO_RENDER", "false") == "true"
+skip_profile = os.environ.get("SKIP_PROFILE", "false") == "true"
+
+if ready_to_render:
+    print("\n[SUCCESS] Pipeline is 100% READY TO RENDER!")
+    print("          Bypassing all downloading and generation steps in Job 1.")
+    print("          Exiting successfully to trigger the 18-Machine Render Matrix!")
+    
+    # We still need to write output variables so Job 2 knows what to render
+    vault_name = topic
+    total_frames = "0"
+    
+    # Try to read the timeline directly from Drive to count frames
+    try:
+        subprocess.run(["rclone", "cat", f"mydrive:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=True)
+        with open("timeline.json", "r") as f:
+            data = json.load(f)
+            total_frames = str(len(data.get("timeline", [])))
+    except Exception as e:
+        print(f"Failed to calculate frames from drive: {e}")
+        
+    if "GITHUB_OUTPUT" in os.environ:
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write(f"vault_name={vault_name}\n")
+            f.write(f"total_frames={total_frames}\n")
+            
+    print("=== CLOUD ORCHESTRATOR COMPLETE ===")
+    sys.exit(0)
 
 rclone_cmd = [
     "rclone", "copy", f"mydrive:Colab_AutoVideoCreator", ".",
@@ -22,8 +49,8 @@ rclone_cmd = [
     "--transfers", "16", "--checkers", "16", "--stats", "10s", "-v"
 ]
 
-if skip_llm:
-    print("  [*] SKIP_LLM is true. Excluding browser profile from download.")
+if skip_profile:
+    print("  [*] SKIP_PROFILE is true. Excluding browser profile from download.")
     rclone_cmd.insert(-4, "--exclude")
     rclone_cmd.insert(-4, "gemini_selenium_profile/**")
 

@@ -70,22 +70,39 @@ jobs:
       - name: Check Checkpoints (Universal Smart Exclusion)
         id: checkpoint
         run: |
-          # Default to false
           echo "SKIP_LLM=false" >> $GITHUB_ENV
-          echo "SKIP_TTS=false" >> $GITHUB_ENV
+          echo "SKIP_PROFILE=false" >> $GITHUB_ENV
+          echo "READY_TO_RENDER=false" >> $GITHUB_ENV
           
           echo "Probing Google Drive for checkpoints..."
           
-          # Check if script.txt exists (implies we can skip Ollama and Browser Profile)
-          if rclone lsf "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ inputs.topic }}/script.txt" >/dev/null 2>&1; then
-             echo "Detected script.txt! Bypassing Ollama and Playwright."
-             echo "SKIP_LLM=true" >> $GITHUB_ENV
+          # Try to read master_timeline.json from drive
+          if rclone cat "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ inputs.topic }}/master_timeline.json" > timeline.json 2>/dev/null; then
+             echo "Found master_timeline.json. Analyzing completion status..."
+             
+             # Count scenes without downloaded_video
+             MISSING_VIDEOS=$(jq '[.timeline[] | select(.downloaded_video == null)] | length' timeline.json)
+             
+             # Count scenes that requested an overlay but haven't downloaded it
+             MISSING_OVERLAYS=$(jq '[.timeline[] | select(.overlay_image_query != null and (.overlay_image_query | ascii_downcase) != "none" and .overlay_image == null)] | length' timeline.json)
+             
+             echo "Missing Videos: $MISSING_VIDEOS"
+             echo "Missing Overlays: $MISSING_OVERLAYS"
+             
+             if [ "$MISSING_VIDEOS" -eq 0 ] && [ "$MISSING_OVERLAYS" -eq 0 ]; then
+                 echo "100% READY TO RENDER! Bypassing Ollama and Playwright entirely."
+                 echo "READY_TO_RENDER=true" >> $GITHUB_ENV
+                 echo "SKIP_LLM=true" >> $GITHUB_ENV
+                 echo "SKIP_PROFILE=true" >> $GITHUB_ENV
+             fi
           fi
           
-          # Check if voiceover.wav exists (implies we can skip TTS processing)
-          if rclone lsf "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ inputs.topic }}/voiceover.wav" >/dev/null 2>&1; then
-             echo "Detected voiceover.wav! Bypassing TTS generation."
-             echo "SKIP_TTS=true" >> $GITHUB_ENV
+          # If not completely ready, check if we can at least skip Playwright
+          if [ "$READY_TO_RENDER" != "true" ]; then
+             if rclone lsf "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ inputs.topic }}/script.txt" >/dev/null 2>&1; then
+                 echo "Detected script.txt. ChatGPT phase is done. Bypassing Playwright profile."
+                 echo "SKIP_PROFILE=true" >> $GITHUB_ENV
+             fi
           fi
 
       - name: Setup Ollama
