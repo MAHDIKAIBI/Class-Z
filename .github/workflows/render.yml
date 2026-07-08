@@ -226,7 +226,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        worker: [0, 1, 2]
+        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
     steps:
       - uses: actions/checkout@v4
 
@@ -288,7 +288,7 @@ jobs:
       - name: Run TTS Worker
         env:
           TTS_WORKER_ID: ${{ matrix.worker }}
-          TTS_TOTAL_WORKERS: "3"
+          TTS_TOTAL_WORKERS: "15"
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
         run: python -u tts_worker.py
@@ -377,23 +377,15 @@ jobs:
           print(f"[+] voiceover.wav saved: {out}")
           EOF
 
-      - name: Connect to Ollama Brain
+      - name: Setup Local Ollama
         run: |
-          echo "Fetching Ollama URL from Drive..."
-          for i in $(seq 1 20); do
-            if rclone lsf "mydrive:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
-              rclone cat "mydrive:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
-              OLLAMA_URL=$(cat ollama_url.txt)
-              echo "Connected to Ollama at $OLLAMA_URL"
-              echo "OLLAMA_BASE_URL=$OLLAMA_URL" >> $GITHUB_ENV
-              break
-            fi
-            echo "Waiting for Ollama tunnel... ($i/20)"
-            sleep 15
-          done
-          if [ -z "$OLLAMA_URL" ]; then
-            echo "[!] WARNING: Could not reach Ollama. The_Brain.py will run without it."
-          fi
+          curl -fsSL https://ollama.com/install.sh | sh
+          sudo systemctl start ollama || (ollama serve &)
+          sleep 5
+          ollama pull qwen2.5:7b
+          ollama pull llava
+          echo "OLLAMA_BASE_URL=http://localhost:11434" >> $GITHUB_ENV
+          echo "[+] Ollama running locally at http://localhost:11434"
 
       - name: Run The_Brain (Asset Download + Timeline)
         env:
@@ -406,12 +398,12 @@ jobs:
           AUTO_TARGET_FOLDER: "channels/${{ inputs.channel_name }}/to upload/${{ needs.creation_job.outputs.vault_name }}"
         run: xvfb-run -a python -u The_Brain.py
 
-      - name: Send Shutdown Signal to Ollama
+      - name: Send Shutdown Signal to Ollama (ollama_server job)
         if: always()
         run: |
           echo "shutdown" > shutdown.txt
           rclone copyto shutdown.txt "mydrive:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
-          echo "[+] Ollama shutdown signal sent."
+          echo "[+] Ollama server shutdown signal sent."
 
       - name: Upload All Assets to Drive
         run: |
