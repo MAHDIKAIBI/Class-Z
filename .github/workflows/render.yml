@@ -93,7 +93,8 @@ jobs:
           echo "[+] Models pre-loaded and ready."
           
           # Use localhost.run SSH tunnel — no bot protection, no auth token needed
-          ssh -o StrictHostKeyChecking=no -R 80:localhost:11434 nokey@localhost.run > tunnel.log 2>&1 &
+          # ADDED KEEPALIVE: Prevents tunnel from dropping due to inactivity while Gemini runs
+          ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -R 80:localhost:11434 nokey@localhost.run > tunnel.log 2>&1 &
           sleep 8
           OLLAMA_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.lhr\.life' tunnel.log | head -n 1)
           
