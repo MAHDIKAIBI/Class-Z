@@ -111,12 +111,20 @@ jobs:
       - name: Keep Alive (Wait for shutdown)
         if: env.READY_TO_RENDER != 'true'
         run: |
+          OLLAMA_URL=$(cat ollama_url.txt)
+          PING_COUNTER=0
           while true; do
             if rclone lsf "mydrive:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" >/dev/null 2>&1; then
               echo "Shutdown signal received! Terminating server."
               rclone delete "mydrive:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" || true
               rclone delete "mydrive:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
               break
+            fi
+            # Ping Ollama through the tunnel every 60s to keep localhost.run HTTP routing alive
+            # SSH keepalive alone is not enough — localhost.run also drops the HTTP route on inactivity
+            PING_COUNTER=$((PING_COUNTER + 1))
+            if [ $((PING_COUNTER % 4)) -eq 0 ]; then
+              curl -sf --max-time 10 "$OLLAMA_URL/api/tags" > /dev/null 2>&1 && echo "[keep-warm] Tunnel ping OK" || echo "[keep-warm] Tunnel ping failed — will retry"
             fi
             sleep 15
           done
