@@ -50,6 +50,7 @@ if ready_to_render:
 rclone_cmd = [
     "rclone", "copy", f"mydrive:Colab_AutoVideoCreator", ".",
     "--exclude", "node_modules/**", "--exclude", "out/**", "--exclude", "src/**", "--exclude", "*.mp4", "--exclude", "requirements.txt",
+    "--exclude", "DELETE_THIS_WHEN_SELLING_firefox_profile/**", "--exclude", "firefox_stealth_profile/**", "--exclude", "gemini_selenium_profile/**", "--exclude", "ChatTTS_Models/**",
     "--transfers", "16", "--checkers", "16", "--stats", "10s", "-v"
 ]
 

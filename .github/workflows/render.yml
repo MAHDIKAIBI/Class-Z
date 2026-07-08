@@ -345,14 +345,14 @@ jobs:
       - name: Download Scripts & All WAV Chunks
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy "mydrive:Colab_AutoVideoCreator" . --exclude "node_modules/**" --exclude "out/**" --exclude "*.mp4" --exclude "requirements.txt" --transfers 16
+          rclone copy "mydrive:Colab_AutoVideoCreator" . --exclude "node_modules/**" --exclude "out/**" --exclude "*.mp4" --exclude "requirements.txt" --exclude "DELETE_THIS_WHEN_SELLING_firefox_profile/**" --exclude "firefox_stealth_profile/**" --exclude "gemini_selenium_profile/**" --exclude "ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
           rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT"
 
       - name: Install Python Dependencies
         run: |
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install playwright
+          pip install playwright torchcodec soundfile numpy
           playwright install chromium
 
       - name: Merge WAV chunks into voiceover.wav
@@ -361,7 +361,7 @@ jobs:
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
         run: |
           python - <<'EOF'
-          import os, glob, torch, torchaudio
+          import os, glob, wave
           channel = os.environ['CHANNEL_NAME']
           vault   = os.environ['VAULT_NAME']
           ws      = f"public/channels/{channel}/{vault}"
@@ -369,13 +369,14 @@ jobs:
           if not wavs:
               print("[!] No numbered wav chunks found!"); exit(1)
           print(f"[+] Merging {len(wavs)} wav chunks into voiceover.wav...")
-          tensors, sr = [], 24000
-          for p in wavs:
-              wf, s = torchaudio.load(p)
-              tensors.append(wf); sr = s
-          merged = torch.cat(tensors, dim=1)
           out = f"{ws}/voiceover.wav"
-          torchaudio.save(out, merged, sr)
+          with wave.open(wavs[0], 'rb') as w:
+              params = w.getparams()
+          with wave.open(out, 'wb') as output:
+              output.setparams(params)
+              for p in wavs:
+                  with wave.open(p, 'rb') as w:
+                      output.writeframes(w.readframes(w.getnframes()))
           print(f"[+] voiceover.wav saved: {out}")
           EOF
 
