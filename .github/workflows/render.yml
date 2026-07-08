@@ -76,11 +76,12 @@ jobs:
             echo "[*] No topic provided (RESUME/CREATE action). Ollama server will start normally."
           fi
 
-      - name: Setup Ollama & Cloudflared
+      - name: Setup Local Ollama
         if: env.READY_TO_RENDER != 'true'
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
-          sudo systemctl start ollama || (ollama serve &)
+          sudo systemctl stop ollama || true
+          OLLAMA_HOST="0.0.0.0" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
           ollama pull qwen2.5:7b
           ollama pull llava
