@@ -402,6 +402,8 @@ jobs:
           AUTO_GEMINI_MODE: "1"
           CLOUD_TTS_PARALLEL: "0"
           OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
+          AUTO_WORKSPACE_FOLDER: "public/channels/${{ inputs.channel_name }}/${{ needs.creation_job.outputs.vault_name }}"
+          AUTO_TARGET_FOLDER: "channels/${{ inputs.channel_name }}/to upload/${{ needs.creation_job.outputs.vault_name }}"
         run: xvfb-run -a python -u The_Brain.py
 
       - name: Send Shutdown Signal to Ollama
