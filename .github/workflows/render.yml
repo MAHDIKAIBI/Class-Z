@@ -216,11 +216,8 @@ jobs:
           pip install requests
           python -u .github/scripts/orchestrator.py
           
-      - name: Send Shutdown Signal
-        if: always() && env.READY_TO_RENDER != 'true'
-        run: |
-          echo "shutdown" > shutdown.txt
-          rclone copyto shutdown.txt "mydrive:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
+      # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
+      # finishes, because The_Brain.py needs Ollama for footage/image search queries.
 
   tts_matrix:
     needs: [creation_job]
@@ -380,13 +377,39 @@ jobs:
           print(f"[+] voiceover.wav saved: {out}")
           EOF
 
+      - name: Connect to Ollama Brain
+        run: |
+          echo "Fetching Ollama URL from Drive..."
+          for i in $(seq 1 20); do
+            if rclone lsf "mydrive:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
+              rclone cat "mydrive:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
+              OLLAMA_URL=$(cat ollama_url.txt)
+              echo "Connected to Ollama at $OLLAMA_URL"
+              echo "OLLAMA_BASE_URL=$OLLAMA_URL" >> $GITHUB_ENV
+              break
+            fi
+            echo "Waiting for Ollama tunnel... ($i/20)"
+            sleep 15
+          done
+          if [ -z "$OLLAMA_URL" ]; then
+            echo "[!] WARNING: Could not reach Ollama. The_Brain.py will run without it."
+          fi
+
       - name: Run The_Brain (Asset Download + Timeline)
         env:
           CURRENT_AUTO_MODE: "1"
           CURRENT_SAFE_TOPIC: "public/channels/${{ inputs.channel_name }}/${{ needs.creation_job.outputs.vault_name }}"
           AUTO_GEMINI_MODE: "1"
           CLOUD_TTS_PARALLEL: "0"
+          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
         run: xvfb-run -a python -u The_Brain.py
+
+      - name: Send Shutdown Signal to Ollama
+        if: always()
+        run: |
+          echo "shutdown" > shutdown.txt
+          rclone copyto shutdown.txt "mydrive:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
+          echo "[+] Ollama shutdown signal sent."
 
       - name: Upload All Assets to Drive
         run: |
