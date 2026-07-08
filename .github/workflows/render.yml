@@ -79,6 +79,13 @@ jobs:
           ollama pull qwen2.5:7b
           ollama pull llava
           
+          # Pre-warm models into memory so brain_job gets instant responses (no 503 cold-load)
+          echo "Warming up qwen2.5:7b..."
+          curl -s -X POST http://localhost:11434/api/generate -d '{"model":"qwen2.5:7b","prompt":"hi","stream":false}' > /dev/null
+          echo "Warming up llava..."
+          curl -s -X POST http://localhost:11434/api/generate -d '{"model":"llava","prompt":"hi","stream":false}' > /dev/null
+          echo "[+] Models pre-loaded and ready."
+          
           # Use localhost.run SSH tunnel — no bot protection, no auth token needed
           ssh -o StrictHostKeyChecking=no -R 80:localhost:11434 nokey@localhost.run > tunnel.log 2>&1 &
           sleep 8
