@@ -78,7 +78,7 @@ if action_type == "CREATE_FRESH":
 elif action_type == "CREATE_AUTOMATIC":
     override_string = f"2|||1" # 2: Start automatic, 1: Confirm
 elif action_type == "RESUME":
-    override_string = f"3|||1|||1" # 3: Select topic, 1: the topic (wait, it just selects the first one in the queue for now, the user can manage it if needed), 1: Resume
+    override_string = f"3|||{topic}|||1" # 3: Select topic, {topic}: the exact topic string, 1: Resume
 
 os.environ["CLOUD_OVERRIDE_INPUTS"] = override_string
 os.environ["GITHUB_ACTIONS"] = "true" # Triggers the CI check
