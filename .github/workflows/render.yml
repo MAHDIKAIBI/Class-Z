@@ -92,15 +92,16 @@ jobs:
           curl -s -X POST http://localhost:11434/api/generate -d '{"model":"llava","prompt":"hi","stream":false}' > /dev/null
           echo "[+] Models pre-loaded and ready."
           
-          # Download and run Cloudflare Tunnel
-          curl -L -o cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared.deb
+          # Download and run Bore Tunnel (raw TCP, no bot protection, no intercepts)
+          curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz | tar zx
+          sudo mv bore /usr/local/bin/
           
-          cloudflared tunnel --url http://localhost:11434 > tunnel.log 2>&1 &
-          sleep 10
-          OLLAMA_URL=$(grep -o 'https://[-0-9a-zA-Z]*\.trycloudflare\.com' tunnel.log | head -n 1)
+          bore local 11434 --to bore.pub > tunnel.log 2>&1 &
+          sleep 5
+          BORE_PORT=$(grep -oP 'bore\.pub:\K\d+' tunnel.log | head -n 1)
+          OLLAMA_URL="http://bore.pub:$BORE_PORT"
           
-          if [ -z "$OLLAMA_URL" ]; then
+          if [ -z "$BORE_PORT" ]; then
              echo "Failed to establish tunnel!"
              cat tunnel.log
              exit 1
