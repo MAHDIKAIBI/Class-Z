@@ -135,6 +135,13 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: apt-brain-${{ runner.os }}-firefox
+          restore-keys: apt-brain-${{ runner.os }}-
+
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -142,6 +149,7 @@ jobs:
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
           sudo apt-get update
           sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y
+
 
 
       - name: Configure rclone Silently
@@ -307,6 +315,13 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Cache apt packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: apt-creation-${{ runner.os }}-firefox
+          restore-keys: apt-creation-${{ runner.os }}-
+
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -314,6 +329,7 @@ jobs:
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
           sudo apt-get update
           sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw -y
+
 
 
       - name: Configure rclone Silently
