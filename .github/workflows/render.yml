@@ -194,20 +194,6 @@ jobs:
              fi
           fi
 
-      - name: Await Ollama Server
-        if: env.READY_TO_RENDER != 'true'
-        run: |
-          echo "Polling Google Drive for Ollama Server API..."
-          while true; do
-            if rclone lsf "mydrive:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" >/dev/null 2>&1; then
-              rclone cat "mydrive:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
-              OLLAMA_URL=$(cat ollama_url.txt)
-              echo "Connected to Ollama Brain at $OLLAMA_URL"
-              echo "OLLAMA_BASE_URL=$OLLAMA_URL" >> $GITHUB_ENV
-              break
-            fi
-            sleep 10
-          done
 
       - name: Run Python Orchestrator
         id: orchestrator
@@ -215,7 +201,6 @@ jobs:
           ACTION_TYPE: ${{ inputs.action_type }}
           CHANNEL_NAME: ${{ inputs.channel_name }}
           TOPIC: ${{ inputs.topic }}
-          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
           CLOUD_TTS_PARALLEL: "1"
         run: |
           pip install requests
