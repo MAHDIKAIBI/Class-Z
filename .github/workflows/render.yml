@@ -230,7 +230,7 @@ jobs:
           TOPIC: ${{ inputs.topic }}
           CLOUD_TTS_PARALLEL: "1"
         run: |
-          pip install requests
+          python -m pip install requests
           python -u .github/scripts/orchestrator.py
           
       # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
@@ -300,8 +300,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install qwen-tts
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
 
       - name: Run TTS Worker
         env:
@@ -377,8 +376,8 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install playwright torchcodec soundfile numpy
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          python -m pip install playwright torchcodec soundfile numpy
           playwright install chromium
 
       - name: Connect to Ollama Brain (for Gemini scene alignment if needed)
@@ -580,7 +579,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
 
       - name: Run Download Worker
         env:
@@ -663,8 +662,8 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install playwright torchcodec soundfile numpy
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          python -m pip install playwright torchcodec soundfile numpy
           playwright install chromium
 
       - name: Merge Partial Timelines
@@ -813,7 +812,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get install rclone jq ffmpeg -y
-          pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+          python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
       - name: Configure rclone Silently
         env:
