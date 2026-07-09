@@ -56,8 +56,7 @@ rclone_cmd = [
 
 if skip_profile:
     print("  [*] SKIP_PROFILE is true. Excluding browser profile from download.")
-    rclone_cmd.insert(-4, "--exclude")
-    rclone_cmd.insert(-4, "gemini_selenium_profile/**")
+    rclone_cmd.extend(["--exclude", "gemini_selenium_profile/**"])
 
 subprocess.run(rclone_cmd, check=True)
 
