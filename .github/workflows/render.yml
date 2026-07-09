@@ -378,7 +378,7 @@ jobs:
         run: |
           if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
           python -m pip install playwright torchcodec soundfile numpy
-          playwright install chromium
+          python -m playwright install --with-deps chromium
 
       - name: Connect to Ollama Brain (for Gemini scene alignment if needed)
         run: |
@@ -580,6 +580,8 @@ jobs:
       - name: Install Python Dependencies
         run: |
           if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
 
       - name: Run Download Worker
         env:
@@ -664,7 +666,7 @@ jobs:
         run: |
           if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
           python -m pip install playwright torchcodec soundfile numpy
-          playwright install chromium
+          python -m playwright install --with-deps chromium
 
       - name: Merge Partial Timelines
         env:
