@@ -192,16 +192,28 @@ jobs:
           echo "READY_TO_RENDER=false" >> $GITHUB_ENV
           
           echo "Probing Google Drive for checkpoints..."
+          VAULT="${{ inputs.topic }}"
+          CHANNEL="${{ inputs.channel_name }}"
+          TIMELINE_JSON=""
           
-          # Try to read master_timeline.json from drive
-          if rclone cat "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ inputs.topic }}/master_timeline.json" > timeline.json 2>/dev/null; then
-             echo "Found master_timeline.json. Analyzing completion status..."
+          # Check public/channels workspace first (modern RESUME path)
+          if rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
+            echo "Found master_timeline.json in public/channels workspace."
+            TIMELINE_JSON="master_timeline.json"
+          # Fall back to legacy to upload path
+          elif rclone cat "mydrive:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
+            echo "Found master_timeline.json in to upload workspace."
+            TIMELINE_JSON="master_timeline.json"
+          fi
+          
+          if [ -n "$TIMELINE_JSON" ]; then
+             echo "Analyzing completion status..."
              
              # Count scenes without downloaded_video
-             MISSING_VIDEOS=$(jq '[.timeline[] | select(.media_path == null and .media_paths == null)] | length' timeline.json)
+             MISSING_VIDEOS=$(jq '[.timeline[] | select(.media_path == null and .media_paths == null)] | length' "$TIMELINE_JSON")
              
              # Count scenes that requested an overlay but haven't downloaded it
-             MISSING_OVERLAYS=$(jq '[.timeline[] | select(.overlay_image_query != null and (.overlay_image_query | ascii_downcase) != "none" and .overlay_image == null)] | length' timeline.json)
+             MISSING_OVERLAYS=$(jq '[.timeline[] | select(.overlay_image_query != null and (.overlay_image_query | ascii_downcase) != "none" and .overlay_image == null)] | length' "$TIMELINE_JSON")
              
              echo "Missing Videos: $MISSING_VIDEOS"
              echo "Missing Overlays: $MISSING_OVERLAYS"
@@ -749,14 +761,32 @@ jobs:
         id: vault_inputs
         run: |
           if [ "${{ inputs.action_type }}" == "RENDER_ONLY" ]; then
-             echo "vault_name=${{ inputs.topic }}" >> $GITHUB_ENV
-             rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ inputs.topic }}/master_timeline.json" .
-             TOTAL=$(jq 'if .metadata.total_duration_ms then (((.metadata.total_duration_ms / 1000) * 30) | round) + 60 else 360 end' master_timeline.json)
-             echo "total_frames=$TOTAL" >> $GITHUB_ENV
+             VAULT_NAME="${{ inputs.topic }}"
           else
-             echo "vault_name=${{ needs.creation_job.outputs.vault_name }}" >> $GITHUB_ENV
-             echo "total_frames=${{ needs.creation_job.outputs.total_frames }}" >> $GITHUB_ENV
+             VAULT_NAME="${{ needs.creation_job.outputs.vault_name }}"
           fi
+          echo "vault_name=$VAULT_NAME" >> $GITHUB_ENV
+          
+          # Always recalculate total_frames directly from Drive — never trust the Python chain
+          # Try public/channels workspace first (RESUME path), then to upload (legacy path)
+          TIMELINE_FOUND=false
+          
+          if rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT_NAME/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
+            TIMELINE_FOUND=true
+            echo "[+] Timeline found in public/channels workspace."
+          elif rclone cat "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT_NAME/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
+            TIMELINE_FOUND=true
+            echo "[+] Timeline found in to upload workspace."
+          fi
+          
+          if [ "$TIMELINE_FOUND" == "true" ]; then
+            TOTAL=$(jq 'if .metadata.total_duration_ms then (((.metadata.total_duration_ms / 1000) * 30) | round) + 60 else 360 end' master_timeline.json)
+            echo "[+] Calculated TOTAL_FRAMES=$TOTAL from master_timeline.json"
+          else
+            TOTAL=360
+            echo "[!] WARNING: master_timeline.json not found on Drive. Defaulting to TOTAL_FRAMES=360."
+          fi
+          echo "total_frames=$TOTAL" >> $GITHUB_ENV
 
       - name: Download Asset Chunk from GDrive
         run: |
@@ -773,6 +803,13 @@ jobs:
         id: calc
         run: |
           TOTAL_FRAMES=${{ env.total_frames }}
+          # Safety guard: if total_frames is 0 or blank, read the timeline that was downloaded
+          if [ -z "$TOTAL_FRAMES" ] || [ "$TOTAL_FRAMES" -le 1 ]; then
+            echo "[!] total_frames is '${TOTAL_FRAMES}' — re-reading from master_timeline.json"
+            TOTAL_FRAMES=$(jq 'if .metadata.total_duration_ms then (((.metadata.total_duration_ms / 1000) * 30) | round) + 60 else 360 end' master_timeline.json 2>/dev/null || echo 360)
+            echo "[+] Recovered TOTAL_FRAMES=$TOTAL_FRAMES"
+          fi
+          
           CHUNK_IDX=${{ matrix.chunk }}
           NUM_CHUNKS=20
           
@@ -785,6 +822,7 @@ jobs:
             END_FRAME=$((START_FRAME + FRAMES_PER_CHUNK - 1))
           fi
           
+          echo "[+] Chunk $CHUNK_IDX: frames $START_FRAME-$END_FRAME (of $TOTAL_FRAMES total)"
           echo "start=$START_FRAME" >> $GITHUB_OUTPUT
           echo "end=$END_FRAME" >> $GITHUB_OUTPUT
 
