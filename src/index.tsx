@@ -314,10 +314,17 @@ const AutomatedDocumentary = () => {
       const startFrame = msToFrames(startMs);
       const audioDurFrames = msToFrames(audioDurMs);
       
+      // Look ahead to the next scene to prevent 1-frame rounding gaps
+      let visualDurFrames = audioDurFrames;
+      if (i < masterJson.timeline.length - 1) {
+          const nextStartMs = masterJson.timeline[i+1].timing?.start_ms || ((i+1) * 3000);
+          const nextStartFrame = msToFrames(nextStartMs);
+          visualDurFrames = nextStartFrame - startFrame;
+      }
+      
       // Cut Director Variables
       const cutStyle = scene.applied_cut_style || 'l_cut';
       const overlapFrames = 0; // Disabled forced drift to keep perfect absolute sync
-      const visualDurFrames = audioDurFrames; 
       
       return {
           ...scene,
@@ -405,8 +412,6 @@ const AutomatedDocumentary = () => {
             );
          })}
       </GlobalCameraProvider>
-
-      <Audio src={staticFile(masterJson.master_audio || 'master_audio.wav')} volume={1.0} />
       
       {/* Inline styles for cross-focus animation engine */}
       <style>{`
