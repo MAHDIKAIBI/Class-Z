@@ -215,7 +215,7 @@ jobs:
           
           # If not completely ready, check if we can at least skip Playwright
           if [ "$READY_TO_RENDER" != "true" ]; then
-             if rclone lsf "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ inputs.topic }}/script.txt" >/dev/null 2>&1; then
+             if rclone lsf "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ inputs.topic }}/script.txt" >/dev/null 2>&1; then
                  echo "Detected script.txt. ChatGPT phase is done. Bypassing Playwright profile."
                  echo "SKIP_PROFILE=true" >> $GITHUB_ENV
              fi
