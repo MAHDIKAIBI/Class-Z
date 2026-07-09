@@ -445,9 +445,10 @@ jobs:
           echo "[+] Fresh session cookies saved to Google Drive."
 
       - name: Upload All Assets to Drive
+        if: always()
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy "public/channels/${{ inputs.channel_name }}/$VAULT" "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 -v
+          rclone copy "public/channels/${{ inputs.channel_name }}/$VAULT" "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 -v || true
           rclone copy "channels/${{ inputs.channel_name }}/to upload/$VAULT" "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" --transfers 16 -v || true
 
   render_matrix:
@@ -456,7 +457,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
     steps:
       - uses: actions/checkout@v4
 
@@ -507,6 +508,8 @@ jobs:
           mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
           rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
           rclone copy "mydrive:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
+          # Remotion's src/ does: import '../master_timeline.json' — must be at repo root
+          cp "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_timeline.json" master_timeline.json
 
       - name: Install Dependencies
         run: npm ci
@@ -516,7 +519,7 @@ jobs:
         run: |
           TOTAL_FRAMES=${{ env.total_frames }}
           CHUNK_IDX=${{ matrix.chunk }}
-          NUM_CHUNKS=15
+          NUM_CHUNKS=20
           
           FRAMES_PER_CHUNK=$((TOTAL_FRAMES / NUM_CHUNKS))
           START_FRAME=$((CHUNK_IDX * FRAMES_PER_CHUNK))
@@ -605,7 +608,7 @@ jobs:
           rclone copy "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
           
           echo "" > file_list.txt
-          for i in {0..14}; do
+          for i in {0..19}; do
             if [ -f "chunks/chunk_$i/chunk_$i.mp4" ]; then
               echo "file 'chunks/chunk_$i/chunk_$i.mp4'" >> file_list.txt
             fi
