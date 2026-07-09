@@ -231,7 +231,7 @@ jobs:
           CLOUD_TTS_PARALLEL: "1"
         run: |
           python -m pip install requests
-          python -u .github/scripts/orchestrator.py
+          xvfb-run -a python -u .github/scripts/orchestrator.py
           
       # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
       # finishes, because The_Brain.py needs Ollama for footage/image search queries.
@@ -543,7 +543,7 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list
           sudo apt-get update || true
-          sudo apt-get install rclone jq ffmpeg sox libsox-fmt-all -y
+          sudo apt-get install rclone jq ffmpeg sox libsox-fmt-all xvfb -y
 
       - name: Configure rclone Silently
         env:
@@ -590,7 +590,7 @@ jobs:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
-        run: python -u download_worker.py
+        run: xvfb-run -a python -u download_worker.py
 
       - name: Upload All Downloaded Assets to Drive
         if: always()
