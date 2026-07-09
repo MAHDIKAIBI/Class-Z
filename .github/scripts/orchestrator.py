@@ -28,7 +28,10 @@ if ready_to_render:
     
     # Try to read the timeline directly from Drive to count frames
     try:
-        subprocess.run(["rclone", "cat", f"mydrive:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=True)
+        result = subprocess.run(["rclone", "cat", f"mydrive:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=False)
+        if result.returncode != 0:
+            subprocess.run(["rclone", "cat", f"mydrive:Colab_AutoVideoCreator/public/channels/{channel_name}/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=True)
+            
         with open("timeline.json", "r") as f:
             data = json.load(f)
             total_ms = data.get("metadata", {}).get("total_duration_ms")
