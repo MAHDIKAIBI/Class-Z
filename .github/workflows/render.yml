@@ -438,6 +438,12 @@ jobs:
           rclone copyto shutdown.txt "mydrive:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
           echo "[+] Ollama server shutdown signal sent."
 
+      - name: Save Fresh Cookies to Drive
+        if: always()
+        run: |
+          rclone copyto gemini_cookies.json "mydrive:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
+          echo "[+] Fresh session cookies saved to Google Drive."
+
       - name: Upload All Assets to Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
@@ -618,3 +624,4 @@ jobs:
         run: |
           echo "Cleaning up raw rendering assets from Google Drive..."
           rclone purge "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
+
