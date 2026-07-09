@@ -862,8 +862,8 @@ jobs:
           
           echo "" > file_list.txt
           for i in {0..19}; do
-            if [ -f "chunks/chunk_$i/chunk_$i.mp4" ]; then
-              echo "file 'chunks/chunk_$i/chunk_$i.mp4'" >> file_list.txt
+            if [ -f "chunks/chunk-$i/chunk_$i.mp4" ]; then
+              echo "file 'chunks/chunk-$i/chunk_$i.mp4'" >> file_list.txt
             fi
           done
           
