@@ -430,7 +430,8 @@ const AutomatedDocumentary = () => {
 };
 
 const RemotionRoot = () => {
-  const totalFrames = Math.max(1, Math.round(((masterJson.metadata?.total_duration_ms || 10000) / 1000) * 30)) + 60;
+  const totalDurationMs = masterJson.meta?.total_duration_ms || masterJson.metadata?.total_duration_ms || 10000;
+  const totalFrames = Math.max(1, Math.round((totalDurationMs / 1000) * 30)) + 60;
   return <Composition id="AutomatedDocumentary" component={AutomatedDocumentary} durationInFrames={totalFrames} fps={30} width={1920} height={1080} />;
 };
 
