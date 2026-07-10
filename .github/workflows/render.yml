@@ -802,13 +802,18 @@ jobs:
       - name: Calculate Chunk Frames
         id: calc
         run: |
-          TOTAL_FRAMES=${{ env.total_frames }}
-          # Safety guard: if total_frames is 0 or blank, read the timeline that was downloaded
-          if [ -z "$TOTAL_FRAMES" ] || [ "$TOTAL_FRAMES" -le 1 ]; then
-            echo "[!] total_frames is '${TOTAL_FRAMES}' — re-reading from master_timeline.json"
-            TOTAL_FRAMES=$(jq 'if .metadata.total_duration_ms then (((.metadata.total_duration_ms / 1000) * 30) | round) + 60 else 360 end' master_timeline.json 2>/dev/null || echo 360)
-            echo "[+] Recovered TOTAL_FRAMES=$TOTAL_FRAMES"
+          # Always read directly from the local master_timeline.json (downloaded in previous step)
+          # Never trust env vars which may have failed to fetch from Drive
+          TOTAL_FRAMES=$(jq 'if .metadata.total_duration_ms then (((.metadata.total_duration_ms / 1000) * 30) | round) + 60 else 0 end' master_timeline.json 2>/dev/null)
+          
+          if [ -z "$TOTAL_FRAMES" ] || [ "$TOTAL_FRAMES" -le 60 ]; then
+            echo "[!] FATAL: Could not read valid total_frames from master_timeline.json (got: '$TOTAL_FRAMES')"
+            echo "[!] Dumping master_timeline.json metadata for debug:"
+            jq '.metadata' master_timeline.json 2>/dev/null || echo "master_timeline.json missing or invalid"
+            exit 1
           fi
+          
+          echo "[+] TOTAL_FRAMES=$TOTAL_FRAMES (read from master_timeline.json)"
           
           CHUNK_IDX=${{ matrix.chunk }}
           NUM_CHUNKS=20
