@@ -670,8 +670,11 @@ jobs:
             --exclude "firefox_stealth_profile/**" --exclude "gemini_selenium_profile/**" \
             --exclude "ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
-          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
-            "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16
+          if rclone lsf "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" >/dev/null 2>&1; then
+            rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16
+          else
+            rclone copy "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16
+          fi
           rclone copy "mydrive:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
 
       - name: Install Python Dependencies
@@ -791,7 +794,11 @@ jobs:
       - name: Download Asset Chunk from GDrive
         run: |
           mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
-          rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
+          if rclone lsf "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" >/dev/null 2>&1; then
+            rclone copy "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
+          else
+            rclone copy "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
+          fi
           rclone copy "mydrive:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
           # Remotion's src/ does: import '../master_timeline.json' — must be at repo root
           cp "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_timeline.json" master_timeline.json
