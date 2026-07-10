@@ -34,7 +34,7 @@ if ready_to_render:
             
         with open("timeline.json", "r") as f:
             data = json.load(f)
-            total_ms = data.get("metadata", {}).get("total_duration_ms")
+            total_ms = data.get("meta", data.get("metadata", {})).get("total_duration_ms")
             if total_ms:
                 total_frames = str(round((total_ms / 1000) * 30) + 60)
             else:
@@ -143,7 +143,7 @@ total_frames = "0"
 try:
     with open(f"public/channels/{channel_name}/{vault_name}/master_timeline.json", "r") as f:
         data = json.load(f)
-        total_ms = data.get("metadata", {}).get("total_duration_ms")
+        total_ms = data.get("meta", data.get("metadata", {})).get("total_duration_ms")
         if total_ms:
             total_frames = str(round((total_ms / 1000) * 30) + 60)
         else:
