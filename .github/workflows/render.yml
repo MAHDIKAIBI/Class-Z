@@ -36,7 +36,6 @@ jobs:
       - name: Install System Dependencies
         run: sudo apt-get update && sudo apt-get install rclone jq curl wget -y
 
-
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
@@ -181,7 +180,6 @@ jobs:
 
 
 
-
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
@@ -306,41 +304,24 @@ jobs:
           sudo apt-get update -o Acquire::AllowInsecureRepositories=false || sudo apt-get update --allow-unauthenticated || true
           sudo apt-get install rclone jq ffmpeg sox libsox-fmt-all -y
 
-
+      - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
           mkdir -p ~/.config/rclone
-          
-          # Engine Token
-          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
-          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
-          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
-          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
-          
-          # Data Token
-          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
-          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
-          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
-          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
-          
+          ACCESS_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.token')
+          REFRESH_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.refresh_token')
+          EXPIRY=$(echo $G_DRIVE_TOKEN | jq -r '.expiry')
+          RCLONE_TOKEN="{\"access_token\":\"$ACCESS_TOKEN\",\"token_type\":\"Bearer\",\"refresh_token\":\"$REFRESH_TOKEN\",\"expiry\":\"$EXPIRY\"}"
           cat << EOF > ~/.config/rclone/rclone.conf
-          [engine]
+          [mydrive]
           type = drive
           client_id = $CLIENT_ID
           client_secret = $CLIENT_SECRET
           scope = drive
-          token = $ENGINE_TOKEN
-          
-          [data]
-          type = drive
-          client_id = $CLIENT_ID
-          client_secret = $CLIENT_SECRET
-          scope = drive
-          token = $DATA_TOKEN
+          token = $RCLONE_TOKEN
           EOF
 
       - name: Download Scripts & Workspace
@@ -410,41 +391,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw -y
 
-
+      - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
           mkdir -p ~/.config/rclone
-          
-          # Engine Token
-          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
-          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
-          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
-          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
-          
-          # Data Token
-          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
-          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
-          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
-          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
-          
+          ACCESS_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.token')
+          REFRESH_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.refresh_token')
+          EXPIRY=$(echo $G_DRIVE_TOKEN | jq -r '.expiry')
+          RCLONE_TOKEN="{\"access_token\":\"$ACCESS_TOKEN\",\"token_type\":\"Bearer\",\"refresh_token\":\"$REFRESH_TOKEN\",\"expiry\":\"$EXPIRY\"}"
           cat << EOF > ~/.config/rclone/rclone.conf
-          [engine]
+          [mydrive]
           type = drive
           client_id = $CLIENT_ID
           client_secret = $CLIENT_SECRET
           scope = drive
-          token = $ENGINE_TOKEN
-          
-          [data]
-          type = drive
-          client_id = $CLIENT_ID
-          client_secret = $CLIENT_SECRET
-          scope = drive
-          token = $DATA_TOKEN
+          token = $RCLONE_TOKEN
           EOF
 
       - name: Download Scripts & All WAV Chunks
@@ -526,41 +490,24 @@ jobs:
       - name: Install System Dependencies
         run: sudo apt-get install rclone jq curl -y
 
-
+      - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
           mkdir -p ~/.config/rclone
-          
-          # Engine Token
-          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
-          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
-          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
-          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
-          
-          # Data Token
-          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
-          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
-          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
-          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
-          
+          ACCESS_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.token')
+          REFRESH_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.refresh_token')
+          EXPIRY=$(echo $G_DRIVE_TOKEN | jq -r '.expiry')
+          RCLONE_TOKEN="{\"access_token\":\"$ACCESS_TOKEN\",\"token_type\":\"Bearer\",\"refresh_token\":\"$REFRESH_TOKEN\",\"expiry\":\"$EXPIRY\"}"
           cat << EOF > ~/.config/rclone/rclone.conf
-          [engine]
+          [mydrive]
           type = drive
           client_id = $CLIENT_ID
           client_secret = $CLIENT_SECRET
           scope = drive
-          token = $ENGINE_TOKEN
-          
-          [data]
-          type = drive
-          client_id = $CLIENT_ID
-          client_secret = $CLIENT_SECRET
-          scope = drive
-          token = $DATA_TOKEN
+          token = $RCLONE_TOKEN
           EOF
 
       - name: Boot Ollama + Register URL to Drive
@@ -642,41 +589,24 @@ jobs:
           sudo apt-get update || true
           sudo apt-get install rclone jq ffmpeg sox libsox-fmt-all xvfb -y
 
-
+      - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
           mkdir -p ~/.config/rclone
-          
-          # Engine Token
-          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
-          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
-          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
-          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
-          
-          # Data Token
-          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
-          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
-          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
-          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
-          
+          ACCESS_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.token')
+          REFRESH_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.refresh_token')
+          EXPIRY=$(echo $G_DRIVE_TOKEN | jq -r '.expiry')
+          RCLONE_TOKEN="{\"access_token\":\"$ACCESS_TOKEN\",\"token_type\":\"Bearer\",\"refresh_token\":\"$REFRESH_TOKEN\",\"expiry\":\"$EXPIRY\"}"
           cat << EOF > ~/.config/rclone/rclone.conf
-          [engine]
+          [mydrive]
           type = drive
           client_id = $CLIENT_ID
           client_secret = $CLIENT_SECRET
           scope = drive
-          token = $ENGINE_TOKEN
-          
-          [data]
-          type = drive
-          client_id = $CLIENT_ID
-          client_secret = $CLIENT_SECRET
-          scope = drive
-          token = $DATA_TOKEN
+          token = $RCLONE_TOKEN
           EOF
 
       - name: Download All Scripts & Workspace from Drive
@@ -737,41 +667,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd -y
 
-
+      - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
           mkdir -p ~/.config/rclone
-          
-          # Engine Token
-          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
-          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
-          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
-          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
-          
-          # Data Token
-          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
-          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
-          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
-          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
-          
+          ACCESS_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.token')
+          REFRESH_TOKEN=$(echo $G_DRIVE_TOKEN | jq -r '.refresh_token')
+          EXPIRY=$(echo $G_DRIVE_TOKEN | jq -r '.expiry')
+          RCLONE_TOKEN="{\"access_token\":\"$ACCESS_TOKEN\",\"token_type\":\"Bearer\",\"refresh_token\":\"$REFRESH_TOKEN\",\"expiry\":\"$EXPIRY\"}"
           cat << EOF > ~/.config/rclone/rclone.conf
-          [engine]
+          [mydrive]
           type = drive
           client_id = $CLIENT_ID
           client_secret = $CLIENT_SECRET
           scope = drive
-          token = $ENGINE_TOKEN
-          
-          [data]
-          type = drive
-          client_id = $CLIENT_ID
-          client_secret = $CLIENT_SECRET
-          scope = drive
-          token = $DATA_TOKEN
+          token = $RCLONE_TOKEN
           EOF
 
       - name: Configure Git for auto-push
@@ -853,7 +766,6 @@ jobs:
 
       - name: Install rclone
         run: sudo apt-get install rclone jq -y
-
 
       - name: Configure rclone Silently
         env:
@@ -1002,7 +914,6 @@ jobs:
         run: |
           sudo apt-get install rclone jq ffmpeg -y
           python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
-
 
       - name: Configure rclone Silently
         env:
