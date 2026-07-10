@@ -717,6 +717,7 @@ jobs:
           rclone copy "channels/${{ inputs.channel_name }}/to upload/$VAULT" \
             "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" \
             --transfers 16 -v || true
+          rclone copy "public/audio" "mydrive:Colab_AutoVideoCreator/public/audio" --transfers 16 -v || true
 
   # ─────────────────────────────────────────────────────────────────────────────
   # PHASE 3: render_matrix — unchanged, now depends on brain_finish_job
