@@ -675,8 +675,7 @@ jobs:
           else
             rclone copy "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16
           fi
-          rclone copy "mydrive:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16 || true
-          rclone copy "mydrive:Colab_AutoVideoCreator/public/sfx" "public/sfx" --transfers 16 || true
+          rclone copy "mydrive:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
 
       - name: Install Python Dependencies
         run: |
@@ -719,7 +718,6 @@ jobs:
             "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" \
             --transfers 16 -v || true
           rclone copy "public/audio" "mydrive:Colab_AutoVideoCreator/public/audio" --transfers 16 -v || true
-          rclone copy "public/sfx" "mydrive:Colab_AutoVideoCreator/public/sfx" --transfers 16 -v || true
 
   # ─────────────────────────────────────────────────────────────────────────────
   # PHASE 3: render_matrix — unchanged, now depends on brain_finish_job
