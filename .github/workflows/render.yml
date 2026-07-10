@@ -38,7 +38,7 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -166,7 +166,7 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -274,7 +274,7 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -361,7 +361,7 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -460,7 +460,7 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -559,7 +559,7 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -637,7 +637,7 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -737,7 +737,7 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -869,7 +869,7 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          G_DRIVE_TOKEN: ${{ secrets.G_DRIVE_TOKEN }}
+          G_DRIVE_TOKEN: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -948,3 +948,4 @@ jobs:
           echo "Keeping rendering assets on Google Drive for future edits/resumes."
           # Clean up ollama pool directory only
           rclone purge "mydrive:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
+

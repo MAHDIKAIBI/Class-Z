@@ -1,0 +1,43 @@
+name: Auto-Pilot Dispatcher
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+    - cron: '0 14 * * *'
+  workflow_dispatch:
+    inputs:
+      force_channel:
+        description: 'Force dispatch a specific channel'
+        required: false
+        type: choice
+        options:
+          - ""
+          - "ClassZ"
+          - "Midi-Fi"
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine Channel
+        id: channel
+        run: |
+          FORCE="${{ inputs.force_channel }}"
+          if [ -n "$FORCE" ]; then
+            echo "channel=$FORCE" >> $GITHUB_OUTPUT
+          else
+            CRON="${{ github.event.schedule }}"
+            if [ "$CRON" = "0 4 * * *" ]; then
+              echo "channel=ClassZ" >> $GITHUB_OUTPUT
+            else
+              echo "channel=Midi-Fi" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Trigger Pipeline
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/render.yml/dispatches \
+            -d '{"ref":"main","inputs":{"action_type":"CREATE_AUTOMATIC","channel_name":"${{ steps.channel.outputs.channel }}","topic":""}}'
