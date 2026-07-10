@@ -945,7 +945,9 @@ jobs:
           
       - name: Clean Up Public Assets Folder
         run: |
-          echo "Keeping rendering assets on Google Drive for future edits/resumes."
-          # Clean up ollama pool directory only
+          echo "Purging raw rendering assets from Google Drive to save space..."
+          rclone purge "mydrive:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
+          
+          # Clean up ollama pool directory
           rclone purge "mydrive:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
 
