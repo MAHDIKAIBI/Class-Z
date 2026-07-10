@@ -930,6 +930,20 @@ jobs:
           echo "Saving final video to Google Drive 'to upload' folder..."
           rclone copy "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4" "mydrive:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" -v
           
+      - name: Upload Video to YouTube API
+        env:
+          AUTO_TARGET_FOLDER: "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
+        run: |
+          echo "Downloading OAuth Token from private Google Drive..."
+          mkdir -p tokens
+          rclone copy "mydrive:Colab_AutoVideoCreator/tokens" "tokens" -v
+          
+          echo "Installing Google API requirements..."
+          pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+          
+          echo "Running YouTube Uploader..."
+          python youtube_uploader.py
+          
       - name: Clean Up Public Assets Folder
         run: |
           echo "Keeping rendering assets on Google Drive for future edits/resumes."
