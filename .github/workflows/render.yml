@@ -170,13 +170,15 @@ jobs:
           key: apt-brain-${{ runner.os }}-firefox
           restore-keys: apt-brain-${{ runner.os }}-
 
+      - name: Setup FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
           sudo add-apt-repository ppa:mozillateam/ppa -y
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
           sudo apt-get update
-          sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y
+          sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y
 
 
 
@@ -296,13 +298,15 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Setup FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
       - name: Install System Dependencies
         run: |
           # Remove broken Microsoft repos that cause apt-get update to fail on ubuntu-latest
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list
           sudo apt-get update -o Acquire::AllowInsecureRepositories=false || sudo apt-get update --allow-unauthenticated || true
-          sudo apt-get install rclone jq ffmpeg sox libsox-fmt-all -y
+          sudo apt-get install rclone jq sox libsox-fmt-all -y
 
       - name: Configure rclone Silently
         env:
@@ -400,13 +404,15 @@ jobs:
           key: apt-brain-prep-${{ runner.os }}-firefox
           restore-keys: apt-brain-prep-${{ runner.os }}-
 
+      - name: Setup FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
           sudo add-apt-repository ppa:mozillateam/ppa -y
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
           sudo apt-get update
-          sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw -y
+          sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw -y
 
       - name: Configure rclone Silently
         env:
@@ -627,12 +633,14 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Setup FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
       - name: Install System Dependencies
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list
           sudo apt-get update || true
-          sudo apt-get install rclone jq ffmpeg sox libsox-fmt-all xvfb -y
+          sudo apt-get install rclone jq sox libsox-fmt-all xvfb -y
 
       - name: Configure rclone Silently
         env:
@@ -721,13 +729,15 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Setup FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
           sudo add-apt-repository ppa:mozillateam/ppa -y
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
           sudo apt-get update
-          sudo apt-get install rclone jq ffmpeg firefox xvfb xclip sox libsox-fmt-all zstd -y
+          sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd -y
 
       - name: Configure rclone Silently
         env:
@@ -1014,9 +1024,12 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Setup FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+
       - name: Install dependencies
         run: |
-          sudo apt-get install rclone jq ffmpeg -y
+          sudo apt-get install rclone jq -y
           python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
       - name: Configure rclone Silently
