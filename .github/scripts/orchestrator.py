@@ -28,9 +28,9 @@ if ready_to_render:
     
     # Try to read the timeline directly from Drive to count frames
     try:
-        result = subprocess.run(["rclone", "cat", f"mydrive:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=False)
+        result = subprocess.run(["rclone", "cat", f"data:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=False)
         if result.returncode != 0:
-            subprocess.run(["rclone", "cat", f"mydrive:Colab_AutoVideoCreator/public/channels/{channel_name}/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=True)
+            subprocess.run(["rclone", "cat", f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=True)
             
         with open("timeline.json", "r") as f:
             data = json.load(f)
@@ -51,7 +51,7 @@ if ready_to_render:
     sys.exit(0)
 
 rclone_cmd = [
-    "rclone", "copy", f"mydrive:Colab_AutoVideoCreator", ".",
+    "rclone", "copy", f"engine:Colab_AutoVideoCreator", ".",
     "--exclude", "node_modules/**", "--exclude", "out/**", "--exclude", "src/**", "--exclude", "*.mp4", "--exclude", "requirements.txt",
     "--exclude", "DELETE_THIS_WHEN_SELLING_firefox_profile/**", "--exclude", "firefox_stealth_profile/**", "--exclude", "gemini_selenium_profile/**", "--exclude", "ChatTTS_Models/**",
     "--transfers", "16", "--checkers", "16", "--stats", "10s", "-v"
@@ -118,7 +118,7 @@ try:
     ws_path = f"public/channels/{channel_name}/{vault_name}"
     if os.path.isdir(ws_path):
         subprocess.run(["rclone", "copy", ws_path,
-                        f"mydrive:Colab_AutoVideoCreator/public/channels/{channel_name}/{vault_name}",
+                        f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{vault_name}",
                         "--transfers", "16", "-v"], check=False)
         print(f"[+] Uploaded public workspace to Drive.")
 
@@ -126,14 +126,14 @@ try:
     vault_meta = f"channels/{channel_name}/to upload/{vault_name}"
     if os.path.isdir(vault_meta):
         subprocess.run(["rclone", "copy", vault_meta,
-                        f"mydrive:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{vault_name}",
+                        f"data:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{vault_name}",
                         "--transfers", "16", "-v"], check=False)
         print(f"[+] Uploaded vault metadata to Drive.")
 
     # Sync topics.txt if it was modified
     if os.path.exists("topics.txt"):
         subprocess.run(["rclone", "copyto", "topics.txt",
-                        "mydrive:Colab_AutoVideoCreator/topics.txt"], check=False)
+                        "data:Colab_AutoVideoCreator/topics.txt"], check=False)
         print(f"[+] Synced topics.txt to Drive.")
 except Exception as e:
     print(f"[!] Drive sync warning: {e}")
