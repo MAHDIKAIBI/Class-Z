@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import json
+import re
 
 action_type = os.environ.get("ACTION_TYPE")
 channel_name = os.environ.get("CHANNEL_NAME")
@@ -23,7 +24,7 @@ if ready_to_render:
     print("          Exiting successfully to trigger the 18-Machine Render Matrix!")
     
     # We still need to write output variables so Job 2 knows what to render
-    vault_name = topic
+    vault_name = re.sub(r'[\\/*?:"<>|]', '', topic).strip()
     total_frames = "0"
     
     # Try to read the timeline directly from Drive to count frames
@@ -124,7 +125,7 @@ except subprocess.CalledProcessError as e:
 # 5. Read the actual vault that was processed (written by state_machine_scriptwriter.py)
 # state_machine_scriptwriter.py writes generated_vault.txt the moment it locks in its vault.
 # This is the single source of truth — no guesswork, no filesystem scanning.
-vault_name = topic  # default fallback if file doesn't exist
+vault_name = re.sub(r'[\\/*?:"<>|]', '', topic).strip()  # default fallback if file doesn't exist
 manifest_path = "generated_vault.txt"
 if os.path.exists(manifest_path):
     with open(manifest_path, "r", encoding="utf-8") as f:
