@@ -238,7 +238,7 @@ jobs:
           echo "READY_TO_RENDER=false" >> $GITHUB_ENV
           
           echo "Probing Google Drive for checkpoints..."
-          VAULT="${{ inputs.topic }}"
+          VAULT='${{ inputs.topic }}'
           CHANNEL="${{ inputs.channel_name }}"
           TIMELINE_JSON=""
           
@@ -371,7 +371,7 @@ jobs:
 
       - name: Download Scripts & Workspace
         run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          VAULT='${{ needs.creation_job.outputs.vault_name }}'
           CHANNEL="${{ inputs.channel_name }}"
           # Only download what tts_worker.py actually needs — no mp4s, no bulk folders
           rclone copy "engine:Colab_AutoVideoCreator" . \
@@ -403,7 +403,7 @@ jobs:
 
       - name: Upload WAV Chunks to Drive
         run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          VAULT='${{ needs.creation_job.outputs.vault_name }}'
           rclone copy "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --include "*.wav" -v
 
 
@@ -491,7 +491,7 @@ jobs:
 
       - name: Download Scripts & All WAV Chunks
         run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          VAULT='${{ needs.creation_job.outputs.vault_name }}'
           rclone copy "engine:Colab_AutoVideoCreator" . --exclude "/node_modules/**" --exclude "/out/**" --exclude "*.mp4" --exclude "requirements.txt" --exclude "/DELETE_THIS_WHEN_SELLING_firefox_profile/**" --exclude "/firefox_stealth_profile/**" --exclude "/gemini_selenium_profile/**" --exclude "/ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
           rclone copy "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT"
@@ -542,7 +542,7 @@ jobs:
       - name: Upload Timeline to Drive
         if: always()
         run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          VAULT='${{ needs.creation_job.outputs.vault_name }}'
           rclone copy "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 -v || true
           rclone copy "channels/${{ inputs.channel_name }}/to upload/$VAULT" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" --transfers 16 -v || true
 
@@ -732,7 +732,7 @@ jobs:
 
       - name: Download All Scripts & Workspace from Drive
         run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          VAULT='${{ needs.creation_job.outputs.vault_name }}'
           rclone copy "engine:Colab_AutoVideoCreator" . \
             --exclude "/node_modules/**" --exclude "/out/**" --exclude "*.mp4" \
             --exclude "requirements.txt" --exclude "/DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
@@ -760,7 +760,7 @@ jobs:
       - name: Upload All Downloaded Assets to Drive
         if: always()
         run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          VAULT='${{ needs.creation_job.outputs.vault_name }}'
           rclone copy "public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
             "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
             --transfers 16 -v || true
@@ -768,7 +768,7 @@ jobs:
       - name: Upload Partial Timeline to Drive
         if: always()
         run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          VAULT='${{ needs.creation_job.outputs.vault_name }}'
           PARTIAL="partial_timeline_${{ matrix.worker }}.json"
           if [ -f "$PARTIAL" ]; then
             rclone copy "$PARTIAL" \
@@ -861,7 +861,7 @@ jobs:
 
       - name: Download All Scripts, Assets & Workspace from Drive
         run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          VAULT='${{ needs.creation_job.outputs.vault_name }}'
           rclone copy "engine:Colab_AutoVideoCreator" . \
             --exclude "/node_modules/**" --exclude "/out/**" --exclude "*.mp4" \
             --exclude "requirements.txt" --exclude "/DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
@@ -927,7 +927,7 @@ jobs:
       - name: Upload Final Assets to Drive
         if: always()
         run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          VAULT='${{ needs.creation_job.outputs.vault_name }}'
           rclone copy "public/channels/${{ inputs.channel_name }}/$VAULT" \
             "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
             --transfers 16 -v || true
