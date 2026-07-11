@@ -171,7 +171,22 @@ jobs:
           restore-keys: apt-brain-${{ runner.os }}-
 
       - name: Setup FFmpeg
-        run: sudo apt-get install -y ffmpeg
+          run: |
+            # Try fast static build first, fall back to apt-get if unavailable
+            if wget -q --timeout=20 -O /tmp/ffmpeg.tar.xz \
+              "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" 2>/dev/null; then
+              mkdir -p /tmp/ffmpeg_static
+              tar xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_static --strip-components=1
+              sudo mv /tmp/ffmpeg_static/ffmpeg /usr/local/bin/ffmpeg || true
+              sudo mv /tmp/ffmpeg_static/ffprobe /usr/local/bin/ffprobe || true
+              echo "[+] FFmpeg installed from static build"
+            else
+              echo "[!] Static build unavailable, falling back to apt..."
+              for i in 1 2 3; do
+                sudo apt-get install -y ffmpeg && break || (echo "Retry $i..." && sleep 10)
+              done
+            fi
+            ffmpeg -version
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -299,7 +314,22 @@ jobs:
           python-version: '3.10'
 
       - name: Setup FFmpeg
-        run: sudo apt-get install -y ffmpeg
+          run: |
+            # Try fast static build first, fall back to apt-get if unavailable
+            if wget -q --timeout=20 -O /tmp/ffmpeg.tar.xz \
+              "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" 2>/dev/null; then
+              mkdir -p /tmp/ffmpeg_static
+              tar xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_static --strip-components=1
+              sudo mv /tmp/ffmpeg_static/ffmpeg /usr/local/bin/ffmpeg || true
+              sudo mv /tmp/ffmpeg_static/ffprobe /usr/local/bin/ffprobe || true
+              echo "[+] FFmpeg installed from static build"
+            else
+              echo "[!] Static build unavailable, falling back to apt..."
+              for i in 1 2 3; do
+                sudo apt-get install -y ffmpeg && break || (echo "Retry $i..." && sleep 10)
+              done
+            fi
+            ffmpeg -version
       - name: Install System Dependencies
         run: |
           # Remove broken Microsoft repos that cause apt-get update to fail on ubuntu-latest
@@ -407,7 +437,22 @@ jobs:
           restore-keys: apt-brain-prep-${{ runner.os }}-
 
       - name: Setup FFmpeg
-        run: sudo apt-get install -y ffmpeg
+          run: |
+            # Try fast static build first, fall back to apt-get if unavailable
+            if wget -q --timeout=20 -O /tmp/ffmpeg.tar.xz \
+              "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" 2>/dev/null; then
+              mkdir -p /tmp/ffmpeg_static
+              tar xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_static --strip-components=1
+              sudo mv /tmp/ffmpeg_static/ffmpeg /usr/local/bin/ffmpeg || true
+              sudo mv /tmp/ffmpeg_static/ffprobe /usr/local/bin/ffprobe || true
+              echo "[+] FFmpeg installed from static build"
+            else
+              echo "[!] Static build unavailable, falling back to apt..."
+              for i in 1 2 3; do
+                sudo apt-get install -y ffmpeg && break || (echo "Retry $i..." && sleep 10)
+              done
+            fi
+            ffmpeg -version
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -636,7 +681,22 @@ jobs:
           python-version: '3.10'
 
       - name: Setup FFmpeg
-        run: sudo apt-get install -y ffmpeg
+          run: |
+            # Try fast static build first, fall back to apt-get if unavailable
+            if wget -q --timeout=20 -O /tmp/ffmpeg.tar.xz \
+              "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" 2>/dev/null; then
+              mkdir -p /tmp/ffmpeg_static
+              tar xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_static --strip-components=1
+              sudo mv /tmp/ffmpeg_static/ffmpeg /usr/local/bin/ffmpeg || true
+              sudo mv /tmp/ffmpeg_static/ffprobe /usr/local/bin/ffprobe || true
+              echo "[+] FFmpeg installed from static build"
+            else
+              echo "[!] Static build unavailable, falling back to apt..."
+              for i in 1 2 3; do
+                sudo apt-get install -y ffmpeg && break || (echo "Retry $i..." && sleep 10)
+              done
+            fi
+            ffmpeg -version
       - name: Install System Dependencies
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
@@ -732,7 +792,22 @@ jobs:
           python-version: '3.10'
 
       - name: Setup FFmpeg
-        run: sudo apt-get install -y ffmpeg
+          run: |
+            # Try fast static build first, fall back to apt-get if unavailable
+            if wget -q --timeout=20 -O /tmp/ffmpeg.tar.xz \
+              "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" 2>/dev/null; then
+              mkdir -p /tmp/ffmpeg_static
+              tar xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_static --strip-components=1
+              sudo mv /tmp/ffmpeg_static/ffmpeg /usr/local/bin/ffmpeg || true
+              sudo mv /tmp/ffmpeg_static/ffprobe /usr/local/bin/ffprobe || true
+              echo "[+] FFmpeg installed from static build"
+            else
+              echo "[!] Static build unavailable, falling back to apt..."
+              for i in 1 2 3; do
+                sudo apt-get install -y ffmpeg && break || (echo "Retry $i..." && sleep 10)
+              done
+            fi
+            ffmpeg -version
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -1027,7 +1102,22 @@ jobs:
           python-version: '3.10'
 
       - name: Setup FFmpeg
-        run: sudo apt-get install -y ffmpeg
+          run: |
+            # Try fast static build first, fall back to apt-get if unavailable
+            if wget -q --timeout=20 -O /tmp/ffmpeg.tar.xz \
+              "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz" 2>/dev/null; then
+              mkdir -p /tmp/ffmpeg_static
+              tar xf /tmp/ffmpeg.tar.xz -C /tmp/ffmpeg_static --strip-components=1
+              sudo mv /tmp/ffmpeg_static/ffmpeg /usr/local/bin/ffmpeg || true
+              sudo mv /tmp/ffmpeg_static/ffprobe /usr/local/bin/ffprobe || true
+              echo "[+] FFmpeg installed from static build"
+            else
+              echo "[!] Static build unavailable, falling back to apt..."
+              for i in 1 2 3; do
+                sudo apt-get install -y ffmpeg && break || (echo "Retry $i..." && sleep 10)
+              done
+            fi
+            ffmpeg -version
 
       - name: Install dependencies
         run: |
