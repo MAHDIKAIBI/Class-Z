@@ -537,6 +537,7 @@ jobs:
         if: always()
         run: |
           rclone copyto gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
+          rclone copyto motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
 
       - name: Upload Timeline to Drive
         if: always()
@@ -921,6 +922,7 @@ jobs:
         if: always()
         run: |
           rclone copyto gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
+          rclone copyto motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
 
       - name: Upload Final Assets to Drive
         if: always()
