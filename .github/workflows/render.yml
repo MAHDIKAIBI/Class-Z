@@ -356,10 +356,12 @@ jobs:
             --include "requirements.txt" \
             --include "gemini_cookies.json" \
             --transfers 8
-          mkdir -p "public/channels/$CHANNEL/$VAULT"
-          # Download the script + any already-generated WAV chunks
-          rclone copy "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" \
-            --include "script.txt" --include "*.wav" --transfers 16
+          if [ -n "$VAULT" ]; then
+            mkdir -p "public/channels/$CHANNEL/$VAULT"
+            # Download the script + any already-generated WAV chunks
+            rclone copy "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" \
+              --include "script.txt" --include "*.wav" --transfers 16
+          fi
           # Download master reference voice if present
           rclone copy "data:Colab_AutoVideoCreator/public/master_voice.wav" "public/" || true
 
