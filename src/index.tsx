@@ -389,9 +389,19 @@ const AutomatedDocumentary = () => {
                             <MotionGraphicsRouter graphics={scene.graphics} sceneIndex={index} variants={scene.editorialVariants} />
                         </Sequence>
                         
-                        {scene.overlay_image && (
-                            <CinematicOverlay src={scene.overlay_image} durationInFrames={scene.visualDurFrames} />
-                        )}
+                        {scene.overlay_image && (() => {
+                              // If Gemini aligned the overlay to a specific trigger word, we delay the animation
+                              const overlayStartMs = scene.overlay_start_ms || scene.timing.start_ms;
+                              const delayMs = Math.max(0, overlayStartMs - scene.timing.start_ms);
+                              const delayFrames = Math.floor((delayMs / 1000) * fps);
+                              const actualDur = Math.max(1, scene.visualDurFrames - delayFrames);
+                              
+                              return (
+                                  <Sequence from={delayFrames} durationInFrames={actualDur}>
+                                      <CinematicOverlay src={scene.overlay_image} durationInFrames={actualDur} />
+                                  </Sequence>
+                              );
+                          })()}
                         
                         {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
                             <CaptionDirector 
