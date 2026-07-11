@@ -81,7 +81,7 @@ jobs:
         run: |
           echo "READY_TO_RENDER=false" >> $GITHUB_ENV
           
-          TOPIC="${{ inputs.topic }}"
+          TOPIC="$INPUT_TOPIC"
           if [ -n "$TOPIC" ]; then
             if rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$TOPIC/master_timeline.json" > timeline.json 2>/dev/null; then
                MISSING_VIDEOS=$(jq '[.timeline[] | select(.media_path == null and .media_paths == null)] | length' timeline.json)
@@ -276,7 +276,7 @@ jobs:
           
           # If not completely ready, check if we can at least skip Playwright
           if [ "$READY_TO_RENDER" != "true" ]; then
-             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ inputs.topic }}/script.txt" >/dev/null 2>&1; then
+             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$INPUT_TOPIC/script.txt" >/dev/null 2>&1; then
                  echo "Detected script.txt. ChatGPT phase is done. Bypassing Playwright profile."
                  echo "SKIP_PROFILE=true" >> $GITHUB_ENV
              fi
@@ -1006,7 +1006,7 @@ jobs:
         id: vault_inputs
         run: |
           if [ "${{ inputs.action_type }}" == "RENDER_ONLY" ]; then
-             VAULT_NAME="${{ inputs.topic }}"
+             VAULT_NAME="$INPUT_TOPIC"
           else
              VAULT_NAME="${{ needs.creation_job.outputs.vault_name }}"
           fi
@@ -1163,7 +1163,7 @@ jobs:
         id: vault_inputs
         run: |
           if [ "${{ inputs.action_type }}" == "RENDER_ONLY" ]; then
-             echo "vault_name=${{ inputs.topic }}" >> $GITHUB_ENV
+             echo "vault_name=$INPUT_TOPIC" >> $GITHUB_ENV
           else
              echo "vault_name=${{ needs.creation_job.outputs.vault_name }}" >> $GITHUB_ENV
           fi
