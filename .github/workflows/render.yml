@@ -1224,3 +1224,42 @@ jobs:
           # Clean up ollama pool directory
           rclone purge "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
 
+  global_cleanup:
+    name: Global Cleanup (Failsafe)
+    needs: [stitch_and_upload]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install rclone jq -y
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          cat <<EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          scope = drive
+          token = {"access_token":"$E_ACCESS","token_type":"Bearer","refresh_token":"$E_REFRESH","expiry":"$E_EXPIRY"}
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          
+          [data]
+          type = drive
+          scope = drive
+          token = {"access_token":"$E_ACCESS","token_type":"Bearer","refresh_token":"$E_REFRESH","expiry":"$E_EXPIRY"}
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          EOF
+      - name: Send Global Failsafe Shutdown Signal to Ollama
+        run: |
+          echo "shutdown" > shutdown.txt
+          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
+          echo "[+] Failsafe shutdown signal sent!"
