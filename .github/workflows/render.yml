@@ -170,20 +170,20 @@ jobs:
           key: apt-brain-${{ runner.os }}-firefox
           restore-keys: apt-brain-${{ runner.os }}-
 
-        - name: Setup FFmpeg (attempt 1 - johnvansickle)
-          id: ffmpeg1
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 1 - johnvansickle)
+        id: ffmpeg1
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
-          id: ffmpeg2
-          if: steps.ffmpeg1.outcome == 'failure'
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
+        id: ffmpeg2
+        if: steps.ffmpeg1.outcome == 'failure'
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (fallback - apt)
-          if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
-          run: sudo apt-get install -y ffmpeg
+      - name: Setup FFmpeg (fallback - apt)
+        if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
+        run: sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -310,20 +310,20 @@ jobs:
         with:
           python-version: '3.10'
 
-        - name: Setup FFmpeg (attempt 1 - johnvansickle)
-          id: ffmpeg1
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 1 - johnvansickle)
+        id: ffmpeg1
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
-          id: ffmpeg2
-          if: steps.ffmpeg1.outcome == 'failure'
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
+        id: ffmpeg2
+        if: steps.ffmpeg1.outcome == 'failure'
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (fallback - apt)
-          if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
-          run: sudo apt-get install -y ffmpeg
+      - name: Setup FFmpeg (fallback - apt)
+        if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
+        run: sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           # Remove broken Microsoft repos that cause apt-get update to fail on ubuntu-latest
@@ -430,20 +430,20 @@ jobs:
           key: apt-brain-prep-${{ runner.os }}-firefox
           restore-keys: apt-brain-prep-${{ runner.os }}-
 
-        - name: Setup FFmpeg (attempt 1 - johnvansickle)
-          id: ffmpeg1
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 1 - johnvansickle)
+        id: ffmpeg1
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
-          id: ffmpeg2
-          if: steps.ffmpeg1.outcome == 'failure'
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
+        id: ffmpeg2
+        if: steps.ffmpeg1.outcome == 'failure'
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (fallback - apt)
-          if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
-          run: sudo apt-get install -y ffmpeg
+      - name: Setup FFmpeg (fallback - apt)
+        if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
+        run: sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -671,20 +671,20 @@ jobs:
         with:
           python-version: '3.10'
 
-        - name: Setup FFmpeg (attempt 1 - johnvansickle)
-          id: ffmpeg1
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 1 - johnvansickle)
+        id: ffmpeg1
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
-          id: ffmpeg2
-          if: steps.ffmpeg1.outcome == 'failure'
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
+        id: ffmpeg2
+        if: steps.ffmpeg1.outcome == 'failure'
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (fallback - apt)
-          if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
-          run: sudo apt-get install -y ffmpeg
+      - name: Setup FFmpeg (fallback - apt)
+        if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
+        run: sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
@@ -793,20 +793,20 @@ jobs:
         with:
           python-version: '3.10'
 
-        - name: Setup FFmpeg (attempt 1 - johnvansickle)
-          id: ffmpeg1
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 1 - johnvansickle)
+        id: ffmpeg1
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
-          id: ffmpeg2
-          if: steps.ffmpeg1.outcome == 'failure'
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
+        id: ffmpeg2
+        if: steps.ffmpeg1.outcome == 'failure'
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (fallback - apt)
-          if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
-          run: sudo apt-get install -y ffmpeg
+      - name: Setup FFmpeg (fallback - apt)
+        if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
+        run: sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -1100,20 +1100,20 @@ jobs:
         with:
           python-version: '3.10'
 
-        - name: Setup FFmpeg (attempt 1 - johnvansickle)
-          id: ffmpeg1
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 1 - johnvansickle)
+        id: ffmpeg1
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
-          id: ffmpeg2
-          if: steps.ffmpeg1.outcome == 'failure'
-          continue-on-error: true
-          uses: FedericoCarboni/setup-ffmpeg@v3
+      - name: Setup FFmpeg (attempt 2 - johnvansickle retry)
+        id: ffmpeg2
+        if: steps.ffmpeg1.outcome == 'failure'
+        continue-on-error: true
+        uses: FedericoCarboni/setup-ffmpeg@v3
 
-        - name: Setup FFmpeg (fallback - apt)
-          if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
-          run: sudo apt-get install -y ffmpeg
+      - name: Setup FFmpeg (fallback - apt)
+        if: steps.ffmpeg1.outcome == 'failure' && steps.ffmpeg2.outcome == 'failure'
+        run: sudo apt-get install -y ffmpeg
       - name: Install dependencies
         run: |
           sudo apt-get install rclone jq -y
