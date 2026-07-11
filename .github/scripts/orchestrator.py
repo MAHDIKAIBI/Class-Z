@@ -108,6 +108,9 @@ elif action_type == "RESUME":
     override_string = f"3|||{topic}|||1" # 3: Select topic, {topic}: the exact topic string, 1: Resume
 
 os.environ["CLOUD_OVERRIDE_INPUTS"] = override_string
+os.environ["ACTION_TYPE"] = action_type
+if topic:
+    os.environ["TOPIC"] = topic
 os.environ["GITHUB_ACTIONS"] = "true" # Triggers the CI check
 
 # 4. Execute the pipeline
