@@ -391,7 +391,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt; fi
 
       - name: Run TTS Worker
         env:
@@ -498,7 +498,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt; fi
           python -m pip install playwright torchcodec soundfile numpy
           python -m playwright install --with-deps chromium
 
@@ -744,7 +744,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt; fi
           python -m pip install playwright
           python -m playwright install --with-deps chromium
 
@@ -877,7 +877,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt; fi
           python -m pip install playwright torchcodec soundfile numpy
           python -m playwright install --with-deps chromium
 
