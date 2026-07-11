@@ -39,7 +39,7 @@ jobs:
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -197,7 +197,7 @@ jobs:
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -335,7 +335,7 @@ jobs:
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -455,7 +455,7 @@ jobs:
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -565,7 +565,7 @@ jobs:
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -695,7 +695,7 @@ jobs:
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -818,7 +818,7 @@ jobs:
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -960,7 +960,7 @@ jobs:
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -1122,7 +1122,7 @@ jobs:
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN_MIDIFI || secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
