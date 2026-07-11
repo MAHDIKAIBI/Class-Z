@@ -764,6 +764,20 @@ jobs:
             "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
             --transfers 16 -v || true
 
+      - name: Upload Partial Timeline to Drive
+        if: always()
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          PARTIAL="partial_timeline_${{ matrix.worker }}.json"
+          if [ -f "$PARTIAL" ]; then
+            rclone copy "$PARTIAL" \
+              "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
+              --transfers 1 -v || true
+            echo "[+] Uploaded $PARTIAL to Drive."
+          else
+            echo "[!] No partial timeline file found for worker ${{ matrix.worker }}."
+          fi
+
   # ─────────────────────────────────────────────────────────────────────────────
   # PHASE 2d: brain_finish_job — Merge partials, overlay, audio master, git push
   # ─────────────────────────────────────────────────────────────────────────────
