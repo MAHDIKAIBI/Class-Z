@@ -74,6 +74,31 @@ else:
 subprocess.run(["playwright", "install", "chromium"], check=True)
 
 # 3. Formulate Input Overrides for the scripts
+if not topic and action_type in ["CREATE_FRESH", "CREATE_AUTOMATIC"]:
+    print(f"[*] Topic is empty. Auto-popping from Google Drive queue...")
+    subprocess.run(["rclone", "copy", f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt", "."], check=False)
+    
+    if os.path.exists("topics.txt"):
+        with open("topics.txt", "r", encoding="utf-8") as f:
+            lines = [l.strip() for l in f.readlines() if l.strip()]
+        if lines:
+            topic = lines[0]
+            with open("topics.txt", "w", encoding="utf-8") as f:
+                f.write("\n".join(lines[1:]) + "\n")
+            print(f"[+] Successfully popped topic: '{topic}'")
+            
+            # Immediately sync it back
+            subprocess.run(["rclone", "copyto", "topics.txt", f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt"], check=False)
+            print("[+] Queue file successfully updated on Google Drive.")
+        else:
+            print("[!] topics.txt is empty!")
+            sys.exit(1)
+    else:
+        print(f"[!] topics.txt not found at data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt!")
+        sys.exit(1)
+        
+    action_type = "CREATE_FRESH"
+
 override_string = ""
 if action_type == "CREATE_FRESH":
     override_string = f"1|||{topic}|||1" # 1: Start fresh, topic, 1: Confirm
@@ -133,7 +158,7 @@ try:
     # Sync topics.txt if it was modified
     if os.path.exists("topics.txt"):
         subprocess.run(["rclone", "copyto", "topics.txt",
-                        "data:Colab_AutoVideoCreator/topics.txt"], check=False)
+                        f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt"], check=False)
         print(f"[+] Synced topics.txt to Drive.")
 except Exception as e:
     print(f"[!] Drive sync warning: {e}")
