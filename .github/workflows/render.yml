@@ -1,4 +1,4 @@
-name: Hybrid Cloud Video Pipeline
+name: Render a video & YouTube Upload
 
 on:
   workflow_dispatch:
