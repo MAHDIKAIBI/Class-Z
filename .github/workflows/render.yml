@@ -171,7 +171,7 @@ jobs:
           restore-keys: apt-brain-${{ runner.os }}-
 
       - name: Setup FFmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
+        run: sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -299,7 +299,7 @@ jobs:
           python-version: '3.10'
 
       - name: Setup FFmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
+        run: sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           # Remove broken Microsoft repos that cause apt-get update to fail on ubuntu-latest
@@ -407,7 +407,7 @@ jobs:
           restore-keys: apt-brain-prep-${{ runner.os }}-
 
       - name: Setup FFmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
+        run: sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -636,7 +636,7 @@ jobs:
           python-version: '3.10'
 
       - name: Setup FFmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
+        run: sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
@@ -732,7 +732,7 @@ jobs:
           python-version: '3.10'
 
       - name: Setup FFmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
+        run: sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -1027,7 +1027,7 @@ jobs:
           python-version: '3.10'
 
       - name: Setup FFmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
+        run: sudo apt-get install -y ffmpeg
 
       - name: Install dependencies
         run: |
