@@ -74,7 +74,7 @@ if os.path.exists("requirements.txt"):
     subprocess.run(["pip", "install", "-r", "requirements.txt"], check=True)
 else:
     # Fallback to essential packages
-    subprocess.run(["pip", "install", "playwright", "requests", "openai", "moviepy", "pydub"], check=True)
+    subprocess.run(["pip", "install", "playwright", "requests", "openai", "moviepy", "pydub", "pyperclip"], check=True)
 
 subprocess.run(["playwright", "install", "chromium"], check=True)
 
