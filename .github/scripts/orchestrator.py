@@ -76,7 +76,7 @@ subprocess.run(["playwright", "install", "chromium"], check=True)
 # 3. Formulate Input Overrides for the scripts
 if not topic and action_type in ["CREATE_FRESH", "CREATE_AUTOMATIC"]:
     print(f"[*] Topic is empty. Auto-popping from Google Drive queue...")
-    subprocess.run(["rclone", "copyto", f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt", "topics.txt"], check=False)
+    subprocess.run(["rclone", "copy", "--include", "topics.txt", f"data:Colab_AutoVideoCreator/channels/{channel_name}/", "."], check=False)
     
     if os.path.exists("topics.txt"):
         with open("topics.txt", "r", encoding="utf-8") as f:
