@@ -115,7 +115,7 @@ jobs:
           # Start pinggy tunnel (highly stable SSH forwarding)
           ssh -p 443 -R0:localhost:11434 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 a.pinggy.io > tunnel.log 2>&1 &
           sleep 10
-          PINGGY_URL=$(grep -oP 'http[s]?://[^ ]*pinggy[^ ]*' tunnel.log | grep 'https' | head -n 1)
+          PINGGY_URL=$(grep -m 1 -o 'https://[a-zA-Z0-9.-]*pinggy[a-zA-Z0-9.-]*' tunnel.log || true)
           OLLAMA_URL="$PINGGY_URL"
           
           if [ -z "$PINGGY_URL" ]; then
@@ -618,7 +618,7 @@ jobs:
           # Start pinggy tunnel (highly stable SSH forwarding)
           ssh -p 443 -R0:localhost:11434 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 a.pinggy.io > tunnel.log 2>&1 &
           sleep 10
-          PINGGY_URL=$(grep -oP 'http[s]?://[^ ]*pinggy[^ ]*' tunnel.log | grep 'https' | head -n 1)
+          PINGGY_URL=$(grep -m 1 -o 'https://[a-zA-Z0-9.-]*pinggy[a-zA-Z0-9.-]*' tunnel.log || true)
 
           if [ -z "$PINGGY_URL" ]; then
             echo "ERROR: pinggy tunnel failed!"
