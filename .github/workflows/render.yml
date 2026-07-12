@@ -192,8 +192,6 @@ jobs:
           key: apt-brain-${{ runner.os }}-firefox
           restore-keys: apt-brain-${{ runner.os }}-
 
-      - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -338,8 +336,6 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           # Remove broken Microsoft repos that cause apt-get update to fail on ubuntu-latest
