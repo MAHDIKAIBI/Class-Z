@@ -311,7 +311,25 @@ jobs:
           CLOUD_TTS_PARALLEL: "1"
         run: |
           python -m pip install requests
-          xvfb-run -a python -u .github/scripts/orchestrator.py
+          
+            # Export GITHUB_OUTPUT explicitly to xvfb-run just in case it strips it
+            xvfb-run -a --server-args="-screen 0 1920x1080x24" env GITHUB_OUTPUT="$GITHUB_OUTPUT" python -u .github/scripts/orchestrator.py
+            
+            # Failsafe: if Python failed to write to GITHUB_OUTPUT, Bash will do it directly!
+            if [ -f "generated_vault.txt" ]; then
+                VAULT_NAME=$(cat generated_vault.txt)
+            else
+                VAULT_NAME="$TOPIC"
+            fi
+            
+            if [ -f "timeline.json" ]; then
+                TOTAL_FRAMES=$(jq '((.meta // .metadata // {}).total_duration_ms // 0) | if . > 0 then ((. / 1000) * 30 | round) + 60 else 0 end' timeline.json 2>/dev/null || echo "0")
+            else
+                TOTAL_FRAMES="0"
+            fi
+            
+            echo "vault_name=$VAULT_NAME" >> $GITHUB_OUTPUT
+            echo "total_frames=$TOTAL_FRAMES" >> $GITHUB_OUTPUT
           
       # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
       # finishes, because The_Brain.py needs Ollama for footage/image search queries.
