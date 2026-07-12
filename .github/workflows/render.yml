@@ -1186,8 +1186,11 @@ jobs:
           
       - name: Upload Video to YouTube API
         env:
-          AUTO_TARGET_FOLDER: "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
+          AUTO_TARGET_FOLDER: "BULK"
         run: |
+          echo "Syncing all pending upload folders from Google Drive..."
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload" "channels/${{ inputs.channel_name }}/to upload" -v
+          
           echo "Downloading private uploader script and tokens from Google Drive..."
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator/youtube_uploader.py" "." -v
           mkdir -p tokens
