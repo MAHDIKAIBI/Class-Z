@@ -112,13 +112,16 @@ jobs:
           curl -s -X POST http://localhost:11434/api/generate -d '{"model":"llava","prompt":"hi","stream":false}' > /dev/null
           echo "[+] Models pre-loaded and ready."
           
-          # Start pinggy tunnel (highly stable SSH forwarding)
-          ssh -p 443 -R0:localhost:11434 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 a.pinggy.io > tunnel.log 2>&1 &
-          sleep 10
-          PINGGY_URL=$(grep -m 1 -o 'https://[a-zA-Z0-9.-]*pinggy[a-zA-Z0-9.-]*' tunnel.log || true)
-          OLLAMA_URL="$PINGGY_URL"
+          # Download and run Bore Tunnel (raw TCP, no bot protection, no intercepts)
+          curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz | tar zx
+          sudo mv bore /usr/local/bin/
           
-          if [ -z "$PINGGY_URL" ]; then
+          bore local 11434 --to bore.pub > tunnel.log 2>&1 &
+          sleep 5
+          BORE_PORT=$(grep -oP 'bore\.pub:\K\d+' tunnel.log | head -n 1)
+          OLLAMA_URL="http://bore.pub:$BORE_PORT"
+          
+          if [ -z "$BORE_PORT" ]; then
              echo "Failed to establish tunnel!"
              cat tunnel.log
              exit 1
@@ -615,18 +618,20 @@ jobs:
           curl -s -X POST http://localhost:11434/api/generate \
             -d '{"model":"qwen2.5:7b","prompt":"hi","stream":false}' > /dev/null
 
-          # Start pinggy tunnel (highly stable SSH forwarding)
-          ssh -p 443 -R0:localhost:11434 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 a.pinggy.io > tunnel.log 2>&1 &
-          sleep 10
-          PINGGY_URL=$(grep -m 1 -o 'https://[a-zA-Z0-9.-]*pinggy[a-zA-Z0-9.-]*' tunnel.log || true)
+          # Download and run Bore Tunnel (raw TCP)
+          curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz | tar zx
+          sudo mv bore /usr/local/bin/
+          bore local 11434 --to bore.pub > tunnel.log 2>&1 &
+          sleep 8
+          BORE_PORT=$(grep -oP 'bore\.pub:\K\d+' tunnel.log | head -n 1)
 
-          if [ -z "$PINGGY_URL" ]; then
-            echo "ERROR: pinggy tunnel failed!"
+          if [ -z "$BORE_PORT" ]; then
+            echo "ERROR: bore tunnel failed!"
             cat tunnel.log
             exit 1
           fi
 
-          OLLAMA_URL="$PINGGY_URL"
+          OLLAMA_URL="http://bore.pub:$BORE_PORT"
           echo "$OLLAMA_URL" > ollama_url.txt
           rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s ollama_url.txt "$POOL_DIR/worker_${WORKER_ID}.txt"
           echo "[Ollama Pool Worker $WORKER_ID] Live at $OLLAMA_URL"
