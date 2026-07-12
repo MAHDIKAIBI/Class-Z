@@ -1194,7 +1194,7 @@ jobs:
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator/tokens" "tokens" -v
           
           echo "Installing Google API requirements..."
-          
+          python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
           
           echo "Running YouTube Uploader..."
           python youtube_uploader.py
