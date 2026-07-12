@@ -158,8 +158,8 @@ jobs:
           while true; do
             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" >/dev/null 2>&1; then
               echo "Shutdown signal received! Terminating server."
-              rclone delete "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" || true
-              rclone delete "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
+              rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" || true
+              rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
               break
             fi
             # Ping Ollama through the tunnel every 60s to keep localhost.run HTTP routing alive
@@ -702,8 +702,8 @@ jobs:
           while true; do
             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "$POOL_DIR/shutdown_${WORKER_ID}.txt" > /dev/null 2>&1; then
               echo "[Ollama Pool Worker $WORKER_ID] Shutdown received. Terminating."
-              rclone delete "$POOL_DIR/worker_${WORKER_ID}.txt" || true
-              rclone delete "$POOL_DIR/shutdown_${WORKER_ID}.txt" || true
+              rclone delete --drive-use-trash=false "$POOL_DIR/worker_${WORKER_ID}.txt" || true
+              rclone delete --drive-use-trash=false "$POOL_DIR/shutdown_${WORKER_ID}.txt" || true
               break
             fi
             PING_COUNTER=$((PING_COUNTER + 1))
@@ -1278,10 +1278,10 @@ jobs:
       - name: Clean Up Public Assets Folder
         run: |
           echo "Purging raw rendering assets from Google Drive to save space..."
-          rclone purge "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
+          rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
           
           # Clean up ollama pool directory
-          rclone purge "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
+          rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
 
   global_cleanup:
     name: Global Cleanup (Failsafe)
