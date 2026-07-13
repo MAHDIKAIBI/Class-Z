@@ -311,8 +311,7 @@ jobs:
             # Failsafe: if Python failed to write to GITHUB_OUTPUT, Bash will do it directly!
             if [ -f "generated_vault.txt" ]; then
                 VAULT_NAME=$(cat generated_vault.txt)
-            else
-                VAULT_NAME="$TOPIC"
+                echo "vault_name=$VAULT_NAME" >> $GITHUB_OUTPUT
             fi
             
             if [ -f "timeline.json" ]; then
@@ -320,8 +319,6 @@ jobs:
             else
                 TOTAL_FRAMES="0"
             fi
-            
-            echo "vault_name=$VAULT_NAME" >> $GITHUB_OUTPUT
             echo "total_frames=$TOTAL_FRAMES" >> $GITHUB_OUTPUT
           
       # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
