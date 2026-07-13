@@ -102,7 +102,7 @@ jobs:
           sudo systemctl stop ollama || true
           OLLAMA_HOST="0.0.0.0" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
-          ollama pull qwen2.5:3b
+          ollama pull qwen2.5:7b
           ollama pull llava
           
           # Pre-warm models into memory so brain_job gets instant responses (no 503 cold-load)
@@ -112,39 +112,39 @@ jobs:
           curl -s -X POST http://localhost:11434/api/generate -d '{"model":"llava","prompt":"hi","stream":false}' > /dev/null
           echo "[+] Models pre-loaded and ready."
           
-          # Download and run Bore Tunnel (raw TCP) with Exponential Backoff Retry Loop
-          curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz | tar zx
-          sudo mv bore /usr/local/bin/
+          # Download and run Cloudflare Tunnel (HTTPS) with Exponential Backoff Retry Loop
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
           
           MAX_RETRIES=5
           RETRY_COUNT=0
-          BORE_PORT=""
+          CF_URL=""
           
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            echo "Starting bore tunnel (Attempt $((RETRY_COUNT+1))/$MAX_RETRIES)..."
-            bore local 11434 --to bore.pub > tunnel.log 2>&1 &
-            BORE_PID=$!
-            sleep 8
+            echo "Starting Cloudflare tunnel (Attempt $((RETRY_COUNT+1))/$MAX_RETRIES)..."
+            cloudflared tunnel --url http://localhost:11434 > tunnel.log 2>&1 &
+            CF_PID=$!
+            sleep 12
             
-            BORE_PORT=$(grep -oP 'bore\.pub:\K\d+' tunnel.log | head -n 1)
-            if [ -n "$BORE_PORT" ]; then
-              echo "Bore tunnel successfully established on port $BORE_PORT"
+            CF_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' tunnel.log | head -n 1)
+            if [ -n "$CF_URL" ]; then
+              echo "Cloudflare tunnel successfully established at $CF_URL"
               break
             fi
             
-            echo "Bore tunnel failed or rate-limited. Retrying in 10 seconds..."
+            echo "Cloudflare tunnel failed. Retrying in 10 seconds..."
             cat tunnel.log
-            kill $BORE_PID || true
+            kill $CF_PID || true
             sleep 10
             RETRY_COUNT=$((RETRY_COUNT+1))
           done
           
-          if [ -z "$BORE_PORT" ]; then
-            echo "ERROR: bore tunnel permanently failed after $MAX_RETRIES attempts!"
+          if [ -z "$CF_URL" ]; then
+            echo "ERROR: Cloudflare tunnel permanently failed after $MAX_RETRIES attempts!"
             exit 1
           fi
           
-          OLLAMA_URL="http://bore.pub:$BORE_PORT"
+          OLLAMA_URL="$CF_URL"
           
           echo "Ollama API is live at: $OLLAMA_URL"
           echo "$OLLAMA_URL" > ollama_url.txt
@@ -614,45 +614,45 @@ jobs:
           sudo systemctl stop ollama || true
           OLLAMA_HOST="0.0.0.0" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
-          ollama pull qwen2.5:3b
+          ollama pull qwen2.5:7b
 
           # Pre-warm model
           curl -s -X POST http://localhost:11434/api/generate \
-            -d '{"model":"qwen2.5:3b","prompt":"hi","stream":false}' > /dev/null
+            -d '{"model":"qwen2.5:7b","prompt":"hi","stream":false}' > /dev/null
 
-          # Download and run Bore Tunnel (raw TCP) with Exponential Backoff Retry Loop
-          curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz | tar zx
-          sudo mv bore /usr/local/bin/
+          # Download and run Cloudflare Tunnel (HTTPS) with Exponential Backoff Retry Loop
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
           
           MAX_RETRIES=5
           RETRY_COUNT=0
-          BORE_PORT=""
+          CF_URL=""
           
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            echo "Starting bore tunnel (Attempt $((RETRY_COUNT+1))/$MAX_RETRIES)..."
-            bore local 11434 --to bore.pub > tunnel.log 2>&1 &
-            BORE_PID=$!
-            sleep 8
+            echo "Starting Cloudflare tunnel (Attempt $((RETRY_COUNT+1))/$MAX_RETRIES)..."
+            cloudflared tunnel --url http://localhost:11434 > tunnel.log 2>&1 &
+            CF_PID=$!
+            sleep 12
             
-            BORE_PORT=$(grep -oP 'bore\.pub:\K\d+' tunnel.log | head -n 1)
-            if [ -n "$BORE_PORT" ]; then
-              echo "Bore tunnel successfully established on port $BORE_PORT"
+            CF_URL=$(grep -o 'https://[a-zA-Z0-9-]*\.trycloudflare\.com' tunnel.log | head -n 1)
+            if [ -n "$CF_URL" ]; then
+              echo "Cloudflare tunnel successfully established at $CF_URL"
               break
             fi
             
-            echo "Bore tunnel failed or rate-limited. Retrying in 10 seconds..."
+            echo "Cloudflare tunnel failed. Retrying in 10 seconds..."
             cat tunnel.log
-            kill $BORE_PID || true
+            kill $CF_PID || true
             sleep 10
             RETRY_COUNT=$((RETRY_COUNT+1))
           done
           
-          if [ -z "$BORE_PORT" ]; then
-            echo "ERROR: bore tunnel permanently failed after $MAX_RETRIES attempts!"
+          if [ -z "$CF_URL" ]; then
+            echo "ERROR: Cloudflare tunnel permanently failed after $MAX_RETRIES attempts!"
             exit 1
           fi
           
-          OLLAMA_URL="http://bore.pub:$BORE_PORT"
+          OLLAMA_URL="$CF_URL"
           echo "$OLLAMA_URL" > ollama_url.txt
           rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s ollama_url.txt "$POOL_DIR/worker_${WORKER_ID}.txt"
           echo "[Ollama Pool Worker $WORKER_ID] Live at $OLLAMA_URL"
