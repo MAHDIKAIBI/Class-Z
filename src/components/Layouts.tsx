@@ -1,4 +1,5 @@
-import { AbsoluteFill, useCurrentFrame, staticFile, Img as RemotionImg, OffthreadVideo, interpolate, spring, useVideoConfig, Audio, Sequence } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, staticFile as remotionStaticFile, Img as RemotionImg, OffthreadVideo, interpolate, spring, useVideoConfig, Audio, Sequence } from 'remotion';
+const staticFile = (path: string) => remotionStaticFile(path?.startsWith('public/') ? path.slice(7) : path);
 import React from 'react';
 import { useCamera } from '../index';
 import { VolumetricDust, FilmGrain, HeavySmoke, LensFlare, WindowLight, EdgeGlow, LightRays, GlassReflection, DustBurst } from './Effects';

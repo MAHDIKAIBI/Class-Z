@@ -1,4 +1,5 @@
-import { AbsoluteFill, Sequence, Img, Audio, useVideoConfig, useCurrentFrame, staticFile, registerRoot, Composition, interpolate, spring, Easing, random as seededRandom } from 'remotion';
+import { AbsoluteFill, Sequence, Img, Audio, useVideoConfig, useCurrentFrame, staticFile as remotionStaticFile, registerRoot, Composition, interpolate, spring, Easing, random as seededRandom } from 'remotion';
+const staticFile = (path: string) => remotionStaticFile(path?.startsWith('public/') ? path.slice(7) : path);
 import { noise2D } from '@remotion/noise';
 import React, { createContext, useContext, useMemo } from 'react';
 import masterJsonRaw from '../master_timeline.json';
