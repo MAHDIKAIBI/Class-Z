@@ -116,7 +116,7 @@ jobs:
           curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz | tar zx
           sudo mv bore /usr/local/bin/
           
-          MAX_RETRIES=5
+          MAX_RETRIES=10
           RETRY_COUNT=0
           BORE_PORT=""
           
@@ -128,8 +128,15 @@ jobs:
             
             BORE_PORT=$(grep -oP 'bore\.pub:\K\d+' tunnel.log | head -n 1)
             if [ -n "$BORE_PORT" ]; then
-              echo "Bore tunnel successfully established on port $BORE_PORT"
-              break
+              echo "Verifying tunnel (ghost port check)..."
+              if curl -m 10 -s http://bore.pub:$BORE_PORT/api/tags > /dev/null; then
+                echo "Bore tunnel verified on port $BORE_PORT"
+                break
+              else
+                echo "Tunnel opened on $BORE_PORT but failed verification (ghost port). Killing and retrying..."
+                kill $BORE_PID || true
+                BORE_PORT=""
+              fi
             fi
             
             echo "Bore tunnel failed or rate-limited. Retrying in 10 seconds..."
@@ -505,7 +512,7 @@ jobs:
       - name: Connect to Ollama Brain (for Gemini scene alignment if needed)
         run: |
           echo "Fetching Ollama URL from Drive..."
-          for i in $(seq 1 20); do
+          for i in $(seq 1 120); do
             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
               rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
               OLLAMA_URL=$(cat ollama_url.txt)
@@ -624,7 +631,7 @@ jobs:
           curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz | tar zx
           sudo mv bore /usr/local/bin/
           
-          MAX_RETRIES=5
+          MAX_RETRIES=10
           RETRY_COUNT=0
           BORE_PORT=""
           
@@ -636,8 +643,15 @@ jobs:
             
             BORE_PORT=$(grep -oP 'bore\.pub:\K\d+' tunnel.log | head -n 1)
             if [ -n "$BORE_PORT" ]; then
-              echo "Bore tunnel successfully established on port $BORE_PORT"
-              break
+              echo "Verifying tunnel (ghost port check)..."
+              if curl -m 10 -s http://bore.pub:$BORE_PORT/api/tags > /dev/null; then
+                echo "Bore tunnel verified on port $BORE_PORT"
+                break
+              else
+                echo "Tunnel opened on $BORE_PORT but failed verification (ghost port). Killing and retrying..."
+                kill $BORE_PID || true
+                BORE_PORT=""
+              fi
             fi
             
             echo "Bore tunnel failed or rate-limited. Retrying in 10 seconds..."
@@ -763,7 +777,7 @@ jobs:
       - name: Connect to Ollama Brain
         run: |
           echo "Fetching Ollama URL from Drive..."
-          for i in $(seq 1 20); do
+          for i in $(seq 1 120); do
             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
               rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
               OLLAMA_URL=$(cat ollama_url.txt)
@@ -906,7 +920,7 @@ jobs:
       - name: Connect to Ollama Brain (for Vision verification)
         run: |
           echo "Fetching Ollama URL from Drive..."
-          for i in $(seq 1 20); do
+          for i in $(seq 1 120); do
             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
               rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
               OLLAMA_URL=$(cat ollama_url.txt)
