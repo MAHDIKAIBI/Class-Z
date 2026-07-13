@@ -1263,6 +1263,8 @@ jobs:
           EOF
       - name: Send Global Failsafe Shutdown Signal to Ollama
         run: |
-          echo "shutdown" > shutdown.txt
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
-          echo "[+] Failsafe shutdown signal sent!"
+            echo "shutdown" > shutdown.txt
+            rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
+            echo "[+] Failsafe shutdown signal sent!"
+            rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
+            echo "[+] Failsafe pool cleanup complete!"
