@@ -1,0 +1,66 @@
+name: Scheduled Social Media Worker
+
+on:
+  schedule:
+    - cron: '0 */2 * * *' # Runs once every 2 hours
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  process_social_queue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get install rclone jq xvfb -y
+          pip install playwright tweepy
+          playwright install chromium
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          
+          # We only need the Engine token because the queue and bots live in the Engine drive!
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          EOF
+
+      - name: Pull Tokens and Engine Scripts from Google Drive
+        run: |
+          mkdir -p tokens
+          echo "Pulling Queue and API Tokens..."
+          rclone copy "engine:Colab_AutoVideoCreator/tokens" "tokens" -v
+          
+          echo "Pulling Social Daemon and Pinterest Bot..."
+          rclone copy "engine:Colab_AutoVideoCreator/social_scheduler_daemon.py" "." -v
+          rclone copy "engine:Colab_AutoVideoCreator/pinterest_bot.py" "." -v
+
+      - name: Run Social Scheduler Daemon (with Xvfb)
+        run: |
+          # xvfb-run creates a virtual display so headless=False works without crashing
+          xvfb-run -a python social_scheduler_daemon.py
+
+      - name: Sync Queue back to Google Drive
+        run: |
+          # Sync the queue back to ensure processed posts are permanently removed
+          rclone copy "tokens/social_queue.json" "engine:Colab_AutoVideoCreator/tokens" -v
