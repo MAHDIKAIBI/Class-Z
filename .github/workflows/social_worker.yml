@@ -63,4 +63,8 @@ jobs:
       - name: Sync Queue back to Google Drive
         run: |
           # Sync the queue back to ensure processed posts are permanently removed
-          rclone copy "tokens/social_queue.json" "engine:Colab_AutoVideoCreator/tokens" -v
+          if [ -f "tokens/social_queue.json" ]; then
+            rclone copyto "tokens/social_queue.json" "engine:Colab_AutoVideoCreator/tokens/social_queue.json" -v
+          else
+            echo "Queue file not found. Nothing to sync."
+          fi
