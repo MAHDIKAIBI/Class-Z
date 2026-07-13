@@ -102,7 +102,7 @@ jobs:
           sudo systemctl stop ollama || true
           OLLAMA_HOST="0.0.0.0" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
-          ollama pull qwen2.5:7b
+          ollama pull qwen2.5:3b
           ollama pull llava
           
           # Pre-warm models into memory so brain_job gets instant responses (no 503 cold-load)
@@ -614,11 +614,11 @@ jobs:
           sudo systemctl stop ollama || true
           OLLAMA_HOST="0.0.0.0" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
-          ollama pull qwen2.5:7b
+          ollama pull qwen2.5:3b
 
           # Pre-warm model
           curl -s -X POST http://localhost:11434/api/generate \
-            -d '{"model":"qwen2.5:7b","prompt":"hi","stream":false}' > /dev/null
+            -d '{"model":"qwen2.5:3b","prompt":"hi","stream":false}' > /dev/null
 
           # Download and run Bore Tunnel (raw TCP) with Exponential Backoff Retry Loop
           curl -Ls https://github.com/ekzhang/bore/releases/download/v0.5.1/bore-v0.5.1-x86_64-unknown-linux-musl.tar.gz | tar zx
