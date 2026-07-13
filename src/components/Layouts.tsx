@@ -9,7 +9,7 @@ export const SmartMedia: React.FC<{ src: string, style?: any, className?: string
   const lower = src.toLowerCase();
   const isVideo = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm');
   return isVideo 
-    ? <OffthreadVideo src={src} style={style} className={className} muted {...props} /> 
+    ? <OffthreadVideo src={src} style={style} className={className} muted delayRenderTimeoutInMilliseconds={120000} {...props} /> 
     : <RemotionImg src={src} style={style} className={className} {...props} />;
 };
 
@@ -32,7 +32,7 @@ export const KenBurnsMedia: React.FC<{ src: string, type: 'video' | 'image', dur
   const finalStyle: React.CSSProperties = { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', transform: `translate3d(${bgX}px, ${bgY}px, 0px) scale(${bgScale})`, ...style };
   
   return type === 'video' 
-    ? <OffthreadVideo src={src} style={finalStyle} startFrom={startFromFrame} muted />
+    ? <OffthreadVideo src={src} style={finalStyle} startFrom={startFromFrame} muted delayRenderTimeoutInMilliseconds={120000} />
     : <SmartMedia src={src} style={finalStyle} />;
 };
 
@@ -346,7 +346,7 @@ export const FullscreenScene: React.FC<{ scene: any, duration: number, isEven: b
           filter: lut.css + (isVideo ? '' : ' blur(1px)')
         }}>
           {isVideo ? (
-            <OffthreadVideo src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+            <OffthreadVideo src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted delayRenderTimeoutInMilliseconds={120000} />
           ) : (
             <SmartMedia src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           )}
