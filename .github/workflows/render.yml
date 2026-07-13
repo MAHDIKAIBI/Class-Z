@@ -1,4 +1,4 @@
-name: Render a video & YouTube Upload
+name: "Render a video & YouTube Upload"
 
 on:
   workflow_dispatch:
