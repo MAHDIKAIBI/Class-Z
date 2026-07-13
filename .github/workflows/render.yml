@@ -258,13 +258,17 @@ jobs:
           TIMELINE_JSON=""
           
           # Check public/channels workspace first (modern RESUME path)
-          if rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
-            echo "Found master_timeline.json in public/channels workspace."
-            TIMELINE_JSON="master_timeline.json"
-          # Fall back to legacy to upload path
-          elif rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
-            echo "Found master_timeline.json in to upload workspace."
-            TIMELINE_JSON="master_timeline.json"
+          if [ -n "$VAULT" ]; then
+            if rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
+              echo "Found master_timeline.json in public/channels workspace."
+              TIMELINE_JSON="master_timeline.json"
+            # Fall back to legacy to upload path
+            elif rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
+              echo "Found master_timeline.json in to upload workspace."
+              TIMELINE_JSON="master_timeline.json"
+            fi
+          else
+            echo "[*] CREATE_AUTOMATIC: No topic provided. Bypassing checkpoints to allow Orchestrator to pull from queue."
           fi
           
           if [ -n "$TIMELINE_JSON" ]; then
