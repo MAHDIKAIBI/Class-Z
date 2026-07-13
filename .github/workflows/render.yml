@@ -760,6 +760,21 @@ jobs:
           
           python -m playwright install --with-deps chromium
 
+      - name: Connect to Ollama Brain
+        run: |
+          echo "Fetching Ollama URL from Drive..."
+          for i in $(seq 1 20); do
+            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
+              rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
+              OLLAMA_URL=$(cat ollama_url.txt)
+              echo "Connected to Ollama Brain at $OLLAMA_URL"
+              echo "OLLAMA_BASE_URL=$OLLAMA_URL" >> $GITHUB_ENV
+              break
+            fi
+            echo "Waiting for Ollama tunnel... ($i/20)"
+            sleep 15
+          done
+
       - name: Run Download Worker
         env:
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
@@ -767,6 +782,7 @@ jobs:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
+          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
         run: xvfb-run -a python -u download_worker.py
 
       - name: Batch Upload Assets and Partial Timeline to Drive
