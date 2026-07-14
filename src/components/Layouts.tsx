@@ -2,16 +2,22 @@ import { AbsoluteFill, useCurrentFrame, staticFile as remotionStaticFile, Img as
 const staticFile = (path: string) => remotionStaticFile(path?.startsWith('public/') ? path.slice(7) : path);
 import React from 'react';
 import { useCamera } from '../index';
+import { SmartMotion } from './SmartMotion';
 import { VolumetricDust, FilmGrain, HeavySmoke, LensFlare, WindowLight, EdgeGlow, LightRays, GlassReflection, DustBurst } from './Effects';
 
 
-export const SmartMedia: React.FC<{ src: string, style?: any, className?: string, [key: string]: any }> = ({ src, style, className, ...props }) => {
+export const SmartMedia: React.FC<{ src: string, style?: any, className?: string, durationFrames?: number, sceneId?: string, [key: string]: any }> = ({ src, style, className, durationFrames, sceneId, ...props }) => {
   if (!src || src.trim() === '') return null;
   const lower = src.toLowerCase();
   const isVideo = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm');
-  return isVideo 
+  const media = isVideo 
     ? <OffthreadVideo src={src} style={style} className={className} muted delayRenderTimeoutInMilliseconds={120000} {...props} /> 
     : <RemotionImg src={src} style={style} className={className} {...props} />;
+    
+  if (durationFrames) {
+      return <SmartMotion durationFrames={durationFrames} sceneId={sceneId || src}>{media}</SmartMotion>;
+  }
+  return media;
 };
 
 export const KenBurnsMedia: React.FC<{ src: string, type: 'video' | 'image', duration: number, isEven: boolean, style?: any, startFromFrame?: number }> = ({ src, type, duration, isEven, style = {}, startFromFrame = 0 }) => {
@@ -239,8 +245,7 @@ export const MapScene: React.FC<{ scene: any, duration: number, isEven: boolean 
               justifyContent: 'center',
               alignItems: 'flex-end'
             }}>
-              <SmartMedia 
-                src={heroPath} 
+              <SmartMedia durationFrames={duration} sceneId={heroPath} src={heroPath} 
                 style={{ 
                   width: '100%', 
                   objectFit: 'contain',
@@ -349,7 +354,7 @@ export const FullscreenScene: React.FC<{ scene: any, duration: number, isEven: b
           {isVideo ? (
             <OffthreadVideo src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted delayRenderTimeoutInMilliseconds={120000} />
           ) : (
-            <SmartMedia src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <SmartMedia durationFrames={duration} sceneId={src} src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           )}
         </AbsoluteFill>
       )}
@@ -527,8 +532,7 @@ export const HeroPNGScene: React.FC<{ scene: any, duration: number, isEven: bool
                 opacity: hOpac,
                 display: 'flex', justifyContent: 'center', alignItems: 'center'
               }}>
-                <SmartMedia 
-                  src={heroPath} 
+                <SmartMedia durationFrames={duration} sceneId={heroPath} src={heroPath} 
                   style={{ 
                     maxHeight: '900px', maxWidth: '1000px', objectFit: 'contain',
                     filter: 'drop-shadow(0 40px 60px rgba(0,0,0,0.9))'
@@ -740,7 +744,7 @@ export const HeroCompositionScene: React.FC<{ scene: any, duration: number, isEv
              const p = getPropAnim(i, slot);
              return (
                <AbsoluteFill key={i} style={{ justifyContent: 'center', alignItems: 'center', zIndex: p.z }}>
-                  <SmartMedia src={path} style={{ 
+                  <SmartMedia durationFrames={duration} sceneId={path} src={path} style={{ 
                      position: 'absolute', width: '300px', objectFit: 'contain',
                      transform: `translate3d(${p.px}px, ${p.py}px, 0) scale(${p.ps}) rotate(${p.prot}deg)`,
                      filter: `blur(${bgBlur * 0.5}px) brightness(70%) drop-shadow(0 20px 30px rgba(0,0,0,0.8))`
@@ -763,7 +767,7 @@ export const HeroCompositionScene: React.FC<{ scene: any, duration: number, isEv
                    opacity: hOpac,
                    filter: `blur(${heroBlur}px)`
                 }}>
-                   <SmartMedia src={heroPath} style={{ 
+                   <SmartMedia durationFrames={duration} sceneId={heroPath} src={heroPath} style={{ 
                       maxHeight: hLayout.align === 'flex-end' ? '1080px' : '900px', 
                       maxWidth: hLayout.align === 'flex-end' ? '1200px' : '1000px', 
                       objectFit: 'contain',
@@ -790,7 +794,7 @@ export const HeroCompositionScene: React.FC<{ scene: any, duration: number, isEv
              const p = getPropAnim(i, slot);
              return (
                <AbsoluteFill key={i} style={{ justifyContent: 'center', alignItems: 'center', zIndex: p.z }}>
-                  <SmartMedia src={path} style={{ 
+                  <SmartMedia durationFrames={duration} sceneId={path} src={path} style={{ 
                      position: 'absolute', width: '400px', objectFit: 'contain',
                      transform: `translate3d(${p.px}px, ${p.py}px, 0) scale(${p.ps}) rotate(${p.prot}deg)`,
                      filter: `blur(${fgBlur}px) drop-shadow(0 40px 60px rgba(0,0,0,1.0))`
@@ -982,7 +986,7 @@ export const TripleCompositionScene: React.FC<{ scene: any, duration: number, is
                   opacity: cOpac,
                   filter: `blur(${blurAmount}px) drop-shadow(0 40px 50px rgba(0,0,0,0.8))`
                }}>
-                  <SmartMedia src={slot.path} style={{ width: slot.isHero ? '700px' : '450px', objectFit: 'contain' }} />
+                  <SmartMedia durationFrames={duration} sceneId={slot.path} src={slot.path} style={{ width: slot.isHero ? '700px' : '450px', objectFit: 'contain' }} />
                </div>
              );
          })}
@@ -1202,7 +1206,7 @@ export const DocumentaryBoardScene: React.FC<{ scene: any, duration: number, isE
                      opacity: cOpac,
                      filter: `blur(${blur}px) drop-shadow(0 15px 25px rgba(0,0,0,0.6))`
                   }}>
-                     <SmartMedia src={docPath} style={{ width: i === 0 ? '700px' : '500px', backgroundColor: 'white', padding: '10px' }} />
+                     <SmartMedia durationFrames={duration} sceneId={docPath} src={docPath} style={{ width: i === 0 ? '700px' : '500px', backgroundColor: 'white', padding: '10px' }} />
                   </div>
                );
            })}
