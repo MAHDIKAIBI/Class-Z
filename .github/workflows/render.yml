@@ -565,6 +565,7 @@ jobs:
           
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 -v || true
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/$VAULT" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" --transfers 16 -v || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "public/audio" "data:Colab_AutoVideoCreator/public/audio" --transfers 16 -v || true
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # PHASE 2b: ollama_pool â€” 8 dedicated Ollama servers, one per download worker
