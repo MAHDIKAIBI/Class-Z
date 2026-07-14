@@ -298,6 +298,13 @@ jobs:
              fi
           fi
 
+      - name: Pre-create Ollama Pool Directory
+        run: |
+          # CRITICAL FIX: Pre-create the directory sequentially before 8 parallel matrix workers start.
+          # Because Google Drive allows duplicate folder names, 8 parallel rclone instances writing 
+          # to a non-existent path will create 8 duplicate "ollama_pool_{RUN_ID}" folders, causing
+          # rclone cat to later read from the wrong duplicate folder.
+          rclone mkdir "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
 
       - name: Run Python Orchestrator
         id: orchestrator
