@@ -6,6 +6,7 @@ export interface HeroMatch {
     numericValue?: number; // make optional since HeroWords don't have this
     globalIndex?: number; // added to track the cycle
     category?: string; // added to style HeroWords
+    exact_start_ms?: number; // added for precise audio sync
 }
 
 export const detectHeroNumber = (text: string): HeroMatch | null => {

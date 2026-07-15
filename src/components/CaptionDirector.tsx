@@ -90,8 +90,17 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
                         const currentCount = typeCounts[match.type] || 0;
                         typeCounts[match.type] = currentCount + 1;
 
-                        heroInfo = { ...match, globalIndex: currentCount };
-                        lastHeroTime = start_ms;
+                        let exact_start_ms = start_ms;
+                        const matchLower = match.value.toLowerCase();
+                        for (const w of currentChunk) {
+                            if (matchLower.includes(w.word.toLowerCase()) || w.word.toLowerCase().includes(matchLower)) {
+                                exact_start_ms = w.start_ms;
+                                break;
+                            }
+                        }
+
+                        heroInfo = { ...match, globalIndex: currentCount, exact_start_ms };
+                        lastHeroTime = exact_start_ms;
                         
                         // Only keep text AFTER the Hero Match
                         const matchIndex = chunkText.toLowerCase().indexOf(match.value.toLowerCase());
@@ -106,9 +115,18 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
                             const currentCount = typeCounts['impact'] || 0;
                             typeCounts['impact'] = currentCount + 1;
                             
-                            heroInfo = { ...wordMatch, globalIndex: currentCount };
+                            let exact_start_ms = start_ms;
+                            const matchLower = wordMatch.value.toLowerCase();
+                            for (const w of currentChunk) {
+                                if (matchLower.includes(w.word.toLowerCase()) || w.word.toLowerCase().includes(matchLower)) {
+                                    exact_start_ms = w.start_ms;
+                                    break;
+                                }
+                            }
+                            
+                            heroInfo = { ...wordMatch, globalIndex: currentCount, exact_start_ms };
                             isHeroWord = true;
-                            lastHeroTime = start_ms;
+                            lastHeroTime = exact_start_ms;
                             
                             // Only keep text AFTER the Hero Match
                             const matchIndex = chunkText.toLowerCase().indexOf(wordMatch.value.toLowerCase());
@@ -153,6 +171,9 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
                 const startFrame = (relativeStartMs / 1000) * fps;
                 const durationFrames = ((chunk.end_ms - chunk.start_ms + preRollMs) / 1000) * fps;
                 
+                const heroOffsetFrames = chunk.heroInfo ? Math.max(0, ((chunk.heroInfo.exact_start_ms - chunk.start_ms) / 1000) * fps) : 0;
+                const heroDurationFrames = Math.max(1, durationFrames - heroOffsetFrames);
+                
                 return (
                     <Sequence key={i} from={Math.max(0, startFrame)} durationInFrames={Math.max(1, durationFrames)}>
                         {chunk.isKinetic ? (
@@ -168,21 +189,21 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
                             <>
                                 {chunk.bottomText && <BottomCaption text={chunk.bottomText} />}
                                 {chunk.heroInfo && !chunk.isHeroWord && (
-                                    <Sequence from={0} durationInFrames={durationFrames}>
+                                    <Sequence from={heroOffsetFrames} durationInFrames={heroDurationFrames}>
                                         <AnimatedNumber 
                                             numericValue={chunk.heroInfo.numericValue || 0} 
                                             type={chunk.heroInfo.type} 
-                                            durationFrames={durationFrames}
+                                            durationFrames={heroDurationFrames}
                                             globalIndex={chunk.heroInfo.globalIndex || 0}
                                         />
                                     </Sequence>
                                 )}
                                 {chunk.heroInfo && chunk.isHeroWord && (
-                                    <Sequence from={0} durationInFrames={durationFrames}>
+                                    <Sequence from={heroOffsetFrames} durationInFrames={heroDurationFrames}>
                                         <AnimatedWord 
                                             word={chunk.heroInfo.value}
                                             globalIndex={chunk.heroInfo.globalIndex || 0}
-                                            durationFrames={durationFrames}
+                                            durationFrames={heroDurationFrames}
                                             category={chunk.heroInfo.category}
                                         />
                                     </Sequence>
