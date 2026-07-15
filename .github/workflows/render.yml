@@ -442,14 +442,13 @@ jobs:
             # Download the script + any already-generated WAV chunks
             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT" >/dev/null 2>&1; then
 
-              rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" \
+              rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" --include "script.txt" --include "*.wav" --transfers 16
 
             else
 
-              rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT" "public/channels/$CHANNEL/$VAULT" \
+              rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT" "public/channels/$CHANNEL/$VAULT" --include "script.txt" --include "*.wav" --transfers 16
 
             fi
-              --include "script.txt" --include "*.wav" --transfers 16
           fi
           # Download master reference voice if present
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/master_voice.wav" "public/" || true
