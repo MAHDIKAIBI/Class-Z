@@ -83,7 +83,7 @@ jobs:
           
           TOPIC="$INPUT_TOPIC"
           if [ -n "$TOPIC" ]; then
-            if rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$TOPIC/master_timeline.json" > timeline.json 2>/dev/null; then
+            if rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$TOPIC/master_timeline.json" > timeline.json 2>/dev/null; then
                MISSING_VIDEOS=$(jq '[.timeline[] | select(.media_path == null and .media_paths == null)] | length' timeline.json)
                MISSING_OVERLAYS=$(jq '[.timeline[] | select(.overlay_image_query != null and (.overlay_image_query | ascii_downcase) != "none" and .overlay_image == null)] | length' timeline.json)
                if [ "$MISSING_VIDEOS" -eq 0 ] && [ "$MISSING_OVERLAYS" -eq 0 ]; then
@@ -155,7 +155,7 @@ jobs:
           
           echo "Ollama API is live at: $OLLAMA_URL"
           echo "$OLLAMA_URL" > ollama_url.txt
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s ollama_url.txt "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt"
+          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s ollama_url.txt "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt"
 
       - name: Keep Alive (Wait for shutdown)
         if: env.READY_TO_RENDER != 'true'
@@ -163,7 +163,7 @@ jobs:
           OLLAMA_URL=$(cat ollama_url.txt)
           PING_COUNTER=0
           while true; do
-            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" >/dev/null 2>&1; then
+            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" >/dev/null 2>&1; then
               echo "Shutdown signal received! Terminating server."
               rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" || true
               rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
@@ -259,11 +259,11 @@ jobs:
           
           # Check public/channels workspace first (modern RESUME path)
           if [ -n "$VAULT" ]; then
-            if rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
+            if rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
               echo "Found master_timeline.json in public/channels workspace."
               TIMELINE_JSON="master_timeline.json"
             # Fall back to legacy to upload path
-            elif rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
+            elif rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
               echo "Found master_timeline.json in to upload workspace."
               TIMELINE_JSON="master_timeline.json"
             fi
@@ -292,7 +292,7 @@ jobs:
           
           # If not completely ready, check if we can at least skip Playwright
           if [ "$READY_TO_RENDER" != "true" ]; then
-             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$INPUT_TOPIC/script.txt" >/dev/null 2>&1; then
+             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$INPUT_TOPIC/script.txt" >/dev/null 2>&1; then
                  echo "Detected script.txt. ChatGPT phase is done. Bypassing Playwright profile."
                  echo "SKIP_PROFILE=true" >> $GITHUB_ENV
              fi
@@ -401,7 +401,7 @@ jobs:
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
           CHANNEL="${{ inputs.channel_name }}"
           # Only download what tts_worker.py actually needs â€” no mp4s, no bulk folders
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
             --include "tts_worker.py" \
             --include "local_voice_engine.py" \
             --include "requirements.txt" \
@@ -410,11 +410,11 @@ jobs:
           if [ -n "$VAULT" ]; then
             mkdir -p "public/channels/$CHANNEL/$VAULT"
             # Download the script + any already-generated WAV chunks
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" \
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" \
               --include "script.txt" --include "*.wav" --transfers 16
           fi
           # Download master reference voice if present
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/master_voice.wav" "public/" || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/master_voice.wav" "public/" || true
 
       - name: Install Python Dependencies
         run: |
@@ -431,7 +431,7 @@ jobs:
       - name: Upload WAV Chunks to Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --include "*.wav" -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --include "*.wav" -v
 
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -507,9 +507,9 @@ jobs:
       - name: Download Scripts & All WAV Chunks
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" --filter "- /ChatTTS_Models/**" --transfers 16
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" --filter "- /ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT"
 
       - name: Install Python Dependencies
         run: |
@@ -521,8 +521,8 @@ jobs:
         run: |
           echo "Fetching Ollama URL from Drive..."
           for i in $(seq 1 120); do
-            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
-              rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
+            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
+              rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
               OLLAMA_URL=$(cat ollama_url.txt)
               echo "Connected to Ollama Brain at $OLLAMA_URL"
               echo "OLLAMA_BASE_URL=$OLLAMA_URL" >> $GITHUB_ENV
@@ -551,8 +551,8 @@ jobs:
       - name: Save Fresh Cookies to Drive
         if: always()
         run: |
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
+          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
+          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
 
       - name: Upload Timeline to Drive
         if: always()
@@ -563,9 +563,9 @@ jobs:
           # Because Google Drive allows duplicate folder names, 8 parallel rclone instances writing to a non-existent path will create 8 duplicate "assets" folders.
           rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" || true
           
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 -v || true
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/$VAULT" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" --transfers 16 -v || true
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "public/audio" "data:Colab_AutoVideoCreator/public/audio" --transfers 16 -v || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 -v || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/$VAULT" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" --transfers 16 -v || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/audio" "data:Colab_AutoVideoCreator/public/audio" --transfers 16 -v || true
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # PHASE 2b: ollama_pool â€” 8 dedicated Ollama servers, one per download worker
@@ -677,13 +677,13 @@ jobs:
           
           OLLAMA_URL="http://bore.pub:$BORE_PORT"
           echo "$OLLAMA_URL" > ollama_url.txt
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s ollama_url.txt "$POOL_DIR/worker_${WORKER_ID}.txt"
+          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s ollama_url.txt "$POOL_DIR/worker_${WORKER_ID}.txt"
           echo "[Ollama Pool Worker $WORKER_ID] Live at $OLLAMA_URL"
 
           # Keep alive â€” wait for shutdown signal from download_worker
           PING_COUNTER=0
           while true; do
-            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "$POOL_DIR/shutdown_${WORKER_ID}.txt" > /dev/null 2>&1; then
+            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "$POOL_DIR/shutdown_${WORKER_ID}.txt" > /dev/null 2>&1; then
               echo "[Ollama Pool Worker $WORKER_ID] Shutdown received. Terminating."
               rclone delete --drive-use-trash=false "$POOL_DIR/worker_${WORKER_ID}.txt" || true
               rclone delete --drive-use-trash=false "$POOL_DIR/shutdown_${WORKER_ID}.txt" || true
@@ -768,13 +768,13 @@ jobs:
       - name: Download All Scripts & Workspace from Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
             --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" \
             --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
             --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" \
             --filter "- /ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
             "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16
 
       - name: Install Python Dependencies
@@ -787,8 +787,8 @@ jobs:
         run: |
           echo "Fetching Ollama URL from Drive..."
           for i in $(seq 1 120); do
-            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
-              rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
+            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
+              rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
               OLLAMA_URL=$(cat ollama_url.txt)
               echo "Connected to Ollama Brain at $OLLAMA_URL"
               echo "OLLAMA_BASE_URL=$OLLAMA_URL" >> $GITHUB_ENV
@@ -815,12 +815,12 @@ jobs:
           PARTIAL="partial_timeline_${{ matrix.worker }}.json"
           
           echo "Batch uploading downloaded assets..."
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
             "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
             --transfers 16 -v || true
             
           if [ -f "$PARTIAL" ]; then
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "$PARTIAL" \
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "$PARTIAL" \
               "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
               --transfers 1 -v || true
             echo "[+] Uploaded $PARTIAL to Drive."
@@ -899,18 +899,18 @@ jobs:
       - name: Download All Scripts, Assets & Workspace from Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
             --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" \
             --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
             --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" \
             --filter "- /ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
-          if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" >/dev/null 2>&1; then
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16
+          if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" >/dev/null 2>&1; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16
           else
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16
           fi
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
 
       - name: Install Python Dependencies
         run: |
@@ -930,8 +930,8 @@ jobs:
         run: |
           echo "Fetching Ollama URL from Drive..."
           for i in $(seq 1 120); do
-            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
-              rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
+            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
+              rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
               OLLAMA_URL=$(cat ollama_url.txt)
               echo "Connected to Ollama Brain at $OLLAMA_URL"
               echo "OLLAMA_BASE_URL=$OLLAMA_URL" >> $GITHUB_ENV
@@ -958,26 +958,26 @@ jobs:
       - name: Save Fresh Cookies to Drive
         if: always()
         run: |
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
+          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
+          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
 
       - name: Upload Final Assets to Drive
         if: always()
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" \
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" \
             "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
             --transfers 16 -v || true
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/$VAULT" \
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/$VAULT" \
             "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" \
             --transfers 16 -v || true
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "public/audio" "data:Colab_AutoVideoCreator/public/audio" --transfers 16 -v || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/audio" "data:Colab_AutoVideoCreator/public/audio" --transfers 16 -v || true
 
       - name: Send Shutdown Signal to original ollama_server
         if: always()
         run: |
           echo "shutdown" > shutdown.txt
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
+          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
           echo "[+] Original ollama_server shutdown signal sent."
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1052,10 +1052,10 @@ jobs:
           # Try public/channels workspace first (RESUME path), then to upload (legacy path)
           TIMELINE_FOUND=false
           
-          if rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT_NAME/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
+          if rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT_NAME/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
             TIMELINE_FOUND=true
             echo "[+] Timeline found in public/channels workspace."
-          elif rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT_NAME/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
+          elif rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT_NAME/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
             TIMELINE_FOUND=true
             echo "[+] Timeline found in to upload workspace."
           fi
@@ -1072,12 +1072,12 @@ jobs:
       - name: Download Asset Chunk from GDrive
         run: |
           mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
-          if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" >/dev/null 2>&1; then
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
+          if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" >/dev/null 2>&1; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
           else
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}"
           fi
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
           # Remotion's src/ does: import '../master_timeline.json' â€” must be at repo root
           cp "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_timeline.json" master_timeline.json
 
@@ -1195,7 +1195,7 @@ jobs:
       - name: Download Audio Assets from GDrive
         run: |
           mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png"
 
       - name: Download all chunks
         uses: actions/download-artifact@v4
@@ -1206,7 +1206,7 @@ jobs:
         run: |
           echo "Downloading 'to upload' metadata folder..."
           mkdir -p "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
           
           echo "" > file_list.txt
           for i in {0..19}; do
@@ -1221,20 +1221,20 @@ jobs:
       - name: Sync Final Video to Google Drive
         run: |
           echo "Saving final video to Google Drive 'to upload' folder..."
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" -v
           
       - name: Upload Video to YouTube API
         env:
           AUTO_TARGET_FOLDER: "BULK"
         run: |
           echo "Syncing all pending upload folders from Google Drive..."
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload" "channels/${{ inputs.channel_name }}/to upload" -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload" "channels/${{ inputs.channel_name }}/to upload" -v
           
           echo "Downloading private uploader script and tokens from Google Drive..."
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator/youtube_uploader.py" "." -v
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator/distribution_engine.py" "." -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/youtube_uploader.py" "." -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/distribution_engine.py" "." -v
           mkdir -p tokens
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator/tokens" "tokens" -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/tokens" "tokens" -v
           
           echo "Installing Google API requirements..."
           python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib tweepy requests
@@ -1287,7 +1287,7 @@ jobs:
       - name: Send Global Failsafe Shutdown Signal to Ollama
         run: |
             echo "shutdown" > shutdown.txt
-            rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
+            rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
             echo "[+] Failsafe shutdown signal sent!"
             rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
             echo "[+] Failsafe pool cleanup complete!"
