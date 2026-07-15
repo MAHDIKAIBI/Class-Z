@@ -1367,5 +1367,13 @@ jobs:
             echo "shutdown" > shutdown.txt
             rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
             echo "[+] Failsafe shutdown signal sent!"
+            
+            # Give the Master Brain 30 seconds to receive it and cleanly shut down
+            sleep 30
+            
+            echo "[+] Running final forceful sweep of all Ollama run residues..."
+            rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
+            rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" || true
+            rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_restart_${{ github.run_id }}.txt" || true
             rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
-            echo "[+] Failsafe pool cleanup complete!"
+            echo "[+] Sweep complete. Next run will be 100% fresh!"
