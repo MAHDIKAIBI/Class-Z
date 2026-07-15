@@ -401,7 +401,7 @@ jobs:
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
           CHANNEL="${{ inputs.channel_name }}"
           # Only download what tts_worker.py actually needs â€” no mp4s, no bulk folders
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --exclude "channels/**" --exclude "public/channels/**" --exclude "error_dumps/**" \
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
             --include "tts_worker.py" \
             --include "local_voice_engine.py" \
             --include "requirements.txt" \
@@ -507,7 +507,7 @@ jobs:
       - name: Download Scripts & All WAV Chunks
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --exclude "channels/**" --exclude "public/channels/**" --exclude "error_dumps/**" --exclude "node_modules/**" --exclude "out/**" --exclude "*.mp4" --exclude "requirements.txt" --exclude "DELETE_THIS_WHEN_SELLING_firefox_profile/**" --exclude "firefox_stealth_profile/**" --exclude "gemini_selenium_profile/**" --exclude "ChatTTS_Models/**" --transfers 16
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" --filter "- /ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT"
 
@@ -768,11 +768,11 @@ jobs:
       - name: Download All Scripts & Workspace from Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --exclude "channels/**" --exclude "public/channels/**" --exclude "error_dumps/**" \
-            --exclude "node_modules/**" --exclude "out/**" --exclude "*.mp4" \
-            --exclude "requirements.txt" --exclude "DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
-            --exclude "firefox_stealth_profile/**" --exclude "gemini_selenium_profile/**" \
-            --exclude "ChatTTS_Models/**" --transfers 16
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
+            --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" \
+            --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
+            --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" \
+            --filter "- /ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
             "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16
@@ -899,11 +899,11 @@ jobs:
       - name: Download All Scripts, Assets & Workspace from Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --exclude "channels/**" --exclude "public/channels/**" --exclude "error_dumps/**" \
-            --exclude "node_modules/**" --exclude "out/**" --exclude "*.mp4" \
-            --exclude "requirements.txt" --exclude "DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
-            --exclude "firefox_stealth_profile/**" --exclude "gemini_selenium_profile/**" \
-            --exclude "ChatTTS_Models/**" --transfers 16
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
+            --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" \
+            --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
+            --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" \
+            --filter "- /ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
           if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" >/dev/null 2>&1; then
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16
