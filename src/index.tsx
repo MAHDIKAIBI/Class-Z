@@ -8,6 +8,7 @@ import { LayoutRouter, SmartMedia } from './components/Layouts';
 import { TypographyRouter } from './components/Typography';
 import { MotionGraphicsRouter } from './components/MotionGraphics';
 import { EffectsDirector } from './components/Effects';
+import { CaptionDirector } from './components/CaptionDirector';
 
 export const CameraContext = createContext({ xPan: 0, yPan: 0, zScale: 1 });
 export const useCamera = () => useContext(CameraContext);
@@ -183,8 +184,6 @@ const DynamicElement = ({ src, duration, motion, continuousMotion, delay, treatm
     </AbsoluteFill>
   );
 };
-
-import { CaptionDirector } from './components/CaptionDirector';
 
 
 const CinematicOverlay = ({ src, durationInFrames }: { src: string, durationInFrames: number }) => {

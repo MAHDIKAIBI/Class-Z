@@ -143,7 +143,7 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
     const preRollMs = 100;
 
     return (
-        <AbsoluteFill style={{ backgroundColor: 'black' }}>
+        <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
             <style>
                {`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap');`}
             </style>
