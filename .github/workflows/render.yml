@@ -169,6 +169,36 @@ jobs:
               rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
               break
             fi
+            
+            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_restart_${{ github.run_id }}.txt" >/dev/null 2>&1; then
+              echo "Restart signal received! Restarting Ollama and tunnel..."
+              kill $(pgrep bore) || true
+              pkill -f "ollama serve" || true
+              sleep 2
+              OLLAMA_HOST="0.0.0.0" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
+              sleep 5
+              
+              MAX_RETRIES=10
+              RETRY_COUNT=0
+              BORE_PORT=""
+              while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+                bore local 11434 --to bore.pub > tunnel.log 2>&1 &
+                BORE_PID=$!
+                sleep 8
+                BORE_PORT=$(grep -oP 'bore\.pub:\K\d+' tunnel.log | head -n 1)
+                if [ -n "$BORE_PORT" ]; then
+                  if curl -m 10 -s http://bore.pub:$BORE_PORT/api/tags > /dev/null; then break; else kill $BORE_PID || true; BORE_PORT=""; fi
+                fi
+                kill $BORE_PID || true; sleep 10
+                RETRY_COUNT=$((RETRY_COUNT+1))
+              done
+              if [ -n "$BORE_PORT" ]; then
+                OLLAMA_URL="http://bore.pub:$BORE_PORT"
+                echo "$OLLAMA_URL" > ollama_url.txt
+                rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s ollama_url.txt "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt"
+              fi
+              rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_restart_${{ github.run_id }}.txt" || true
+            fi
             # Ping Ollama through the tunnel every 60s to keep localhost.run HTTP routing alive
             # SSH keepalive alone is not enough â€” localhost.run also drops the HTTP route on inactivity
             PING_COUNTER=$((PING_COUNTER + 1))
@@ -1219,7 +1249,7 @@ jobs:
         run: |
           echo "Downloading 'to upload' metadata folder..."
           mkdir -p "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" || true
           
           echo "" > file_list.txt
           for i in {0..19}; do
