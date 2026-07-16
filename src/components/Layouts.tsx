@@ -10,8 +10,11 @@ export const SmartMedia: React.FC<{ src: string, style?: any, className?: string
   if (!src || src.trim() === '') return null;
   const lower = src.toLowerCase();
   const isVideo = lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.endsWith('.webm');
+  // Pass endAt = durationFrames when available so overlay/foreground videos
+  // don't freeze on their last frame if shorter than the scene window.
+  const endAtProp = isVideo && durationFrames ? { endAt: durationFrames } : {};
   const media = isVideo 
-    ? <OffthreadVideo src={src} style={style} className={className} muted delayRenderTimeoutInMilliseconds={120000} {...props} /> 
+    ? <OffthreadVideo src={src} style={style} className={className} muted delayRenderTimeoutInMilliseconds={120000} {...endAtProp} {...props} /> 
     : <RemotionImg src={src} style={style} className={className} {...props} />;
     
   if (durationFrames) {
@@ -38,8 +41,13 @@ export const KenBurnsMedia: React.FC<{ src: string, type: 'video' | 'image', dur
 
   const finalStyle: React.CSSProperties = { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', transform: `translate3d(${bgX}px, ${bgY}px, 0px) scale(${bgScale})`, ...style };
   
+  // endAt hard-clamps the video to exactly the scene window.
+  // Without this, OffthreadVideo freezes on the clip's last decoded frame
+  // when the stock footage is shorter than visualDurFrames.
+  const endAtFrame = startFromFrame + duration;
+
   return type === 'video' 
-    ? <OffthreadVideo src={src} style={finalStyle} startFrom={startFromFrame} muted delayRenderTimeoutInMilliseconds={120000} />
+    ? <OffthreadVideo src={src} style={finalStyle} startFrom={startFromFrame} endAt={endAtFrame} muted delayRenderTimeoutInMilliseconds={120000} />
     : <SmartMedia src={src} style={finalStyle} />;
 };
 
