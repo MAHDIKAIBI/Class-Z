@@ -9,9 +9,7 @@ import { TypographyRouter } from './components/Typography';
 import { MotionGraphicsRouter } from './components/MotionGraphics';
 import { EffectsDirector } from './components/Effects';
 import { CaptionDirector } from './components/CaptionDirector';
-
-export const CameraContext = createContext({ xPan: 0, yPan: 0, zScale: 1 });
-export const useCamera = () => useContext(CameraContext);
+import { GlobalFinisher } from './components/GlobalFinisher';
 
 const getParallaxMultiplier = (role: string, depth: number) => {
     if (role === 'background') return 0.2;
@@ -44,59 +42,6 @@ const getEditorialVariants = (scene: any, sceneIndex: number) => {
       };
   };
 
-// 1. Global Camera Engine (Replaces Virtual3DCamera inside scenes)
-const GlobalCameraProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const frame = useCurrentFrame();
-    const { fps } = useVideoConfig();
-    const timeSec = frame / fps;
-
-    // Generate a continuous global path from scene data
-    const globalPath = useMemo(() => {
-        let pts: any[] = [];
-        masterJson.timeline.forEach((scene: any, i: number) => {
-            const sTime = (scene.timing?.start_ms || (i * 3000)) / 1000;
-            // Generate deterministic but dynamic waypoints to interpolate through
-            pts.push({ 
-                t: sTime, 
-                x: (Math.sin(i * 1.5) * 60), 
-                y: (Math.cos(i * 1.2) * 40), 
-                z: 1.0 + (i * 0.05) 
-            });
-        });
-        // Add an end point
-        pts.push({ t: 9999, x: 0, y: 0, z: 2.0 });
-        return pts;
-    }, []);
-
-    let xPan = 0, yPan = 0, zScale = 1;
-    if (globalPath.length > 0) {
-        const currentIdx = Math.max(0, globalPath.findIndex(p => p.t > timeSec) - 1);
-        const current = globalPath[currentIdx];
-        const next = globalPath[currentIdx + 1] || current;
-        
-        if (next && current && next.t > current.t) {
-            // Easing to make momentum feel natural and cinematic (MagnatesMedia style)
-            const rawProgress = (timeSec - current.t) / (next.t - current.t);
-            const progress = Easing.inOut(Easing.quad)(rawProgress);
-            xPan = interpolate(progress, [0, 1], [current.x, next.x]);
-            yPan = interpolate(progress, [0, 1], [current.y, next.y]);
-            zScale = interpolate(progress, [0, 1], [current.z, next.z]);
-        } else {
-            xPan = current.x; yPan = current.y; zScale = current.z;
-        }
-    }
-
-    const breathScale = 1.0 + Math.sin(frame * 0.05) * 0.015;
-    const finalScale = zScale * breathScale;
-
-    return (
-        <CameraContext.Provider value={{ xPan, yPan, zScale: finalScale }}>
-            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', backgroundColor: '#000' }}>
-                {children}
-            </div>
-        </CameraContext.Provider>
-    );
-};
 
 const getTreatmentCSS = (treatment: string) => {
   switch(treatment) {
@@ -116,7 +61,6 @@ const getTreatmentCSS = (treatment: string) => {
 const DynamicElement = ({ src, duration, motion, continuousMotion, delay, treatment, depth, transformOrigin, composition, role, focus }: any) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const camera = useCamera(); 
   
   const isEntering = frame >= delay;
   const activeFrame = isEntering ? frame - delay : 0;
@@ -156,9 +100,9 @@ const DynamicElement = ({ src, duration, motion, continuousMotion, delay, treatm
   else if (composition?.anchor === 'right') { posStyles.justifyContent = 'flex-end'; posStyles.alignItems = 'center'; }
 
   const pMult = getParallaxMultiplier(role, depth || 10);
-  const parallaxX = camera.xPan * pMult;
-  const parallaxY = camera.yPan * pMult;
-  const parallaxScale = 1.0 + ((camera.zScale - 1.0) * pMult); 
+  const parallaxX = 0;
+  const parallaxY = 0;
+  const parallaxScale = 1.0; 
 
   let blurStr = 'none';
   if (focus === 'hero' && role !== 'hero' && depth < 500) {
@@ -255,8 +199,8 @@ const AutomatedDocumentary = () => {
   });
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#000' }}>
-      <GlobalCameraProvider>
+    <GlobalFinisher>
+      <AbsoluteFill style={{ backgroundColor: '#000' }}>
          
          {/* 6. Decoupled Audio & Visual Timeline */}
          {mappedScenes.map((scene: any, index: number) => {
@@ -337,7 +281,7 @@ const AutomatedDocumentary = () => {
                </React.Fragment>
             );
          })}
-      </GlobalCameraProvider>
+      </AbsoluteFill>
       
       {/* Inline styles for cross-focus animation engine */}
       <style>{`
@@ -351,7 +295,7 @@ const AutomatedDocumentary = () => {
              100% { transform: scale(1.15); filter: blur(8px); }
           }
       `}</style>
-    </AbsoluteFill>
+    </GlobalFinisher>
   );
 };
 

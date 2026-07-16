@@ -23,32 +23,28 @@ export const SmartMedia: React.FC<{ src: string, style?: any, className?: string
   return media;
 };
 
-export const KenBurnsMedia: React.FC<{ src: string, type: 'video' | 'image', duration: number, isEven: boolean, style?: any, startFromFrame?: number }> = ({ src, type, duration, isEven, style = {}, startFromFrame = 0 }) => {
+import { OrganicCamera } from './OrganicCamera';
+
+export const KenBurnsMedia: React.FC<{ src: string, type: 'video' | 'image', duration: number, isEven: boolean, style?: any, startFromFrame?: number, sceneId?: string }> = ({ src, type, duration, isEven, style = {}, startFromFrame = 0, sceneId }) => {
   if (!src || src.endsWith('assets/') || src.trim() === '') return null;
   
-  const frame = useCurrentFrame();
-  const progress = frame / duration;
-  const camera = useCamera();
-  
-  // Use heavy overscan (1.3+) to guarantee safety during extreme 3D camera panning
-  const baseScale = isEven ? 1.30 + Math.max(0, progress) * 0.05 : 1.35 - Math.max(0, progress) * 0.05;
-  const drift = Math.sin(Math.max(0, progress) * Math.PI) * 10;
-  
-  // System 1: Real Parallax multiplier for Backgrounds (0.2)
-  const bgScale = baseScale + ((camera.zScale - 1.0) * 0.2);
-  const bgX = (camera.xPan * 0.2) + drift;
-  const bgY = (camera.yPan * 0.2);
-
-  const finalStyle: React.CSSProperties = { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', transform: `translate3d(${bgX}px, ${bgY}px, 0px) scale(${bgScale})`, ...style };
+  const finalStyle: React.CSSProperties = { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', ...style };
   
   // endAt hard-clamps the video to exactly the scene window.
   // Without this, OffthreadVideo freezes on the clip's last decoded frame
   // when the stock footage is shorter than visualDurFrames.
   const endAtFrame = startFromFrame + duration;
 
-  return type === 'video' 
+  const media = type === 'video' 
     ? <OffthreadVideo src={src} style={finalStyle} startFrom={startFromFrame} endAt={endAtFrame} muted delayRenderTimeoutInMilliseconds={120000} />
     : <SmartMedia src={src} style={finalStyle} />;
+
+  // Seed with explicit sceneId if available, fallback to the file path
+  return (
+    <OrganicCamera seed={sceneId || src}>
+      {media}
+    </OrganicCamera>
+  );
 };
 
 
