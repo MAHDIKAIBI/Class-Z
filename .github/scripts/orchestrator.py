@@ -6,7 +6,8 @@ import re
 
 def safe_filename(name: str) -> str:
     if not name: return ""
-    return re.sub(r'[\\/*?:"<>|]', '', name).strip()
+    name = re.sub(r'[^a-zA-Z0-9 \-_]', '', name)
+    return re.sub(r'\s+', ' ', name).strip()
 
 action_type = os.environ.get("ACTION_TYPE")
 channel_name = os.environ.get("CHANNEL_NAME")
