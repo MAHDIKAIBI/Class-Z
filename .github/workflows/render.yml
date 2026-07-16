@@ -362,6 +362,20 @@ jobs:
             fi
             echo "total_frames=$TOTAL_FRAMES" >> $GITHUB_OUTPUT
           
+      - name: Sync Refreshed ChatGPT Cookies to Engine Drive
+        if: always()
+        run: |
+          echo "Syncing refreshed ChatGPT cookies back to engine drive..."
+          rclone copy --tpslimit 5 --retries 3 --contimeout 30s \
+            "engine:Colab_AutoVideoCreator/chatgpt_cookies.json" "." || true
+          if [ -f chatgpt_cookies.json ]; then
+            rclone copy --tpslimit 5 --retries 3 --contimeout 30s \
+              "chatgpt_cookies.json" "engine:Colab_AutoVideoCreator/" -v
+            echo "[+] ChatGPT cookies synced back to engine drive."
+          else
+            echo "[!] No refreshed cookies found to sync (Playwright may have been skipped)."
+          fi
+
       # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
       # finishes, because The_Brain.py needs Ollama for footage/image search queries.
 
