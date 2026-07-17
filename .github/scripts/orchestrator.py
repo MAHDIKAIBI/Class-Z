@@ -120,6 +120,15 @@ if topic:
     os.environ["TOPIC"] = topic
 os.environ["GITHUB_ACTIONS"] = "true" # Triggers the CI check
 
+
+# [Deep Fix for RESUME Mode] Download existing workspace so state_machine_scriptwriter detects script.txt and skips Playwright!
+if topic:
+    safe_topic = safe_filename(topic)
+    print(f"[*] Pre-fetching existing workspace for topic '{topic}' to bypass ChatGPT if resuming...")
+    # We download the public workspace which contains script.txt
+    subprocess.run(["rclone", "copy", f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{safe_topic}", f"public/channels/{channel_name}/{safe_topic}"], check=False)
+
+
 # 4. Execute the pipeline
 print("Executing Video Creation Pipeline...")
 try:
