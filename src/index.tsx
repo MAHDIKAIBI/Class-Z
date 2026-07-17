@@ -132,6 +132,7 @@ const DynamicElement = ({ src, duration, motion, continuousMotion, delay, treatm
 
 
 const CinematicOverlay = ({ src, durationInFrames }: { src: string, durationInFrames: number }) => {
+    if (!src) return null;
     const frame = useCurrentFrame();
     
     // Smooth fade in over half a second
