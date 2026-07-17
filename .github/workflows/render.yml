@@ -102,8 +102,8 @@ jobs:
           sudo systemctl stop ollama || true
           OLLAMA_HOST="0.0.0.0" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
-          ollama pull qwen2.5:7b
-          ollama pull llava
+          for i in {1..5}; do ollama pull qwen2.5:7b && break || sleep 5; done
+          for i in {1..5}; do ollama pull llava && break || sleep 5; done
           
           # Pre-warm models into memory so brain_job gets instant responses (no 503 cold-load)
           echo "Warming up qwen2.5:7b..."
@@ -675,7 +675,7 @@ jobs:
           sudo systemctl stop ollama || true
           OLLAMA_HOST="0.0.0.0" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
-          ollama pull qwen2.5:7b
+          for i in {1..5}; do ollama pull qwen2.5:7b && break || sleep 5; done
 
           # Pre-warm model
           curl -s -X POST http://localhost:11434/api/generate \
