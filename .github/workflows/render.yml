@@ -871,6 +871,7 @@ jobs:
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
           PARTIAL_VID="partial_timeline_${{ matrix.worker }}.json"
+          PARTIAL_OVL="partial_overlay_${{ matrix.worker }}.json"
           
           echo "Batch uploading downloaded assets..."
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
@@ -883,138 +884,18 @@ jobs:
               --transfers 1 -v || true
             echo "[+] Uploaded $PARTIAL_VID to Drive."
           fi
-
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # PHASE 2d: brain_finish_job â€” Merge partials, overlay, audio master, git push
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  overlay_matrix:
-    needs: [creation_job, brain_prep_job]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        worker: [0, 1, 2, 3, 4, 5, 6, 7]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install FFmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - name: Install System Dependencies
-        run: |
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list
-          sudo apt-get update || true
-          sudo apt-get install rclone jq sox libsox-fmt-all xvfb -y
-
-      - name: Configure rclone Silently
-        env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN_ENGINE }}
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-        run: |
-          mkdir -p ~/.config/rclone
-          
-          # Engine Token
-          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
-          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
-          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
-          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
-          
-          # Data Token
-          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
-          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
-          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
-          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
-          
-          cat << EOF > ~/.config/rclone/rclone.conf
-          [engine]
-          type = drive
-          client_id = $CLIENT_ID
-          client_secret = $CLIENT_SECRET
-          scope = drive
-          token = $ENGINE_TOKEN
-          
-          [data]
-          type = drive
-          client_id = $CLIENT_ID
-          client_secret = $CLIENT_SECRET
-          scope = drive
-          token = $DATA_TOKEN
-          EOF
-
-      - name: Download All Scripts & Workspace from Drive
-        run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
-            --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" \
-            --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
-            --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" \
-            --filter "- /ChatTTS_Models/**" --transfers 16
-          mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT"  "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 || true
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT"  "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 || true
-
-      - name: Install Python Dependencies
-        run: |
-          if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt; fi
-          
-          python -m playwright install --with-deps chromium
-
-      - name: Connect to Ollama Brain
-        run: |
-          echo "Fetching Ollama URL from Drive..."
-          for i in $(seq 1 120); do
-            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
-              rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
-              OLLAMA_URL=$(cat ollama_url.txt)
-              echo "Connected to Ollama Brain at $OLLAMA_URL"
-              echo "OLLAMA_BASE_URL=$OLLAMA_URL" >> $GITHUB_ENV
-              break
-            fi
-            echo "Waiting for Ollama tunnel... ($i/20)"
-            sleep 15
-          done
-
-      - name: Run Overlay Worker
-        env:
-          DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
-          DOWNLOAD_TOTAL_WORKERS: "8"
-          CHANNEL_NAME: ${{ inputs.channel_name }}
-          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
-          GITHUB_RUN_ID: ${{ github.run_id }}
-          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
-        run: xvfb-run -a python -u overlay_worker.py
-
-      - name: Batch Upload Assets and Partial Timeline to Drive
-        if: always()
-        run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          PARTIAL_OVL="partial_overlay_${{ matrix.worker }}.json"
-          
-          echo "Batch uploading downloaded assets..."
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
-            "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
-            --transfers 16 -v || true
           
           if [ -f "$PARTIAL_OVL" ]; then
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "$PARTIAL_OVL" \
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "$PARTIAL_OVL" \
               "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
               --transfers 1 -v || true
-            echo "[+] Uploaded $PARTIAL_OVL to Drive."
           fi
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # PHASE 2d: brain_finish_job â€” Merge partials, overlay, audio master, git push
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   brain_finish_job:
-    needs: [creation_job, brain_prep_job, download_matrix, overlay_matrix]
+    needs: [creation_job, brain_prep_job, download_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY'
     runs-on: ubuntu-latest
     steps:
