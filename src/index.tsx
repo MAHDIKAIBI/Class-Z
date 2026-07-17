@@ -282,13 +282,8 @@ const AutomatedDocumentary = () => {
                               );
                           })()}
                         
-                        {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.caption_preset !== 'none' && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
-                            <CaptionDirector 
-                                words={scene.words} 
-                                sceneIndex={index} 
-                                variants={scene.editorialVariants} 
-                                sceneStartMs={scene.timing?.start_ms || (index * 3000)}
-                            />
+                        {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
+                            <CaptionDirector scene={scene} />
                         )}
                      </AbsoluteFill>
                   </Sequence>

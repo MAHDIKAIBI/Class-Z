@@ -6,7 +6,7 @@ export const KineticStack: React.FC<{
     side: 'left' | 'right';
     layoutType: 'A' | 'B' | 'C';
     durationFrames: number;
-}> = ({ words, side, layoutType }) => {
+}> = ({ words, side = 'left', layoutType = 'A' }) => {
     const frame = useCurrentFrame();
 
     // Group words into lines based on layout

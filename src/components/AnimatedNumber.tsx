@@ -6,12 +6,14 @@ import { useDynamicSfx } from './useDynamicSfx';
 
 interface Props {
     numericValue: number;
-    type: HeroType;
+    type?: HeroType;
     durationFrames: number;
-    globalIndex: number;
+    globalIndex?: number;
+    prefix?: string;
+    suffix?: string;
 }
 
-export const AnimatedNumber: React.FC<Props> = ({ numericValue, type, durationFrames, globalIndex }) => {
+export const AnimatedNumber: React.FC<Props> = ({ numericValue, type = 'generic', durationFrames, globalIndex = 0, prefix: prefixOverride, suffix: suffixOverride }) => {
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
 
@@ -93,8 +95,9 @@ export const AnimatedNumber: React.FC<Props> = ({ numericValue, type, durationFr
         return { display, suffix };
     };
 
-    const { display, suffix } = formatValue(currentNum);
-    const prefix = type === 'money' ? '$' : '';
+    const { display, suffix: computedSuffix } = formatValue(currentNum);
+    const suffix = suffixOverride || computedSuffix;
+    const prefix = prefixOverride || (type === 'money' ? '$' : '');
 
     return (
         <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent', zIndex: 200, pointerEvents: 'none' }}>
