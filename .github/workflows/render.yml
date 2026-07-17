@@ -866,24 +866,40 @@ jobs:
           OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
         run: xvfb-run -a python -u download_worker.py
 
+      - name: Run Overlay Worker
+        env:
+          DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
+          DOWNLOAD_TOTAL_WORKERS: "8"
+          CHANNEL_NAME: ${{ inputs.channel_name }}
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
+        run: xvfb-run -a python -u overlay_worker.py
+
       - name: Batch Upload Assets and Partial Timeline to Drive
         if: always()
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          PARTIAL="partial_timeline_${{ matrix.worker }}.json"
+          PARTIAL_VID="partial_timeline_${{ matrix.worker }}.json"
+          PARTIAL_OVL="partial_overlay_${{ matrix.worker }}.json"
           
           echo "Batch uploading downloaded assets..."
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
             "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
             --transfers 16 -v || true
             
-          if [ -f "$PARTIAL" ]; then
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "$PARTIAL" \
+          if [ -f "$PARTIAL_VID" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "$PARTIAL_VID" \
               "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
               --transfers 1 -v || true
-            echo "[+] Uploaded $PARTIAL to Drive."
-          else
-            echo "[!] No partial timeline file found for worker ${{ matrix.worker }}."
+            echo "[+] Uploaded $PARTIAL_VID to Drive."
+          fi
+          
+          if [ -f "$PARTIAL_OVL" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "$PARTIAL_OVL" \
+              "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
+              --transfers 1 -v || true
+            echo "[+] Uploaded $PARTIAL_OVL to Drive."
           fi
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
