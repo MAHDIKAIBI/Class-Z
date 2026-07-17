@@ -1,5 +1,9 @@
 import { AbsoluteFill, Sequence, Img, Audio, useVideoConfig, useCurrentFrame, staticFile as remotionStaticFile, registerRoot, Composition, interpolate, spring, Easing, random as seededRandom } from 'remotion';
-const staticFile = (path: string) => remotionStaticFile(path?.startsWith('public/') ? path.slice(7) : path);
+const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+const staticFile = (path: string) => {
+    if (!path || typeof path !== 'string' || path.trim() === '') return TRANSPARENT_PIXEL;
+    return remotionStaticFile(path.startsWith('public/') ? path.slice(7) : path);
+};
 import { noise2D } from '@remotion/noise';
 import React, { createContext, useContext, useMemo } from 'react';
 import masterJsonRaw from '../master_timeline.json';
