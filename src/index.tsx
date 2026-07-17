@@ -9,6 +9,7 @@ import { TypographyRouter } from './components/Typography';
 import { MotionGraphicsRouter } from './components/MotionGraphics';
 import { EffectsDirector } from './components/Effects';
 import { CaptionDirector } from './components/CaptionDirector';
+import { DynamicLiquidGrid } from './components/DynamicLiquidGrid';
 import { GlobalFinisher } from './components/GlobalFinisher';
 
 const getParallaxMultiplier = (role: string, depth: number) => {
@@ -212,36 +213,49 @@ const AutomatedDocumentary = () => {
                   <Sequence from={scene.startFrame} durationInFrames={scene.visualDurFrames}>
                      <AbsoluteFill>
                         
-                        {/* 4. Focus Pull (Cross-Focus Cut Dynamics) */}
-                        <div style={{
-                           position: 'absolute', inset: 0, 
-                           animationName: scene.cutStyle === 'split_cut' ? 'none' : 'crossFocus',
-                           animationDuration: `${scene.overlapFrames / fps}s`
-                        }}>
-                           <div style={{
-                               position: 'absolute', inset: 0,
-                               animationName: scene.overlay_image ? 'slowZoomBg' : 'none',
-                               animationDuration: `${scene.visualDurFrames / fps}s`,
-                               animationTimingFunction: 'linear',
-                               animationFillMode: 'forwards'
-                           }}>
-                               <LayoutRouter scene={scene} duration={scene.visualDurFrames} isEven={scene.isEven} variants={scene.editorialVariants} />
-                           </div>
-                           
-                             {/* Foreground cutouts */}
-                             <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', pointerEvents: 'none' }}>
-                               {scene.visual_elements?.map((el: any, elIdx: number) => {
-                                 const mPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
-                                 const mediaPath = mPaths[elIdx];
-                                 if (el.role && el.role !== 'background' && el.role !== 'video' && mediaPath && !mediaPath.endsWith('.mp4')) {
-                                    const assetName = mediaPath.split(/[/\\]/).pop();
-                                    const staggerDelay = Math.round((scene.stagger || 0) * fps * elIdx);
-                                    return <DynamicElement key={`fg-${elIdx}`} src={staticFile(mediaPath)} duration={scene.visualDurFrames} motion={el.motion} continuousMotion={el.continuous_motion} delay={staggerDelay} treatment={el.treatment} depth={el.depth} transformOrigin={el.transform_origin} composition={el.composition} role={el.role} focus={scene.focus} />;
-                                 }
-                                 return null;
-                               })}
-                             </div>
-                        </div>
+                        {/* VISUAL ROUTING ENGINE */}
+                        {(scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') ? (
+                            /* DYNAMIC LIQUID GRID (for specific/comparison scenes) */
+                            <DynamicLiquidGrid
+                                bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''}
+                                assets={(scene.visual?.assets || scene.assets || []).map((a: any, idx: number) => ({
+                                    url: scene.media_paths?.[idx + 1] || scene.media_paths?.[idx] || a.downloaded_path || '',
+                                    title: a.title || '',
+                                    subtitle: a.subtitle || '',
+                                    trigger_frame: a.trigger_frame ?? (idx === 0 ? 0 : 9999)
+                                }))}
+                            />
+                        ) : (
+                            /* STANDARD LAYOUT (for vibe/data scenes) */
+                            <div style={{
+                                position: 'absolute', inset: 0, 
+                                animationName: scene.cutStyle === 'split_cut' ? 'none' : 'crossFocus',
+                                animationDuration: `${scene.overlapFrames / fps}s`
+                            }}>
+                               <div style={{
+                                   position: 'absolute', inset: 0,
+                                   animationName: scene.overlay_image ? 'slowZoomBg' : 'none',
+                                   animationDuration: `${scene.visualDurFrames / fps}s`,
+                                   animationTimingFunction: 'linear',
+                                   animationFillMode: 'forwards'
+                               }}>
+                                   <LayoutRouter scene={scene} duration={scene.visualDurFrames} isEven={scene.isEven} variants={scene.editorialVariants} />
+                               </div>
+                               
+                                 {/* Foreground cutouts */}
+                                 <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', pointerEvents: 'none' }}>
+                                   {scene.visual_elements?.map((el: any, elIdx: number) => {
+                                     const mPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
+                                     const mediaPath = mPaths[elIdx];
+                                     if (el.role && el.role !== 'background' && el.role !== 'video' && mediaPath && !mediaPath.endsWith('.mp4')) {
+                                        const staggerDelay = Math.round((scene.stagger || 0) * fps * elIdx);
+                                        return <DynamicElement key={`fg-${elIdx}`} src={staticFile(mediaPath)} duration={scene.visualDurFrames} motion={el.motion} continuousMotion={el.continuous_motion} delay={staggerDelay} treatment={el.treatment} depth={el.depth} transformOrigin={el.transform_origin} composition={el.composition} role={el.role} focus={scene.focus} />;
+                                     }
+                                     return null;
+                                   })}
+                                 </div>
+                            </div>
+                        )}
 
                         {/* Effects & Post FX overrides managed by Editorial Director */}
                         <EffectsDirector variants={scene.editorialVariants} events={scene.events} />
@@ -263,7 +277,7 @@ const AutomatedDocumentary = () => {
                               );
                           })()}
                         
-                        {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
+                        {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.caption_preset !== 'none' && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
                             <CaptionDirector 
                                 words={scene.words} 
                                 sceneIndex={index} 
