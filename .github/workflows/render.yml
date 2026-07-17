@@ -1308,10 +1308,10 @@ jobs:
           
           # Clean up ollama pool directory
           
-          for i in {0..7}; do
-            rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
-          done
-          rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
+            for i in {0..7}; do
+              rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
+            done
+            rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
 
   global_cleanup:
     name: Global Cleanup (Failsafe)
@@ -1361,8 +1361,8 @@ jobs:
             rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" || true
             rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_restart_${{ github.run_id }}.txt" || true
             
-          for i in {0..7}; do
-            rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
-          done
-          rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
+            for i in {0..7}; do
+              rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
+            done
+            rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
             echo "[+] Sweep complete. Next run will be 100% fresh!"
