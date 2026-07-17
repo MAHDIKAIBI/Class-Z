@@ -34,7 +34,7 @@ const getEditorialVariants = (scene: any, sceneIndex: number) => {
       return {
         layout: scene.layout_variant || 1,
         captionEnabled: scene.captions?.enabled !== false,
-        captionPreset: scene.caption_preset || 'GlassPill',
+        captionPreset: scene.caption_preset || scene.visual?.caption_preset || 'GlassPill',
         lighting: scene.effects_theme || 'none',
         particles: scene.effects_theme || 'none',
         cameraSpeed: scene.camera_focus === 'hero' ? 'slow' : 'medium',
@@ -219,10 +219,15 @@ const AutomatedDocumentary = () => {
                             <DynamicLiquidGrid
                                 bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''}
                                 assets={(scene.visual?.assets || scene.assets || []).map((a: any, idx: number) => ({
-                                    url: scene.media_paths?.[idx + 1] || scene.media_paths?.[idx] || a.downloaded_path || '',
+                                    // overlay_downloader.py writes to a.local_path
+                                    // a.trigger_start_ms is set by The_Brain word alignment (precise WhisperX ms)
+                                    // a.trigger_frame is the AI's estimated fallback
+                                    url: a.local_path || a.downloaded_path || '',
                                     title: a.title || '',
                                     subtitle: a.subtitle || '',
-                                    trigger_frame: a.trigger_frame ?? (idx === 0 ? 0 : 9999)
+                                    trigger_frame: a.trigger_start_ms
+                                        ? Math.round(((a.trigger_start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps)
+                                        : (a.trigger_frame ?? (idx === 0 ? 0 : 9999))
                                 }))}
                             />
                         ) : (
