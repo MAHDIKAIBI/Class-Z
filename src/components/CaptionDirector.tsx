@@ -5,6 +5,13 @@ import { detectHeroNumber, detectHeroWord, HeroMatch } from './HeroDetector';
 import { AnimatedWord } from './AnimatedWord';
 import { KineticStack } from './KineticStack';
 
+import { CinematicDocumentaryCaption } from './CinematicDocumentaryCaption';
+import { GlassPillCaption } from './GlassPillCaption';
+import { HighlightReelCaption } from './HighlightReelCaption';
+import { LiquidMirrorCaption } from './LiquidMirrorCaption';
+import { PremiumLeftSpatial } from './PremiumLeftSpatial';
+import { PremiumRightSpatial } from './PremiumRightSpatial';
+
 interface Word {
     word: string;
     start_ms: number;
@@ -15,33 +22,6 @@ interface Props {
     words: Word[];
 }
 
-const BottomCaption: React.FC<{ text: string }> = ({ text }) => {
-    const frame = useCurrentFrame();
-    const opacity = interpolate(frame, [0, 5], [0, 1], { extrapolateRight: 'clamp' });
-    
-    return (
-        <div style={{
-            position: 'absolute', 
-            bottom: '8%', left: '50%', transform: 'translate(-50%, 0)', 
-            display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
-            justifyContent: 'center', width: '80%', gap: '15px',
-            opacity: opacity,
-            zIndex: 100
-        }}>
-            <span style={{
-                display: 'inline-block',
-                fontFamily: '"Inter", sans-serif',
-                fontSize: '48px',
-                fontWeight: 600,
-                color: '#FFFFFF',
-                textShadow: '0px 2px 4px rgba(0,0,0,0.9), 0px 4px 15px rgba(0,0,0,0.8), 0px 0px 30px rgba(0,0,0,0.5)',
-            }}>
-                {text}
-            </span>
-        </div>
-    );
-};
-
 export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: any) => {
     const { fps } = useVideoConfig();
 
@@ -50,9 +30,7 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
         let currentChunk: Word[] = [];
         let lastHeroTime = -10000;
 
-        // Keep track of counts across the video for the cyclic audio logic
         const typeCounts: Record<string, number> = {};
-        let hasTriggeredKineticThisScene = false;
 
         for (let i = 0; i < words.length; i++) {
             currentChunk.push(words[i]);
@@ -67,24 +45,9 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
 
                 let heroInfo: HeroMatch | null = null;
                 let isHeroWord = false;
-                let bottomText = chunkText;
                 
-                let isKinetic = false;
-                let kineticSide: 'left' | 'right' | null = null;
-                let kineticLayout: 'A' | 'B' | 'C' | null = null;
-
-                const windowNum = Math.floor(start_ms / 15000);
-                const offset = start_ms % 15000;
-                const isEligibleKinetic = offset < 6000 && !hasTriggeredKineticThisScene && currentChunk.length >= 2 && currentChunk.length <= 5;
-
-                if (isEligibleKinetic) {
-                    isKinetic = true;
-                    kineticSide = windowNum % 2 === 0 ? 'left' : 'right';
-                    const layouts: ('A'|'B'|'C')[] = ['A', 'B', 'C'];
-                    kineticLayout = layouts[windowNum % 3];
-                    hasTriggeredKineticThisScene = true;
-                    bottomText = ""; // Disable standard caption
-                } else if (start_ms - lastHeroTime >= 2500) {
+                // Let the engine detect if there is a number or impact word
+                if (start_ms - lastHeroTime >= 2500) {
                     const match = detectHeroNumber(chunkText);
                     if (match) {
                         const currentCount = typeCounts[match.type] || 0;
@@ -101,14 +64,6 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
 
                         heroInfo = { ...match, globalIndex: currentCount, exact_start_ms };
                         lastHeroTime = exact_start_ms;
-                        
-                        // Only keep text AFTER the Hero Match
-                        const matchIndex = chunkText.toLowerCase().indexOf(match.value.toLowerCase());
-                        if (matchIndex !== -1) {
-                            bottomText = chunkText.substring(matchIndex + match.value.length).replace(/^[.,!?;:]\s*/, '').trim();
-                        } else {
-                            bottomText = "";
-                        }
                     } else {
                         const wordMatch = detectHeroWord(chunkText);
                         if (wordMatch) {
@@ -127,14 +82,6 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
                             heroInfo = { ...wordMatch, globalIndex: currentCount, exact_start_ms };
                             isHeroWord = true;
                             lastHeroTime = exact_start_ms;
-                            
-                            // Only keep text AFTER the Hero Match
-                            const matchIndex = chunkText.toLowerCase().indexOf(wordMatch.value.toLowerCase());
-                            if (matchIndex !== -1) {
-                                bottomText = chunkText.substring(matchIndex + wordMatch.value.length).replace(/^[.,!?;:]\s*/, '').trim();
-                            } else {
-                                bottomText = "";
-                            }
                         }
                     }
                 }
@@ -144,12 +91,8 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
                     start_ms,
                     end_ms,
                     chunkText,
-                    bottomText,
                     heroInfo,
-                    isHeroWord,
-                    isKinetic,
-                    kineticSide,
-                    kineticLayout
+                    isHeroWord
                 });
 
                 currentChunk = [];
@@ -159,6 +102,10 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
     }, [words]);
 
     const preRollMs = 100;
+    const preset = (variants?.captionPreset || 'GlassPill').toLowerCase();
+    
+    // Support mapping HeroKineticCaption to KineticStack
+    const isHeroKinetic = preset.includes('herokinetic');
 
     return (
         <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
@@ -174,20 +121,48 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
                 const heroOffsetFrames = chunk.heroInfo ? Math.max(0, ((chunk.heroInfo.exact_start_ms - chunk.start_ms) / 1000) * fps) : 0;
                 const heroDurationFrames = Math.max(1, durationFrames - heroOffsetFrames);
                 
+                const mappedScript = chunk.words.map((w: any) => {
+                    const wordStartFrame = ((w.start_ms - chunk.start_ms) / 1000) * fps;
+                    const wordEndFrame = ((w.end_ms - chunk.start_ms) / 1000) * fps;
+                    let isHighlight = false;
+                    if (chunk.isHeroWord && chunk.heroInfo && chunk.heroInfo.value.toLowerCase().includes(w.word.toLowerCase())) {
+                        isHighlight = true;
+                    }
+                    return {
+                        word: w.word,
+                        start: Math.max(0, wordStartFrame),
+                        end: Math.max(0, wordEndFrame),
+                        isHighlight
+                    };
+                });
+
+                let CaptionComponent = <GlassPillCaption script={mappedScript} />;
+                if (preset.includes('cinematic') || preset.includes('documentary')) {
+                    CaptionComponent = <CinematicDocumentaryCaption script={mappedScript} />;
+                } else if (preset.includes('highlight')) {
+                    CaptionComponent = <HighlightReelCaption script={mappedScript} />;
+                } else if (preset.includes('liquid') || preset.includes('mirror')) {
+                    CaptionComponent = <LiquidMirrorCaption script={mappedScript} />;
+                } else if (preset.includes('left')) {
+                    CaptionComponent = <PremiumLeftSpatial script={mappedScript} />;
+                } else if (preset.includes('right')) {
+                    CaptionComponent = <PremiumRightSpatial script={mappedScript} />;
+                }
+                
                 return (
                     <Sequence key={i} from={Math.max(0, startFrame)} durationInFrames={Math.max(1, durationFrames)}>
-                        {chunk.isKinetic ? (
+                        {isHeroKinetic ? (
                             <Sequence from={0} durationInFrames={durationFrames}>
                                 <KineticStack 
                                     words={chunk.words.map((w: any) => w.word)}
-                                    side={chunk.kineticSide}
-                                    layoutType={chunk.kineticLayout}
+                                    side={i % 2 === 0 ? 'left' : 'right'}
+                                    layoutType={i % 3 === 0 ? 'A' : i % 3 === 1 ? 'B' : 'C'}
                                     durationFrames={durationFrames}
                                 />
                             </Sequence>
                         ) : (
                             <>
-                                {chunk.bottomText && <BottomCaption text={chunk.bottomText} />}
+                                {CaptionComponent}
                                 {chunk.heroInfo && !chunk.isHeroWord && (
                                     <Sequence from={heroOffsetFrames} durationInFrames={heroDurationFrames}>
                                         <AnimatedNumber 
@@ -195,16 +170,6 @@ export const CaptionDirector = ({ words, sceneIndex, variants, sceneStartMs }: a
                                             type={chunk.heroInfo.type} 
                                             durationFrames={heroDurationFrames}
                                             globalIndex={chunk.heroInfo.globalIndex || 0}
-                                        />
-                                    </Sequence>
-                                )}
-                                {chunk.heroInfo && chunk.isHeroWord && (
-                                    <Sequence from={heroOffsetFrames} durationInFrames={heroDurationFrames}>
-                                        <AnimatedWord 
-                                            word={chunk.heroInfo.value}
-                                            globalIndex={chunk.heroInfo.globalIndex || 0}
-                                            durationFrames={heroDurationFrames}
-                                            category={chunk.heroInfo.category}
                                         />
                                     </Sequence>
                                 )}

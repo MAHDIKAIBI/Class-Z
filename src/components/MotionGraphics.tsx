@@ -1,6 +1,10 @@
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, random as seededRandom } from 'remotion';
 import React from 'react';
 import { useCamera } from '../index';
+import { BiometricScanRing } from './BiometricScanRing';
+import { GlassStatGrid } from './GlassStatGrid';
+import { Dynamic3DComparison } from './Dynamic3DComparison';
+
 
 // -----------------------------------------------------
 // 1. DATA TICK ENGINE (Advanced Number Animators)
@@ -244,7 +248,46 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  if (!graphics || graphics.graphics_type === 'none' || !graphics.data_points) return null;
+  if (!graphics || graphics.graphics_type === 'none') return null;
+
+  const type = graphics.graphics_type.toLowerCase();
+
+  // --- VAULT COMPONENTS (New Premium HUDs) ---
+  // These components manage their own timing via start/end props.
+  // start=0 is correct because they live inside a <Sequence> that already handles the global offset.
+  // end uses a generous ceiling; the parent Sequence will unmount them before this is reached.
+  if (type === 'biometricscanring' || type === 'biometric_ring') {
+      return (
+          <BiometricScanRing 
+              start={0} 
+              end={9999} 
+              targetPercentage={graphics.targetPercentage ?? 100} 
+              label={graphics.label ?? ''} 
+              brandColor={graphics.brandColor}
+          />
+      );
+  }
+  if (type === 'glassstatgrid' || type === 'glass_grid') {
+      return (
+          <GlassStatGrid 
+              start={0} 
+              end={9999} 
+              stats={graphics.stats ?? []} 
+          />
+      );
+  }
+  if (type === 'dynamic3dcomparison' || type === 'dynamic_3d' || type === 'kineticcomparisonbars') {
+      return (
+          <Dynamic3DComparison 
+              unit={graphics.unit ?? ''}
+              itemA={graphics.itemA ?? { title: '', subtitle: '', value: 0, color: '#ff1a40', start: 0, end: 150 }}
+              itemB={graphics.itemB ?? { title: '', subtitle: '', value: 0, color: '#00e6b8', start: 10, end: 150 }}
+          />
+      );
+  }
+
+  // --- LEGACY GRAPHIC MODULES (existing components that need data_points) ---
+  if (!graphics.data_points) return null;
 
   const seed = sceneIndex + (graphics.data_points.length * 7);
   const random = (offset: number) => seededRandom(seed + offset);
@@ -259,9 +302,9 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
   const zDepth = integrationMode === 'stick_to_wall' ? -200 : 
                  integrationMode === 'glass_projection' ? 150 : 50;
 
-  const type = graphics.graphics_type.toLowerCase();
   
-  let GraphicComponent = CinematicGraph;
+
+  let GraphicComponent: any = CinematicGraph;
   if (type.includes('blueprint') || type.includes('specs') || type.includes('diagram')) {
       GraphicComponent = HolographicBlueprint;
   } else if (type.includes('kpi') || type.includes('quote') || type.includes('comparison') || type.includes('counter')) {

@@ -33,7 +33,7 @@ const getEditorialVariants = (scene: any, sceneIndex: number) => {
       return {
         layout: scene.layout_variant || 1,
         captionEnabled: scene.captions?.enabled !== false,
-        captionPreset: 'Documentary',
+        captionPreset: scene.caption_preset || 'GlassPill',
         lighting: scene.effects_theme || 'none',
         particles: scene.effects_theme || 'none',
         cameraSpeed: scene.camera_focus === 'hero' ? 'slow' : 'medium',
