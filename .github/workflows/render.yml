@@ -445,7 +445,7 @@ jobs:
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
           CHANNEL="${{ inputs.channel_name }}"
           # Only download what tts_worker.py actually needs â€” no mp4s, no bulk folders
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" \
             --include "tts_worker.py" \
             --include "local_voice_engine.py" \
             --include "requirements.txt" \
