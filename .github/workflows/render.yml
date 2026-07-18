@@ -866,6 +866,16 @@ jobs:
           OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
         run: xvfb-run -a python -u download_worker.py
 
+      - name: Run Overlay Worker
+        env:
+          DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
+          DOWNLOAD_TOTAL_WORKERS: "8"
+          CHANNEL_NAME: ${{ inputs.channel_name }}
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
+        run: xvfb-run -a python -u overlay_worker.py
+
       - name: Batch Upload Assets and Partial Timeline to Drive
         if: always()
         run: |
