@@ -56,7 +56,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
             src={payload.bgVideoSrc} 
             style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.4 }} 
             muted 
-          / onError={(e) => console.log("Media playback error caught on Video:", e)}>
+          onError={(e) => console.log("Media playback error caught on Video:", e)} />
         )}
         {/* Heavy vignette to crush the edges and focus the center */}
         <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 400px rgba(0,0,0,1)", pointerEvents: "none" }} />

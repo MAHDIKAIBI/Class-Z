@@ -20,7 +20,7 @@ export const SmartMedia: React.FC<{ src: string, style?: any, className?: string
   // don't freeze on their last frame if shorter than the scene window.
   const endAtProp = isVideo && durationFrames ? { endAt: durationFrames } : {};
   const media = isVideo 
-    ? <OffthreadVideo src={src} style={style} className={className} muted delayRenderTimeoutInMilliseconds={120000} {...endAtProp} {...props} / onError={(e) => console.log("Media playback error caught on OffthreadVideo:", e)}> 
+    ? <OffthreadVideo src={src} style={style} className={className} muted delayRenderTimeoutInMilliseconds={120000} {...endAtProp} {...props} onError={(e) => console.log("Media playback error caught on OffthreadVideo:", e)} /> 
     : <RemotionImg src={src} style={style} className={className} {...props} />;
     
   if (durationFrames) {
@@ -42,7 +42,7 @@ export const KenBurnsMedia: React.FC<{ src: string, type: 'video' | 'image', dur
   const endAtFrame = startFromFrame + duration;
 
   const media = type === 'video' 
-    ? <OffthreadVideo src={src} style={finalStyle} startFrom={startFromFrame} endAt={endAtFrame} muted delayRenderTimeoutInMilliseconds={120000} / onError={(e) => console.log("Media playback error caught on OffthreadVideo:", e)}>
+    ? <OffthreadVideo src={src} style={finalStyle} startFrom={startFromFrame} endAt={endAtFrame} muted delayRenderTimeoutInMilliseconds={120000} onError={(e) => console.log("Media playback error caught on OffthreadVideo:", e)} />
     : <SmartMedia src={src} style={finalStyle} />;
 
   // Seed with explicit sceneId if available, fallback to the file path
@@ -362,7 +362,7 @@ export const FullscreenScene: React.FC<{ scene: any, duration: number, isEven: b
           filter: lut.css + (isVideo ? '' : ' blur(1px)')
         }}>
           {isVideo ? (
-            <OffthreadVideo src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted delayRenderTimeoutInMilliseconds={120000} / onError={(e) => console.log("Media playback error caught on OffthreadVideo:", e)}>
+            <OffthreadVideo src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted delayRenderTimeoutInMilliseconds={120000} onError={(e) => console.log("Media playback error caught on OffthreadVideo:", e)} />
           ) : (
             <SmartMedia durationFrames={duration} sceneId={src} src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           )}

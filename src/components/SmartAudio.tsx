@@ -23,5 +23,5 @@ export const SmartAudio: React.FC<Props> = ({ src, durationFrames }) => {
         return Math.floor(Math.random() * 15);
     }, []);
 
-    return <Audio src={staticFile(src)} volume={volume} startFrom={startFrom} / onError={(e) => console.log("Media playback error caught on Audio:", e)}>;
+    return <Audio src={staticFile(src)} volume={volume} startFrom={startFrom} onError={(e) => console.log("Media playback error caught on Audio:", e)} />;
 };
