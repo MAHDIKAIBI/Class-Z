@@ -455,6 +455,7 @@ jobs:
             mkdir -p "public/channels/$CHANNEL/$VAULT"
             # Download the script + any already-generated WAV chunks
               rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT" "public/channels/$CHANNEL/$VAULT" --include "script.txt" --include "*.wav" --transfers 16 || true
+              rclone mkdir "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT" || true
               rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" --include "script.txt" --include "*.wav" --transfers 16 || true
           fi
           # Download master reference voice if present
@@ -554,6 +555,7 @@ jobs:
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" --filter "- /ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" || true
+            rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" || true
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" || true
 
       - name: Install Python Dependencies
@@ -676,6 +678,7 @@ jobs:
           OLLAMA_HOST="0.0.0.0" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
           for i in {1..5}; do ollama pull qwen2.5:7b && break || sleep 5; done
+          for i in {1..5}; do ollama pull llava && break || sleep 5; done
 
           # Pre-warm model
           curl -s -X POST http://localhost:11434/api/generate \
@@ -833,6 +836,7 @@ jobs:
             --filter "- /ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT"  "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 || true
+            rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" || true
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT"  "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 || true
 
       - name: Install Python Dependencies
@@ -979,6 +983,7 @@ jobs:
             --filter "- /ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 || true
+            rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" || true
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 || true
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
 
@@ -1143,6 +1148,7 @@ jobs:
         run: |
           mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
+            rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
           # Remotion's src/ does: import '../master_timeline.json' â€” must be at repo root
@@ -1263,6 +1269,7 @@ jobs:
         run: |
           mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
+            rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
 
       - name: Download all chunks

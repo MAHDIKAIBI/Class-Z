@@ -125,8 +125,12 @@ os.environ["GITHUB_ACTIONS"] = "true" # Triggers the CI check
 if topic:
     safe_topic = safe_filename(topic)
     print(f"[*] Pre-fetching existing workspace for topic '{topic}' to bypass ChatGPT if resuming...")
-    # We download the public workspace which contains script.txt
-    subprocess.run(["rclone", "copy", f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{safe_topic}", f"public/channels/{channel_name}/{safe_topic}"], check=False)
+    # Pre-create the directory on Drive AND locally so rclone doesn't error on fresh creations
+    local_ws = f"public/channels/{channel_name}/{safe_topic}"
+    os.makedirs(local_ws, exist_ok=True)
+    subprocess.run(["rclone", "mkdir", f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{safe_topic}"], check=False)
+    # Now safely download whatever exists (will be empty on fresh, populated on resume)
+    subprocess.run(["rclone", "copy", f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{safe_topic}", local_ws], check=False)
 
 
 # 4. Execute the pipeline

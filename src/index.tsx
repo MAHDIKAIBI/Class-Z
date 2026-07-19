@@ -16,7 +16,10 @@ import { MotionGraphicsRouter } from './components/MotionGraphics';
 import { EffectsDirector } from './components/Effects';
 import { CaptionDirector } from './components/CaptionDirector';
 import { DynamicLiquidGrid } from './components/DynamicLiquidGrid';
+import { DioramaCanvas } from './components/Diorama';
 import { GlobalFinisher } from './components/GlobalFinisher';
+
+export const useCamera = () => ({ xPan: 0, yPan: 0, zScale: 1.0 });
 
 const getParallaxMultiplier = (role: string, depth: number) => {
     if (role === 'background') return 0.2;
@@ -221,11 +224,19 @@ const AutomatedDocumentary = () => {
                      <AbsoluteFill>
                         
                         {/* VISUAL ROUTING ENGINE */}
-                        {(scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') ? (
+                        {(scene.scene_type === 'topic_reveal') ? (
+                            /* TOPIC REVEAL DIORAMA (Liquid Glass Parallax Engine) */
+                            <DioramaCanvas
+                                payload={{
+                                    ...(scene.diorama_payload || {}),
+                                    bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '',
+                                }}
+                            />
+                        ) : (scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') ? (
                             /* DYNAMIC LIQUID GRID (for specific/comparison scenes) */
                             <DynamicLiquidGrid
                                 bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''}
-                                assets={(scene.visual?.assets || scene.assets || []).map((a: any, idx: number) => ({
+                                assets={(scene.visual?.assets || scene.assets || []).filter((a: any) => a.layer !== 'background' && a.type !== 'video').map((a: any, idx: number) => ({
                                     // overlay_downloader.py writes to a.local_path
                                     // a.trigger_start_ms is set by The_Brain word alignment (precise WhisperX ms)
                                     // a.trigger_frame is the AI's estimated fallback
