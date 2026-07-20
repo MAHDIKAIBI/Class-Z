@@ -366,8 +366,6 @@ jobs:
         if: always()
         run: |
           echo "Syncing refreshed ChatGPT cookies back to engine drive..."
-          rclone copy --tpslimit 5 --retries 3 --contimeout 30s \
-            "engine:Colab_AutoVideoCreator/chatgpt_cookies.json" "." || true
           if [ -f chatgpt_cookies.json ]; then
             rclone copyto --tpslimit 5 --retries 3 --contimeout 30s --ignore-times \
                 "chatgpt_cookies.json" "engine:Colab_AutoVideoCreator/chatgpt_cookies.json" -v
