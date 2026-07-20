@@ -48,6 +48,11 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
   const w2 = interpolate(spring2, [0, 1], [0, 33.33]);
   const widths = [w0, w1, w2];
 
+  // DYNAMIC BACKGROUND BLUR (Starts sharp, blurs on first trigger)
+  const firstTrigger = assets[0]?.trigger_frame ?? 0;
+  const bgBlur = interpolate(frame, [firstTrigger - 10, firstTrigger], [0, 40], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const bgBrightness = interpolate(frame, [firstTrigger - 10, firstTrigger], [1, 0.6], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
   const liquidGlassStyle: React.CSSProperties = {
     background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.05))",
     backdropFilter: "blur(40px) saturate(200%) brightness(120%)",
@@ -70,7 +75,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
     <AbsoluteFill style={{ backgroundColor: "transparent", fontFamily: '"Geist", "Inter", system-ui, sans-serif' }}>
       
       {/* BACKGROUND LAYER (Blurred cinematic backdrop) */}
-      <AbsoluteFill style={{ filter: "blur(40px) brightness(0.6)", transform: "scale(1.1)", zIndex: 0 }}>
+      <AbsoluteFill style={{ filter: `blur(${bgBlur}px) brightness(${bgBrightness})`, transform: "scale(1.1)", zIndex: 0 }}>
         {bgIsVideo ? (
           <Video src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => console.log("Media playback error caught on Video:", e)} />
         ) : (
