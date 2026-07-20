@@ -1,6 +1,9 @@
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, random as seededRandom } from 'remotion';
 import React from 'react';
 import { useCamera } from '../index';
+import { BiometricScanRing } from './BiometricScanRing';
+import { Dynamic3DComparison } from './Dynamic3DComparison';
+import { GlassStatGrid } from './GlassStatGrid';
 
 // -----------------------------------------------------
 // 1. DATA TICK ENGINE (Advanced Number Animators)
@@ -245,28 +248,64 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
   const { fps } = useVideoConfig();
 
   if (!graphics || graphics.graphics_type === 'none') return null;
-  
-  // Gemini outputs different shapes per graphics_type. Normalize them into data_points for the sub-components.
-  if (!graphics.data_points) {
-      const gType = graphics.graphics_type.toLowerCase();
-      if (gType === 'biometricscanring' || gType === 'biometric_scan_ring') {
-          graphics = { ...graphics, data_points: [{ label: graphics.label || 'METRIC', value: graphics.targetPercentage || 0, suffix: '%' }] };
-      } else if (gType === 'dynamic3dcomparison' || gType === 'dynamic_3d_comparison') {
-          const a = graphics.itemA || {};
-          const b = graphics.itemB || {};
-          graphics = { ...graphics, data_points: [
-              { label: a.title || 'A', value: a.value || 0, suffix: ` ${graphics.unit || ''}` },
-              { label: b.title || 'B', value: b.value || 0, suffix: ` ${graphics.unit || ''}` }
-          ]};
-      } else if (gType === 'glassstatgrid' || gType === 'glass_stat_grid') {
-          graphics = { ...graphics, data_points: (graphics.stats || []).map((s: any) => ({
-              label: s.label || '', value: s.value || 0, prefix: s.prefix || '', suffix: s.suffix || ''
-          })) };
-      }
-  }
-  if (!graphics.data_points || graphics.data_points.length === 0) return null;
 
-  const seed = sceneIndex + (graphics.data_points.length * 7);
+  const type = graphics.graphics_type.toLowerCase();
+
+  // NATIVE ROUTES for custom data components
+  if (type === 'biometricscanring' || type === 'biometric_scan_ring') {
+      return (
+          <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
+              <BiometricScanRing 
+                  start={frame} 
+                  end={frame + (graphics.duration_frames || 150)} 
+                  targetPercentage={graphics.targetPercentage || 0}
+                  label={graphics.label || 'METRIC'}
+                  brandColor={graphics.brandColor || '#00FF66'}
+              />
+          </AbsoluteFill>
+      );
+  }
+
+  if (type === 'dynamic3dcomparison' || type === 'dynamic_3d_comparison') {
+      return (
+          <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
+              <Dynamic3DComparison 
+                  start={frame}
+                  end={frame + (graphics.duration_frames || 150)}
+                  unit={graphics.unit || ''}
+                  itemA={graphics.itemA}
+                  itemB={graphics.itemB}
+                  title={graphics.title || ''}
+                  subtitle={graphics.subtitle || ''}
+                  color={graphics.color || '#FFFFFF'}
+              />
+          </AbsoluteFill>
+      );
+  }
+
+  if (type === 'glassstatgrid' || type === 'glass_stat_grid') {
+      return (
+          <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
+              <GlassStatGrid 
+                  start={frame}
+                  end={frame + (graphics.duration_frames || 150)}
+                  stats={graphics.stats || []}
+              />
+          </AbsoluteFill>
+      );
+  }
+
+  // FALLBACK GENERIC ROUTER FOR LEGACY COMPONENTS
+  let g = { ...graphics };
+  if (!g.data_points) {
+      // If it missed the exact type match but still lacks data_points, we gracefully exit 
+      // rather than crashing CinematicGraph
+      return null;
+  }
+
+  if (!g.data_points || g.data_points.length === 0) return null;
+
+  const seed = sceneIndex + (g.data_points.length * 7);
   const random = (offset: number) => seededRandom(seed + offset);
   const choice = (arr: any[]) => arr[Math.floor(random(0) * arr.length)];
 
@@ -274,23 +313,13 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
   const themeColor = choice(colors);
 
   const modes = ['float', 'glass_projection', 'attach_to_desk', 'stick_to_wall', 'hud_scanner'];
-  const integrationMode = graphics.integration_mode || choice(modes);
+  const integrationMode = g.integration_mode || choice(modes);
 
   const zDepth = integrationMode === 'stick_to_wall' ? -200 : 
                  integrationMode === 'glass_projection' ? 150 : 50;
 
-  const type = graphics.graphics_type.toLowerCase();
-  
   let GraphicComponent = CinematicGraph;
-  // Gemini-specific graphics types (explicit match first)
-  if (type === 'biometricscanring' || type === 'biometric_scan_ring') {
-      GraphicComponent = CinematicGraph; // Ring visualization via bar chart (single metric)
-  } else if (type === 'dynamic3dcomparison' || type === 'dynamic_3d_comparison') {
-      GraphicComponent = KPICards; // A/B comparison cards
-  } else if (type === 'glassstatgrid' || type === 'glass_stat_grid') {
-      GraphicComponent = KPICards; // Stat grid as cards
-  // Legacy keyword-based routing
-  } else if (type.includes('blueprint') || type.includes('specs') || type.includes('diagram')) {
+  if (type.includes('blueprint') || type.includes('specs') || type.includes('diagram')) {
       GraphicComponent = HolographicBlueprint;
   } else if (type.includes('kpi') || type.includes('quote') || type.includes('comparison') || type.includes('counter')) {
       GraphicComponent = KPICards;
@@ -301,11 +330,11 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
   return (
       <PhysicalIntegrator mode={integrationMode} zDepth={zDepth}>
           <GraphicComponent 
-              dataPoints={graphics.data_points} 
+              dataPoints={g.data_points} 
               frame={frame + 20} 
               fps={fps} 
               color={themeColor} 
-              styleVariant={graphics.visual_style} 
+              styleVariant={g.visual_style} 
           />
       </PhysicalIntegrator>
   );

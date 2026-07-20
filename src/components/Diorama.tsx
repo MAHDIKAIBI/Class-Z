@@ -6,9 +6,22 @@ import {
   spring, 
   interpolate, 
   Easing,
-  Video
+  Video,
+  Img,
+  staticFile as remotionStaticFile
 } from "remotion";
 import React from "react";
+
+const staticFile = (path: string) => {
+    if (!path) return '';
+    let cleanPath = path;
+    if (cleanPath.startsWith('public/')) {
+        cleanPath = cleanPath.slice(7);
+    } else if (cleanPath.startsWith('/public/')) {
+        cleanPath = cleanPath.slice(8);
+    }
+    return remotionStaticFile(cleanPath);
+};
 
 // ============================================================================
 // 1. THE ENGINE (Dynamic, Liquid Glass, Smoke, 100% Adaptable)
@@ -16,7 +29,8 @@ import React from "react";
 
 export type DynamicSubject = {
   id: string;
-  emoji: string;
+  emoji?: string;
+  imageUrl?: string;
   color: string;
 };
 
@@ -141,11 +155,15 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
               borderLeft: `1px solid rgba(255,255,255,0.3)`,
               borderRadius: "30px",
               boxShadow: `0 40px 100px rgba(0,0,0,0.8), inset 0 0 40px ${sub.color}`,
-              
+              overflow: "hidden", // Keeps the image inside the rounded corners
               display: "flex", justifyContent: "center", alignItems: "center", fontSize: "120px",
               color: "rgba(255,255,255,0.8)"
             }}>
-              {sub.emoji}
+              {sub.imageUrl ? (
+                <Img src={staticFile(sub.imageUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.9 }} />
+              ) : (
+                sub.emoji
+              )}
             </div>
           ))}
         </div>
