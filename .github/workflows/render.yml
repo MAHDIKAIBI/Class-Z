@@ -1275,6 +1275,18 @@ jobs:
           ffmpeg -f concat -safe 0 -i file_list.txt -c copy final_video_sfx.mp4
           ffmpeg -i final_video_sfx.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
           
+      - name: Clean Up Public Assets Folder
+        run: |
+          echo "Purging raw rendering assets from Google Drive to save space..."
+          rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
+          
+          # Clean up ollama pool directory
+          
+            for i in {0..7}; do
+              rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
+            done
+            rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
+
       - name: Sync Final Video to Google Drive
         run: |
           echo "Saving final video to Google Drive 'to upload' folder..."
@@ -1299,18 +1311,6 @@ jobs:
           
           echo "Running YouTube Uploader..."
           python youtube_uploader.py
-          
-      - name: Clean Up Public Assets Folder
-        run: |
-          echo "Purging raw rendering assets from Google Drive to save space..."
-          rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
-          
-          # Clean up ollama pool directory
-          
-            for i in {0..7}; do
-              rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
-            done
-            rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
 
   global_cleanup:
     name: Global Cleanup (Failsafe)
