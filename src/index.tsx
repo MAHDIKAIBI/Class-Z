@@ -16,6 +16,7 @@ import { MotionGraphicsRouter } from './components/MotionGraphics';
 import { EffectsDirector } from './components/Effects';
 import { CaptionDirector } from './components/CaptionDirector';
 import { DynamicLiquidGrid } from './components/DynamicLiquidGrid';
+import { MonolithEngine } from './components/MonolithEngine';
 import { DioramaCanvas } from './components/Diorama';
 import { GlobalFinisher } from './components/GlobalFinisher';
 
@@ -224,7 +225,18 @@ const AutomatedDocumentary = () => {
                      <AbsoluteFill>
                         
                         {/* VISUAL ROUTING ENGINE */}
-                        {(scene.scene_type === 'topic_reveal') ? (
+                        {(scene.scene_type === 'monolith') ? (
+                            /* MONOLITH ENGINE (Kinetic Parallax Hook) */
+                            <MonolithEngine
+                                payload={{
+                                    ...(scene.monolith_payload || {}),
+                                    bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '',
+                                    assetSrc: scene.monolith_payload?.assetSrc
+                                        ? staticFile(scene.monolith_payload.assetSrc)
+                                        : '',
+                                }}
+                            />
+                        ) : (scene.scene_type === 'topic_reveal') ? (
                             /* TOPIC REVEAL DIORAMA (Liquid Glass Parallax Engine) */
                             <DioramaCanvas
                                 payload={{
