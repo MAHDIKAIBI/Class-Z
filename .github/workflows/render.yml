@@ -562,7 +562,7 @@ jobs:
         run: |
           if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; fi
           
-          python -m playwright install --with-deps chromium
+          python -m playwright install --with-deps chromium firefox
 
       - name: Connect to Ollama Brain (for Gemini scene alignment if needed)
         run: |
@@ -843,7 +843,7 @@ jobs:
         run: |
           if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; fi
           
-          python -m playwright install --with-deps chromium
+          python -m playwright install --with-deps chromium firefox
 
       - name: Connect to Ollama Brain
         run: |
@@ -991,7 +991,7 @@ jobs:
         run: |
           if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; fi
           
-          python -m playwright install --with-deps chromium
+          python -m playwright install --with-deps chromium firefox
 
       - name: Merge Partial Timelines
         env:
