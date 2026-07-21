@@ -24,25 +24,21 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          SERVICE_ACCOUNT_JSON: ${{ secrets.G_DRIVE_SERVICE_ACCOUNT }}
         run: |
           mkdir -p ~/.config/rclone
-          
-          # We only need the Engine token because the queue and bots live in the Engine drive!
-          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
-          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
-          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
-          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          echo "$SERVICE_ACCOUNT_JSON" > ~/.config/rclone/sa.json
           
           cat << EOF > ~/.config/rclone/rclone.conf
           [engine]
           type = drive
-          client_id = $CLIENT_ID
-          client_secret = $CLIENT_SECRET
           scope = drive
-          token = $ENGINE_TOKEN
+          service_account_file = /home/runner/.config/rclone/sa.json
+          
+          [data]
+          type = drive
+          scope = drive
+          service_account_file = /home/runner/.config/rclone/sa.json
           EOF
 
       - name: Pull Tokens and Engine Scripts from Google Drive
