@@ -78,7 +78,7 @@ else:
     # Fallback to essential packages
     subprocess.run(["pip", "install", "playwright", "requests", "openai", "moviepy", "pydub", "pyperclip"], check=True)
 
-subprocess.run(["playwright", "install", "chromium"], check=True)
+subprocess.run(["playwright", "install", "--with-deps", "chromium", "firefox"], check=True)
 
 # 3. Formulate Input Overrides for the scripts
 if not topic and action_type in ["CREATE_FRESH", "CREATE_AUTOMATIC"]:
@@ -208,3 +208,4 @@ if "GITHUB_OUTPUT" in os.environ:
 
 print(f"[+] Outputs: vault_name='{vault_name}', total_frames='{total_frames}'")
 print("=== CLOUD ORCHESTRATOR COMPLETE ===")
+
