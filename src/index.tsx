@@ -242,6 +242,21 @@ const AutomatedDocumentary = () => {
                                 payload={{
                                     ...(scene.diorama_payload || {}),
                                     bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '',
+                                    subjects: (scene.diorama_payload?.subjects || []).map((sub: any, i: number) => {
+                                        const imgPath = scene.media_paths?.[i + 1];
+                                        return {
+                                            ...sub,
+                                            imageUrl: (imgPath && !imgPath.endsWith('.mp4')) ? imgPath : undefined
+                                        };
+                                    }),
+                                    text: (scene.diorama_payload?.text || []).map((t: any, i: number) => {
+                                        const actualWord = scene.words?.[i];
+                                        if (actualWord && actualWord.start_ms) {
+                                            const startFrame = Math.max(0, Math.round(((actualWord.start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps));
+                                            return { ...t, start: startFrame };
+                                        }
+                                        return t;
+                                    })
                                 }}
                             />
                         ) : (scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') ? (
@@ -312,7 +327,7 @@ const AutomatedDocumentary = () => {
                               );
                           })()}
                         
-                        {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
+                        {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'monolith' && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
                             <CaptionDirector scene={scene} />
                         )}
                      </AbsoluteFill>
