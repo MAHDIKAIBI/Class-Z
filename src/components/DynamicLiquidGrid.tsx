@@ -75,7 +75,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
     <AbsoluteFill style={{ backgroundColor: "transparent", fontFamily: '"Geist", "Inter", system-ui, sans-serif' }}>
       
       {/* BACKGROUND LAYER (Blurred cinematic backdrop) */}
-      <AbsoluteFill style={{ filter: `blur(${bgBlur}px) brightness(${bgBrightness})`, transform: "scale(1.1)", zIndex: 0 }}>
+      <AbsoluteFill style={{ filter: `blur(${bgBlur}px) brightness(${bgBrightness})`, transform: "scale(1.1) translateZ(0)", willChange: "filter, transform", backfaceVisibility: "hidden", zIndex: 0 }}>
         {bgIsVideo ? (
           <Video src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => console.log("Media playback error caught on Video:", e)} />
         ) : (
