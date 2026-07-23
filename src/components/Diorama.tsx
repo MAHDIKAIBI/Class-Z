@@ -52,8 +52,10 @@ export type DioramaPayload = {
 };
 
 export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }) => {
-  const frame = useCurrentFrame();
+  const rawFrame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const startFrame = (payload as any).trigger_frame ?? 0;
+  const frame = Math.max(0, rawFrame - startFrame);
 
   // GLOBAL CAMERA PARALLAX (Z-Axis Push)
   const bgScale = interpolate(frame, [0, payload.duration], [1, 1.05], { extrapolateRight: "clamp" });
@@ -64,7 +66,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
     <AbsoluteFill style={{ backgroundColor: "#020202", overflow: "hidden" }}>
       
       {/* LAYER 0: CINEMATIC VIDEO BACKGROUND */}
-      <AbsoluteFill style={{ zIndex: 0, transform: `scale(${bgScale})` }}>
+      <AbsoluteFill style={{ zIndex: 0, transform: `scale(${interpolate(rawFrame, [0, payload.duration], [1, 1.05], { extrapolateRight: 'clamp' })})` }}>
         {payload.bgVideoSrc && (
           <Video 
             src={payload.bgVideoSrc} 
@@ -85,7 +87,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
           width: "150%", height: "80%",
           background: "radial-gradient(ellipse at center, rgba(150,150,150,0.15) 0%, transparent 60%)",
           filter: "blur(100px)",
-          transform: `scaleY(0.6) translateY(${Math.sin(frame / 30) * 50}px)`
+          transform: `scaleY(0.6) translateY(${Math.sin(rawFrame / 30) * 50}px)`
         }} />
         <div style={{
           position: "absolute",
@@ -94,7 +96,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
           width: "120%", height: "60%",
           background: "radial-gradient(ellipse at center, rgba(200,200,200,0.08) 0%, transparent 70%)",
           filter: "blur(80px)",
-          transform: `translateY(${Math.cos(frame / 40) * 40}px)`
+          transform: `translateY(${Math.cos(rawFrame / 40) * 40}px)`
         }} />
       </AbsoluteFill>
 

@@ -326,7 +326,13 @@ const AutomatedDocumentary = () => {
                         {/* Effects & Post FX overrides managed by Editorial Director */}
                         <EffectsDirector variants={scene.editorialVariants} events={scene.events} />
                         <Sequence from={0} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)}>
-                            <MotionGraphicsRouter graphics={scene.graphics} sceneIndex={index} variants={scene.editorialVariants} />
+                            {scene.graphics ? (() => {
+                                const g = { ...scene.graphics };
+                                if (g.trigger_start_ms) {
+                                    g.trigger_frame = Math.round(((g.trigger_start_ms - scene.timing.start_ms) / 1000) * fps);
+                                }
+                                return <MotionGraphicsRouter graphics={g} sceneIndex={index} variants={scene.editorialVariants} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)} />;
+                            })() : null}
                         </Sequence>
                         
                         {scene.overlay_image && (() => {
