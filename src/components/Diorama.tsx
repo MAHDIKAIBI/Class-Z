@@ -143,10 +143,16 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
           padding: "0 5%",
           transform: `translateY(15%)`
         }}>
-          {payload.subjects.map((sub, i) => (
+          {payload.subjects.map((sub, i) => {
+            const entrance = spring({ frame: Math.max(0, rawFrame - startFrame - (i * 10)), fps, config: { damping: 12, stiffness: 100 } });
+            const popScale = interpolate(entrance, [0, 1], [0, 1]);
+            const popOpacity = interpolate(entrance, [0, 0.5], [0, 1]);
+            
+            return (
             <div key={sub.id} style={{ 
               width: "450px", height: "300px", 
-              transform: `translateY(${Math.sin((frame + i * 20) / 15) * 15}px) scale(${subjectScale})`,
+              opacity: popOpacity,
+              transform: `translateY(${Math.sin((frame + i * 20) / 15) * 15}px) scale(${subjectScale * popScale})`,
               
               // THE LIQUID GLASS EFFECT
               background: `linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%)`,
