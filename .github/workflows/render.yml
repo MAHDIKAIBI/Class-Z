@@ -562,23 +562,6 @@ jobs:
           
           python -m playwright install --with-deps chromium firefox
 
-      - name: Connect to Ollama Brain (for Gemini scene alignment if needed)
-        run: |
-          echo "Fetching Ollama URL from Drive..."
-          for i in $(seq 1 120); do
-            if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > /dev/null 2>&1; then
-              rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt" > ollama_url.txt
-              OLLAMA_URL=$(cat ollama_url.txt)
-              echo "Connected to Ollama Brain at $OLLAMA_URL"
-              echo "OLLAMA_BASE_URL=$OLLAMA_URL" >> $GITHUB_ENV
-              break
-            fi
-            echo "Waiting for Ollama tunnel... ($i/20)"
-            sleep 15
-          done
-          if [ -z "$OLLAMA_URL" ]; then
-            echo "[!] WARNING: Could not reach Ollama. The_Brain.py will run without it."
-          fi
 
       - name: Run The_Brain PREP phase (audio + timeline, no clip downloads)
         env:
