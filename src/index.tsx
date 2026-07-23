@@ -249,14 +249,30 @@ const AutomatedDocumentary = () => {
                                             imageUrl: (imgPath && !imgPath.endsWith('.mp4')) ? imgPath : undefined
                                         };
                                     }),
-                                    text: (scene.diorama_payload?.text || []).map((t: any, i: number) => {
-                                        const actualWord = scene.words?.[i];
-                                        if (actualWord && actualWord.start_ms) {
-                                            const startFrame = Math.max(0, Math.round(((actualWord.start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps));
-                                            return { ...t, start: startFrame };
-                                        }
-                                        return t;
-                                    })
+                                    text: (() => {
+                                        let searchIdx = 0;
+                                        return (scene.diorama_payload?.text || []).map((t: any) => {
+                                            if (!scene.words || scene.words.length === 0) return t;
+                                            
+                                            const target = t.word.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                            let bestMatch = null;
+                                            
+                                            for (let j = searchIdx; j < scene.words.length; j++) {
+                                                const w = scene.words[j].word.toLowerCase().replace(/[^a-z0-9]/g, '');
+                                                if (w && target && (w === target || w.includes(target) || target.includes(w))) {
+                                                    bestMatch = scene.words[j];
+                                                    searchIdx = j + 1;
+                                                    break;
+                                                }
+                                            }
+                                            
+                                            if (bestMatch && bestMatch.start_ms) {
+                                                const startFrame = Math.max(0, Math.round(((bestMatch.start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps));
+                                                return { ...t, start: startFrame };
+                                            }
+                                            return t;
+                                        });
+                                    })()
                                 }}
                             />
                         ) : (scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') ? (
