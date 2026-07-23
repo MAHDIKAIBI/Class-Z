@@ -50,8 +50,8 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
 
   // DYNAMIC BACKGROUND BLUR (Starts sharp, blurs on first trigger)
   const firstTrigger = assets[0]?.trigger_frame ?? 0;
-  const bgBlur = interpolate(frame, [firstTrigger - 10, firstTrigger], [0, 40], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-  const bgBrightness = interpolate(frame, [firstTrigger - 10, firstTrigger], [1, 0.6], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // Use opacity instead of blur for hardware acceleration to prevent video tearing
+  const blurOpacity = interpolate(frame, [firstTrigger - 10, firstTrigger], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   const liquidGlassStyle: React.CSSProperties = {
     background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.05))",
@@ -74,14 +74,24 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
   return (
     <AbsoluteFill style={{ backgroundColor: "transparent", fontFamily: '"Geist", "Inter", system-ui, sans-serif' }}>
       
-      {/* BACKGROUND LAYER (Blurred cinematic backdrop) */}
-      <AbsoluteFill style={{ filter: `blur(${bgBlur}px) brightness(${bgBrightness})`, transform: "scale(1.1) translateZ(0)", willChange: "filter, transform", backfaceVisibility: "hidden", zIndex: 0 }}>
+      {/* BACKGROUND LAYER (Clean, hardware-accelerated, no animating filters) */}
+      <AbsoluteFill style={{ transform: "scale(1.1) translateZ(0)", zIndex: 0 }}>
         {bgIsVideo ? (
           <Video src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => console.log("Media playback error caught on Video:", e)} />
         ) : (
           <Img src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         )}
       </AbsoluteFill>
+
+      {/* BLUR OVERLAY (Animates opacity instead of CSS blur radius to save GPU) */}
+      <AbsoluteFill style={{ 
+          backgroundColor: `rgba(0,0,0,${blurOpacity * 0.4})`,
+          backdropFilter: "blur(40px) saturate(150%)",
+          WebkitBackdropFilter: "blur(40px) saturate(150%)",
+          opacity: blurOpacity,
+          zIndex: 1,
+          pointerEvents: "none"
+      }} />
 
       {/* DYNAMIC GRID CONTAINER */}
       <div style={{
