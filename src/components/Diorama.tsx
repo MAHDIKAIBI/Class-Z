@@ -156,13 +156,17 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
               borderRadius: "30px",
               boxShadow: `0 40px 100px rgba(0,0,0,0.8), inset 0 0 40px ${sub.color}`,
               overflow: "hidden", // Keeps the image inside the rounded corners
-              display: "flex", justifyContent: "center", alignItems: "center", fontSize: "120px",
-              color: "rgba(255,255,255,0.8)"
+              display: "flex", justifyContent: "center", alignItems: "center",
             }}>
               {sub.imageUrl ? (
                 <Img src={staticFile(sub.imageUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.9 }} />
               ) : (
-                sub.emoji
+                /* Gradient shimmer placeholder instead of emoji — never show raw emoji in a premium video */
+                <div style={{
+                  width: "100%", height: "100%",
+                  background: `linear-gradient(135deg, ${sub.color || 'rgba(255,255,255,0.05)'}, rgba(255,255,255,0.02), ${sub.color || 'rgba(255,255,255,0.05)'})`,
+                  display: "flex", justifyContent: "center", alignItems: "center",
+                }} />
               )}
             </div>
           ))}

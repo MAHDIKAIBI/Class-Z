@@ -39,8 +39,8 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
   const trigger1 = assets[1]?.trigger_frame ?? 9999;
   const trigger2 = assets[2]?.trigger_frame ?? 9999;
 
-  const spring1 = spring({ frame: Math.max(0, frame - trigger1), fps, config: { damping: 14, stiffness: 90, mass: 1.2 } });
-  const spring2 = spring({ frame: Math.max(0, frame - trigger2), fps, config: { damping: 14, stiffness: 90, mass: 1.2 } });
+  const spring1 = spring({ frame: Math.max(0, frame - trigger1), fps, config: { damping: 28, stiffness: 90, mass: 1 } });
+  const spring2 = spring({ frame: Math.max(0, frame - trigger2), fps, config: { damping: 28, stiffness: 90, mass: 1 } });
 
   // FLUID WIDTH MATH (100 -> 50/50 -> 33/33/33)
   const w0 = interpolate(spring1, [0, 1], [100, 50]) - interpolate(spring2, [0, 1], [0, 16.66]);

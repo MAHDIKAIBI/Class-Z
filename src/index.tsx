@@ -326,7 +326,7 @@ const AutomatedDocumentary = () => {
                         {/* Effects & Post FX overrides managed by Editorial Director */}
                         <EffectsDirector variants={scene.editorialVariants} events={scene.events} />
                         <Sequence from={0} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)}>
-                            <MotionGraphicsRouter graphics={scene.graphics} sceneIndex={index} variants={scene.editorialVariants} />
+                            <MotionGraphicsRouter graphics={scene.graphics} sceneIndex={index} variants={scene.editorialVariants} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)} />
                         </Sequence>
                         
                         {scene.overlay_image && (() => {
@@ -343,7 +343,7 @@ const AutomatedDocumentary = () => {
                               );
                           })()}
                         
-                        {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'monolith' && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
+                        {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'monolith' && !scene.diorama_payload && !scene.monolith_payload && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
                             <CaptionDirector scene={scene} />
                         )}
                      </AbsoluteFill>

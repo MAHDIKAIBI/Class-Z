@@ -243,7 +243,7 @@ const StockTerminal = ({ dataPoints, frame, fps, color }: any) => {
 // -----------------------------------------------------
 // 4. GRAPHIC DIRECTOR
 // -----------------------------------------------------
-export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
+export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrames = 150 }: any) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -256,8 +256,8 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
       return (
           <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
               <BiometricScanRing 
-                  start={frame} 
-                  end={frame + (graphics.duration_frames || 150)} 
+                  start={0} 
+                  end={durationInFrames} 
                   targetPercentage={graphics.targetPercentage || 0}
                   label={graphics.label || 'METRIC'}
                   brandColor={graphics.brandColor || '#00FF66'}
@@ -267,17 +267,15 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
   }
 
   if (type === 'dynamic3dcomparison' || type === 'dynamic_3d_comparison') {
+      // itemA and itemB carry their own start/end/title/subtitle/value/color
+      const patchedItemA = graphics.itemA ? { ...graphics.itemA, start: graphics.itemA.start ?? 0, end: graphics.itemA.end ?? durationInFrames } : { title: '', subtitle: '', value: 0, color: '#ff1a40', start: 0, end: durationInFrames };
+      const patchedItemB = graphics.itemB ? { ...graphics.itemB, start: graphics.itemB.start ?? 15, end: graphics.itemB.end ?? durationInFrames } : { title: '', subtitle: '', value: 0, color: '#00e6b8', start: 15, end: durationInFrames };
       return (
           <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
               <Dynamic3DComparison 
-                  start={frame}
-                  end={frame + (graphics.duration_frames || 150)}
                   unit={graphics.unit || ''}
-                  itemA={graphics.itemA}
-                  itemB={graphics.itemB}
-                  title={graphics.title || ''}
-                  subtitle={graphics.subtitle || ''}
-                  color={graphics.color || '#FFFFFF'}
+                  itemA={patchedItemA}
+                  itemB={patchedItemB}
               />
           </AbsoluteFill>
       );
@@ -287,8 +285,8 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
       return (
           <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
               <GlassStatGrid 
-                  start={frame}
-                  end={frame + (graphics.duration_frames || 150)}
+                  start={0}
+                  end={durationInFrames}
                   stats={graphics.stats || []}
               />
           </AbsoluteFill>
