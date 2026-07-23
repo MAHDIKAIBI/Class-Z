@@ -344,7 +344,7 @@ jobs:
           TOPIC: ${{ inputs.topic }}
           CLOUD_TTS_PARALLEL: "1"
         run: |
-          python -m pip install requests
+          python -m pip install requests selenium undetected-chromedriver
           
             # Export GITHUB_OUTPUT explicitly to xvfb-run just in case it strips it
             xvfb-run -a --server-args="-screen 0 1920x1080x24" env GITHUB_OUTPUT="$GITHUB_OUTPUT" python -u .github/scripts/orchestrator.py
