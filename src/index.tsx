@@ -19,6 +19,7 @@ import { DynamicLiquidGrid } from './components/DynamicLiquidGrid';
 import { MonolithEngine } from './components/MonolithEngine';
 import { DioramaCanvas } from './components/Diorama';
 import { GlobalFinisher } from './components/GlobalFinisher';
+import { CinematicChapterReveal } from './components/CinematicChapterReveal';
 
 export const useCamera = () => ({ xPan: 0, yPan: 0, zScale: 1.0 });
 
@@ -276,6 +277,15 @@ const AutomatedDocumentary = () => {
                                     })()
                                 }}
                             />
+                        ) : (scene.scene_type === 'chapter_reveal') ? (
+                              /* CINEMATIC CHAPTER ENGINE */
+                              <CinematicChapterReveal 
+                                  chapterNumber={scene.chapter_payload?.chapterNumber || 1}
+                                  subtitle={scene.chapter_payload?.subtitle || ""}
+                                  bgImgUrl={scene.visual?.assets?.find((a:any) => a.role === 'bg_chapter')?.local_path || ""}
+                                  leftAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'left_chapter')?.local_path || ""}
+                                  rightAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'right_chapter')?.local_path || ""}
+                              />
                         ) : (scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') ? (
                             /* DYNAMIC LIQUID GRID (for specific/comparison scenes) */
                             <DynamicLiquidGrid

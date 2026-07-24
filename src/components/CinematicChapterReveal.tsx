@@ -68,10 +68,10 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
   sfxUrl
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
 
   // 1. THE PERPETUAL PUSH
-  const perpetualScale = interpolate(frame, [0, 150], [1, 1.15], { extrapolateRight: "clamp" });
+  const perpetualScale = interpolate(frame, [0, durationInFrames], [1, 1.15], { extrapolateRight: "clamp" });
 
   // 2. THE UNPREDICTABLE SHARD ENGINE
   const driftEase = Easing.out(Easing.cubic);
@@ -105,7 +105,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
   // Fades in over the first 15 frames, stays at 100%, then fades out smoothly over the last 30 frames.
   const audioVolume = interpolate(
     frame,
-    [0, 15, 120, 150],
+    [0, 15, durationInFrames - 30, durationInFrames],
     [0, 1, 1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );

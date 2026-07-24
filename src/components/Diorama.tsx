@@ -177,7 +177,8 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
                 }} />
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       </AbsoluteFill>
 
