@@ -57,7 +57,7 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
   
   const displayValueA = interpolate(
     frame - itemA.start,
-    [10, durationA - 30],
+    [10, Math.max(11, durationA - 30)],
     [0, itemA.value],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
   );
@@ -79,7 +79,7 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
 
   const displayValueB = interpolate(
     frame - itemB.start,
-    [10, durationB - 30],
+    [10, Math.max(11, durationB - 30)],
     [0, itemB.value],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
   );
