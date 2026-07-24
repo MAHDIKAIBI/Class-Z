@@ -15,6 +15,7 @@ const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
     const cleanPath = path.startsWith('public/') ? path.slice(7) : path;
     if (cleanPath.trim() === '' || cleanPath.endsWith('/')) return TRANSPARENT_PIXEL;
+    try { cleanPath = decodeURIComponent(cleanPath); } catch(e) {}
     return remotionStaticFile(cleanPath);
 };
 

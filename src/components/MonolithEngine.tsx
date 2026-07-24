@@ -18,6 +18,7 @@ const staticFile = (path: string) => {
     } else if (cleanPath.startsWith('/public/')) {
         cleanPath = cleanPath.slice(8);
     }
+    try { cleanPath = decodeURIComponent(cleanPath); } catch(e) {}
     return remotionStaticFile(cleanPath);
 };
 
