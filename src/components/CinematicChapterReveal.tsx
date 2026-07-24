@@ -37,7 +37,7 @@ const BasePlate: React.FC<{ bgImgUrl: string; text: string }> = ({ bgImgUrl, tex
   return (
     <AbsoluteFill>
       <Img 
-        src={bgImgUrl} 
+        src={bgImgUrl ? staticFile(bgImgUrl) : undefined} 
         style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.5)" }} 
       />
       <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(150, 0, 15, 0.7)", mixBlendMode: "multiply" }} />
@@ -192,7 +192,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
         <AbsoluteFill style={{ opacity: interpolate(frame, [40, 48], [0, 1], { extrapolateRight: "clamp" }), justifyContent: "center", alignItems: "center" }}>
           
           <AbsoluteFill>
-            <Img src={bgImgUrl} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.2)" }} />
+            <Img src={bgImgUrl ? staticFile(bgImgUrl) : undefined} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.2)" }} />
             <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(5, 0, 5, 0.85)" }} />
             <div style={{ position: "absolute", inset: "-50%", background: "radial-gradient(circle at center, rgba(200, 0, 20, 0.15) 0%, transparent 60%)", opacity: interpolate(frame, [45, 100], [0, 1], { extrapolateRight: "clamp" }) + Math.sin(frame / 20) * 0.1 }} />
           </AbsoluteFill>
@@ -212,13 +212,13 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
 
           {leftAssetUrl && (
             <div style={{ position: "absolute", transform: `translateX(${leftFlankX}px) translateY(${50 + Math.sin(frame / 15) * 15}px)`, zIndex: 1, opacity: interpolate(flankSpring, [0, 0.3], [0, 1]) }}>
-              <Img src={leftAssetUrl} style={{ width: "600px", height: "auto", filter: "drop-shadow(0 50px 50px rgba(0,0,0,0.9))" }} />
+              <Img src={staticFile(leftAssetUrl)} style={{ width: "600px", height: "auto", filter: "drop-shadow(0 50px 50px rgba(0,0,0,0.9))" }} />
               <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle, rgba(255,0,0,0.2) 0%, transparent 70%)", zIndex: -1, filter: "blur(40px)" }} />
             </div>
           )}
           {rightAssetUrl && (
             <div style={{ position: "absolute", transform: `translateX(${rightFlankX}px) translateY(${50 + Math.cos(frame / 18) * 15}px)`, zIndex: 1, opacity: interpolate(flankSpring, [0, 0.3], [0, 1]) }}>
-              <Img src={rightAssetUrl} style={{ width: "600px", height: "auto", filter: "drop-shadow(0 50px 50px rgba(0,0,0,0.9))" }} />
+              <Img src={staticFile(rightAssetUrl)} style={{ width: "600px", height: "auto", filter: "drop-shadow(0 50px 50px rgba(0,0,0,0.9))" }} />
               <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle, rgba(255,0,0,0.2) 0%, transparent 70%)", zIndex: -1, filter: "blur(40px)" }} />
             </div>
           )}
