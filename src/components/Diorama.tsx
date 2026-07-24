@@ -69,7 +69,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
       <AbsoluteFill style={{ zIndex: 0, transform: `scale(${interpolate(rawFrame, [0, payload.duration], [1, 1.05], { extrapolateRight: 'clamp' })})` }}>
         {payload.bgVideoSrc && (
           <Video 
-            src={payload.bgVideoSrc} 
+            src={payload.bgVideoSrc ? (payload.bgVideoSrc.startsWith('http') ? payload.bgVideoSrc : staticFile(payload.bgVideoSrc)) : undefined} 
             style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.4 }} 
             muted 
           onError={(e) => console.log("Media playback error caught on Video:", e)} />

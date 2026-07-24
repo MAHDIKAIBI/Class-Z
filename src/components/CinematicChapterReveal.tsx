@@ -7,10 +7,22 @@ import {
   Img,
   Easing,
   Audio,
-  staticFile,
+  staticFile as remotionStaticFile,
   random
 } from "remotion";
 import React, { useMemo } from "react";
+
+const staticFile = (path: string) => {
+    if (!path) return '';
+    let cleanPath = path;
+    if (cleanPath.startsWith('public/')) {
+        cleanPath = cleanPath.slice(7);
+    } else if (cleanPath.startsWith('/public/')) {
+        cleanPath = cleanPath.slice(8);
+    }
+    return remotionStaticFile(cleanPath);
+};
+
 
 // Webpack require.context to find all chapter SFX dynamically without hardcoding paths.
 // This works perfectly in the cloud because it resolves relative to the Remotion project!
