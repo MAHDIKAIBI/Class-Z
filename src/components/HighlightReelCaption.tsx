@@ -42,8 +42,9 @@ export const HighlightReelCaption: React.FC<{ script: HighlightWordTiming[] }> =
         borderRadius: "24px",
         padding: "24px 40px",
         display: "flex",
-        gap: "12px",
-        flexWrap: "wrap",
+        gap: "24px 16px",
+        flexWrap: "nowrap",
+          whiteSpace: "nowrap",
         maxWidth: "80%",
         justifyContent: "center",
         alignItems: "center",
@@ -64,8 +65,8 @@ export const HighlightReelCaption: React.FC<{ script: HighlightWordTiming[] }> =
           });
           
           // Normal words scale slightly, highlight words punch harder
-          const maxScale = item.isHighlight ? 1.15 : 1.05;
-          const wordScale = isActive ? interpolate(wordSpring, [0, 1], [1, maxScale]) : 1;
+          
+          
 
           // Color Routing
           const baseColor = "rgba(255, 255, 255, 0.5)"; // Dimmed normal state
@@ -85,7 +86,7 @@ export const HighlightReelCaption: React.FC<{ script: HighlightWordTiming[] }> =
                 fontSize: "48px",
                 fontFamily: '"Geist", system-ui, sans-serif',
                 fontWeight: isActive ? (item.isHighlight ? 800 : 600) : 500,
-                transform: `scale(${wordScale})`,
+                
                 
                 // The Highlight Glow
                 textShadow: isActive && item.isHighlight 

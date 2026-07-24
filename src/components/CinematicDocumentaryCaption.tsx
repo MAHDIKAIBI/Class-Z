@@ -29,8 +29,9 @@ export const CinematicDocumentaryCaption: React.FC<{ script: WordTiming[] }> = (
     }}>
       <div style={{
         display: "flex",
-        gap: "10px",
-        flexWrap: "wrap",
+        gap: "24px 14px",
+        flexWrap: "nowrap",
+          whiteSpace: "nowrap",
         maxWidth: "75%",
         justifyContent: "center",
         alignItems: "center"
@@ -61,7 +62,7 @@ export const CinematicDocumentaryCaption: React.FC<{ script: WordTiming[] }> = (
                 fontFamily: '"Playfair Display", "Georgia", serif',
                 fontSize: "40px",
                 fontWeight: isActive ? 800 : 600,
-                transform: `scale(${wordScale})`,
+                
                 textShadow: isActive 
                   ? `0 6px 20px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.9), 0 0 15px rgba(226, 183, 20, 0.4)`
                   : `0 6px 20px rgba(0,0,0,0.9), 0 2px 8px rgba(0,0,0,0.9)`,

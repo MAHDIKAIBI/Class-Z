@@ -4,7 +4,8 @@ import {
   useVideoConfig, 
   interpolate, 
   Easing,
-  spring
+  spring,
+  Img
 } from "remotion";
 import { ThreeCanvas } from "@remotion/three";
 import React from "react";
@@ -18,6 +19,7 @@ export type Bar3DItem = {
   subtitle: string;
   value: number;
   color: string;
+  imageUrl?: string;
   start: number;
   end: number;
 };
@@ -88,7 +90,7 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
   const cameraZ = interpolate(frame, [0, 200], [48, 38], { extrapolateRight: "clamp" });
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#020202", justifyContent: "center", alignItems: "center" }}>
+    <AbsoluteFill style={{ background: "transparent", justifyContent: "center", alignItems: "center" }}>
       
       {/* 3D RENDER ENGINE (Background) */}
       <ThreeCanvas
@@ -138,8 +140,8 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
       >
         {/* Item A Data Card */}
         <div style={{
-          background: "linear-gradient(145deg, rgba(20, 20, 22, 0.65) 0%, rgba(10, 10, 12, 0.8) 100%)",
-          backdropFilter: "blur(24px) saturate(120%)",
+          background: "linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)",
+          backdropFilter: "blur(40px) saturate(150%) brightness(1.2)",
           WebkitBackdropFilter: "blur(24px) saturate(120%)",
           border: `1px solid ${itemA.color}40`,
           borderRadius: "20px",
@@ -153,6 +155,14 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
         }}>
           <p style={{ color: "rgba(255,255,255,0.5)", margin: 0, fontSize: "12px", letterSpacing: "3px", textTransform: "uppercase", fontWeight: 600 }}>{itemA.subtitle}</p>
           <h2 style={{ color: "white", margin: "8px 0 20px 0", fontSize: "24px", fontWeight: "700", letterSpacing: "-0.5px" }}>{itemA.title}</h2>
+
+          {itemA.imageUrl && (
+            <div style={{ width: "100%", height: "140px", borderRadius: "12px", overflow: "hidden", marginBottom: "20px", border: `1px solid ${itemA.color}40`, position: "relative" }}>
+               <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, rgba(10,10,12,0.9), transparent)`, zIndex: 1 }} />
+               <Img src={itemA.imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+          )}
+
           <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
             <span style={{ color: itemA.color, fontSize: "56px", fontWeight: "800", fontVariantNumeric: "tabular-nums", textShadow: `0 0 30px ${itemA.color}60`, lineHeight: 1 }}>
               {Math.floor(displayValueA).toLocaleString()}
@@ -163,8 +173,8 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
 
         {/* Item B Data Card */}
         <div style={{
-          background: "linear-gradient(145deg, rgba(20, 20, 22, 0.65) 0%, rgba(10, 10, 12, 0.8) 100%)",
-          backdropFilter: "blur(24px) saturate(120%)",
+          background: "linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)",
+          backdropFilter: "blur(40px) saturate(150%) brightness(1.2)",
           WebkitBackdropFilter: "blur(24px) saturate(120%)",
           border: `1px solid ${itemB.color}40`,
           borderRadius: "20px",
@@ -178,6 +188,14 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
         }}>
           <p style={{ color: "rgba(255,255,255,0.5)", margin: 0, fontSize: "12px", letterSpacing: "3px", textTransform: "uppercase", fontWeight: 600 }}>{itemB.subtitle}</p>
           <h2 style={{ color: "white", margin: "8px 0 20px 0", fontSize: "24px", fontWeight: "700", letterSpacing: "-0.5px" }}>{itemB.title}</h2>
+
+          {itemB.imageUrl && (
+            <div style={{ width: "100%", height: "140px", borderRadius: "12px", overflow: "hidden", marginBottom: "20px", border: `1px solid ${itemB.color}40`, position: "relative" }}>
+               <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, rgba(10,10,12,0.9), transparent)`, zIndex: 1 }} />
+               <Img src={itemB.imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </div>
+          )}
+
           <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
             <span style={{ color: itemB.color, fontSize: "56px", fontWeight: "800", fontVariantNumeric: "tabular-nums", textShadow: `0 0 30px ${itemB.color}60`, lineHeight: 1 }}>
               {Math.floor(displayValueB).toLocaleString()}

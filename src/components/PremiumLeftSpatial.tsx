@@ -30,10 +30,10 @@ export const PremiumLeftSpatial: React.FC<{ script: WordTiming[] }> = ({ script 
       height: "100%", 
       width: "45%", 
       display: "flex",
-      flexWrap: "wrap",
-      alignContent: "center",
-      justifyContent: "flex-start", 
-      gap: "12px 20px", // Adjusted gap for massive text
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "flex-start", 
+      gap: "32px 28px", // Adjusted gap for massive text
       zIndex: 50
     }}>
       {script.map((item, index) => {
@@ -70,13 +70,14 @@ export const PremiumLeftSpatial: React.FC<{ script: WordTiming[] }> = ({ script 
               fontSize: "84px", // Massive, authoritative size
               fontFamily: '"Geist", "Inter", system-ui, sans-serif',
               fontWeight: isActive ? 900 : 500, // Maximum density when active
-              transform: `translateY(${yShift}px) scale(${scale})`,
+              
               filter: isActive ? `blur(${blurAmount}px)` : "none",
               textShadow: isActive 
                 ? `0 25px 50px rgba(0,0,0,0.9), 0 0 40px rgba(255,255,255,0.3)` 
                 : `0 15px 30px rgba(0,0,0,0.9)`,
               transition: "color 0.2s ease, opacity 0.3s ease, filter 0.2s ease",
               display: "inline-block",
+              textTransform: "capitalize",
               letterSpacing: "-2.5px", // Extremely tight kerning for that premium look
               lineHeight: "1"
             }}

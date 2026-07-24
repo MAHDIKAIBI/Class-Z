@@ -178,7 +178,8 @@ const AutomatedDocumentary = () => {
   const msToFrames = (ms: number) => Math.round((ms / 1000) * fps);
 
   // Determine global frame positioning for absolute sequences
-  const mappedScenes = masterJson.timeline.map((scene: any, i: number) => {
+  let activeGraphicUntil = 0;
+    const mappedScenes = masterJson.timeline.map((scene: any, i: number) => {
       // Exact absolute timing from Whisper
       const startMs = scene.timing?.start_ms || (i * 3000);
       const audioDurMs = scene.timing?.duration_ms || 3000;
