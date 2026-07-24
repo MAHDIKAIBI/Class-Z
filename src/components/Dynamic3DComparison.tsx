@@ -5,10 +5,22 @@ import {
   interpolate, 
   Easing,
   spring,
-  Img
+  Img, staticFile as remotionStaticFile
 } from "remotion";
 import { ThreeCanvas } from "@remotion/three";
 import React from "react";
+
+const staticFile = (path: string) => {
+    if (!path) return '';
+    let cleanPath = path;
+    if (cleanPath.startsWith('public/')) {
+        cleanPath = cleanPath.slice(7);
+    } else if (cleanPath.startsWith('/public/')) {
+        cleanPath = cleanPath.slice(8);
+    }
+    return remotionStaticFile(cleanPath);
+};
+
 
 // ============================================================================
 // 1. THE VAULT COMPONENT (100% Adaptable 3D Data Engine)
@@ -159,7 +171,7 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
           {itemA.imageUrl && (
             <div style={{ width: "100%", height: "140px", borderRadius: "12px", overflow: "hidden", marginBottom: "20px", border: `1px solid ${itemA.color}40`, position: "relative" }}>
                <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, rgba(10,10,12,0.9), transparent)`, zIndex: 1 }} />
-               <Img src={itemA.imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+               <Img, staticFile as remotionStaticFile src={itemA.imageUrl ? staticFile(itemA.imageUrl) : undefined} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
           )}
 
@@ -192,7 +204,7 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
           {itemB.imageUrl && (
             <div style={{ width: "100%", height: "140px", borderRadius: "12px", overflow: "hidden", marginBottom: "20px", border: `1px solid ${itemB.color}40`, position: "relative" }}>
                <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, rgba(10,10,12,0.9), transparent)`, zIndex: 1 }} />
-               <Img src={itemB.imageUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+               <Img src={itemB.imageUrl ? staticFile(itemB.imageUrl) : undefined} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             </div>
           )}
 

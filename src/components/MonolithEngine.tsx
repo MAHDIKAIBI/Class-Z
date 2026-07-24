@@ -5,10 +5,22 @@ import {
   useVideoConfig, 
   spring, 
   interpolate, 
-  Img,
+  Img, staticFile as remotionStaticFile,
   Video
 } from "remotion";
 import React from "react";
+
+const staticFile = (path: string) => {
+    if (!path) return '';
+    let cleanPath = path;
+    if (cleanPath.startsWith('public/')) {
+        cleanPath = cleanPath.slice(7);
+    } else if (cleanPath.startsWith('/public/')) {
+        cleanPath = cleanPath.slice(8);
+    }
+    return remotionStaticFile(cleanPath);
+};
+
 
 // ============================================================================
 // THE KINETIC PARALLAX ENGINE (Fully Dynamic JSON Driven)
@@ -47,7 +59,7 @@ export const MonolithEngine: React.FC<{ payload: MonolithPayload }> = ({ payload
       <AbsoluteFill style={{ zIndex: 0, opacity: payload.bgVideoSrc ? 0.4 : 0.15, transform: cameraTransform }}>
         {payload.bgVideoSrc ? (
             <Video 
-                src={payload.bgVideoSrc} 
+                src={payload.bgVideoSrc ? staticFile(payload.bgVideoSrc) : undefined} 
                 style={{ width: "100%", height: "100%", objectFit: "cover" }} 
                 muted 
             />
@@ -90,7 +102,7 @@ export const MonolithEngine: React.FC<{ payload: MonolithPayload }> = ({ payload
         }}>
           
           {payload.assetSrc && (
-            <Img src={payload.assetSrc} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.2) grayscale(0.3) brightness(0.7)" }} />
+            <Img src={payload.assetSrc ? staticFile(payload.assetSrc) : undefined} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.2) grayscale(0.3) brightness(0.7)" }} />
           )}
           
           <div style={{
