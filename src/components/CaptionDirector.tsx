@@ -52,6 +52,8 @@ function buildTimedChunks(words: any[]): TimedChunk[] {
 
 // ==========================================
 // MAIN CAPTION DIRECTOR
+// Routes Gemini's caption_preset to the correct
+// per-word standalone component from the Desktop vault.
 // ==========================================
 export const CaptionDirector = ({ scene }: any) => {
     const { fps } = useVideoConfig();

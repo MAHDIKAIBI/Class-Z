@@ -350,7 +350,7 @@ const AutomatedDocumentary = () => {
                               );
                           })()}
                         
-                        {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'monolith' && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
+                        {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'monolith' && !scene.diorama_payload && !scene.monolith_payload && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
                             <CaptionDirector scene={scene} />
                         )}
                      </AbsoluteFill>

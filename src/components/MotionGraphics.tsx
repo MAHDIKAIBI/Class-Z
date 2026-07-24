@@ -243,7 +243,7 @@ const StockTerminal = ({ dataPoints, frame, fps, color }: any) => {
 // -----------------------------------------------------
 // 4. GRAPHIC DIRECTOR
 // -----------------------------------------------------
-export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
+export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrames = 150 }: any) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -275,14 +275,9 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0 }: any) => {
       return (
           <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
               <Dynamic3DComparison 
-                  start={frame}
-                  end={frame + (graphics.duration_frames || 150)}
                   unit={graphics.unit || ''}
-                  itemA={graphics.itemA}
-                  itemB={graphics.itemB}
-                  title={graphics.title || ''}
-                  subtitle={graphics.subtitle || ''}
-                  color={graphics.color || '#FFFFFF'}
+                  itemA={patchedItemA}
+                  itemB={patchedItemB}
               />
           </AbsoluteFill>
       );
