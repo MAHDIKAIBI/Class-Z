@@ -114,6 +114,16 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
     return availableSfx[hash % availableSfx.length];
   }, [sfxUrl, subtitle, chapterNumber]);
 
+  // Map known audio files to the exact frame where their peak "drop" or "impact" occurs (at 30fps)
+  const audioDropFrames: Record<string, number> = {
+    'audio/sfx/chapters/chapter1.wav': 195, // Peak is at 6.51 seconds
+  };
+  
+  // Calculate how many frames to skip from the beginning of the audio so the drop hits exactly at frame 40 (visual impact)
+  const impactFrame = 40;
+  const dropFrame = finalSfxUrl ? (audioDropFrames[finalSfxUrl] || impactFrame) : impactFrame;
+  const audioStartOffset = Math.max(0, dropFrame - impactFrame);
+
   // 6. CINEMATIC AUDIO CROSSFADE (No sudden cuts)
   // Fades in over the first 15 frames, stays at 100%, then fades out smoothly over the last 30 frames.
   const audioVolume = interpolate(
@@ -127,7 +137,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
     <AbsoluteFill style={{ backgroundColor: "#020202", overflow: "hidden" }}>
       
       {/* SYNCHRONIZED CINEMATIC AUDIO (Now rotating dynamically with smooth volume curves) */}
-      {finalSfxUrl && <Audio src={staticFile(finalSfxUrl)} volume={audioVolume} />}
+      {finalSfxUrl && <Audio src={staticFile(finalSfxUrl)} volume={audioVolume} startFrom={audioStartOffset} />}
 
       <AbsoluteFill style={{ transform: `scale(${perpetualScale})`, justifyContent: "center", alignItems: "center" }}>
         
