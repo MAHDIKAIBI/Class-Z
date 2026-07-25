@@ -214,6 +214,9 @@ jobs:
     outputs:
       vault_name: ${{ steps.orchestrator.outputs.vault_name }}
       total_frames: ${{ steps.orchestrator.outputs.total_frames }}
+      skip_tts: ${{ steps.checkpoint.outputs.skip_tts }}
+      skip_prep: ${{ steps.checkpoint.outputs.skip_prep }}
+      skip_downloads: ${{ steps.checkpoint.outputs.skip_downloads }}
     steps:
       - uses: actions/checkout@v4
 
@@ -281,6 +284,9 @@ jobs:
         run: |
           echo "SKIP_PROFILE=false" >> $GITHUB_ENV
           echo "READY_TO_RENDER=false" >> $GITHUB_ENV
+          echo "skip_tts=false" >> $GITHUB_OUTPUT
+          echo "skip_prep=false" >> $GITHUB_OUTPUT
+          echo "skip_downloads=false" >> $GITHUB_OUTPUT
           
           echo "Probing Google Drive for checkpoints..."
           VAULT="$INPUT_TOPIC"
@@ -297,12 +303,23 @@ jobs:
               echo "Found master_timeline.json in to upload workspace."
               TIMELINE_JSON="master_timeline.json"
             fi
+            
+            # Probe for completed voiceover if timeline isn't found yet
+            if [ -z "$TIMELINE_JSON" ]; then
+              if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 30s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT/voiceover.wav" >/dev/null 2>&1 || rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 30s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT/voiceover.wav" >/dev/null 2>&1; then
+                echo "[+] Detected complete voiceover.wav on Drive! Bypassing 15 parallel TTS workers."
+                echo "skip_tts=true" >> $GITHUB_OUTPUT
+              fi
+            fi
           else
             echo "[*] CREATE_AUTOMATIC: No topic provided. Bypassing checkpoints to allow Orchestrator to pull from queue."
           fi
           
           if [ -n "$TIMELINE_JSON" ]; then
              echo "Analyzing completion status..."
+             echo "[+] Valid master_timeline.json detected. Bypassing TTS matrix and Brain Prep!"
+             echo "skip_tts=true" >> $GITHUB_OUTPUT
+             echo "skip_prep=true" >> $GITHUB_OUTPUT
              
              # Count scenes without downloaded_video
              MISSING_VIDEOS=$(jq '[.timeline[] | select(.media_path == null and .media_paths == null)] | length' "$TIMELINE_JSON")
@@ -317,12 +334,13 @@ jobs:
                  echo "100% READY TO RENDER! Bypassing Ollama and Playwright entirely."
                  echo "READY_TO_RENDER=true" >> $GITHUB_ENV
                  echo "SKIP_PROFILE=true" >> $GITHUB_ENV
+                 echo "skip_downloads=true" >> $GITHUB_OUTPUT
              fi
           fi
           
           # If not completely ready, check if we can at least skip Playwright
-          if [ "$READY_TO_RENDER" != "true" ]; then
-             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$INPUT_TOPIC/script.txt" >/dev/null 2>&1; then
+          if [ "$READY_TO_RENDER" != "true" ] && [ -n "$VAULT" ]; then
+             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/script.txt" >/dev/null 2>&1 || rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT/script.txt" >/dev/null 2>&1; then
                  echo "Detected script.txt. ChatGPT phase is done. Bypassing Playwright profile."
                  echo "SKIP_PROFILE=true" >> $GITHUB_ENV
              fi
@@ -379,7 +397,7 @@ jobs:
 
   tts_matrix:
     needs: [creation_job]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY'
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_tts != 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -483,7 +501,7 @@ jobs:
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   brain_prep_job:
     needs: [creation_job, tts_matrix]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY'
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_prep != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -615,8 +633,8 @@ jobs:
   # Each registers its URL to Drive and waits for its shutdown signal.
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   ollama_pool:
-    needs: [tts_matrix]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY'
+    needs: [creation_job, tts_matrix]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -761,7 +779,7 @@ jobs:
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   download_matrix:
     needs: [creation_job, brain_prep_job]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY'
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
