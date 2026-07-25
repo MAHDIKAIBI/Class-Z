@@ -247,7 +247,9 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrame
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  if (!graphics || graphics.graphics_type === 'none') return null;
+  if (!graphics || !graphics.graphics_type || typeof graphics.graphics_type !== 'string' || graphics.graphics_type.toLowerCase() === 'none') {
+    return null;
+  }
 
   const type = graphics.graphics_type.toLowerCase();
 
