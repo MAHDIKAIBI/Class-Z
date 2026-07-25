@@ -84,8 +84,8 @@ jobs:
           TOPIC="$INPUT_TOPIC"
           if [ -n "$TOPIC" ]; then
             if rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$TOPIC/master_timeline.json" > timeline.json 2>/dev/null; then
-               MISSING_VIDEOS=$(jq '[.timeline[] | select(.media_path == null and .media_paths == null)] | length' timeline.json)
-               MISSING_OVERLAYS=$(jq '[.timeline[] | select(.overlay_image_query != null and (.overlay_image_query | ascii_downcase) != "none" and .overlay_image == null)] | length' timeline.json)
+               MISSING_VIDEOS=$(jq '[.timeline[] | select((.media_path == null or .media_path == "") and (.media_paths == null or .media_paths == []))] | length' timeline.json)
+               MISSING_OVERLAYS=$(jq '[.timeline[] | select(.overlay_image_query != null and .overlay_image_query != "" and (.overlay_image_query | ascii_downcase) != "none" and (.overlay_image == null or .overlay_image == ""))] | length' timeline.json)
                if [ "$MISSING_VIDEOS" -eq 0 ] && [ "$MISSING_OVERLAYS" -eq 0 ]; then
                    echo "READY_TO_RENDER=true" >> $GITHUB_ENV
                    echo "[+] All assets present. Skipping Ollama server (RENDER_ONLY mode)."
