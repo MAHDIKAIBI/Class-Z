@@ -15,6 +15,7 @@ export type WordTiming = {
     word: string;
     start: number;
     end: number;
+    isHighlight?: boolean;
 };
 
 interface TimedChunk {
@@ -108,7 +109,8 @@ export const CaptionDirector = ({ scene }: any) => {
                     return {
                         word: w.word,
                         start: Math.max(0, absStart - chunkStartFrame),
-                        end: Math.max(0, absEnd - chunkStartFrame)
+                        end: Math.max(0, absEnd - chunkStartFrame),
+                        isHighlight: w.isHighlight
                     };
                 });
                 
