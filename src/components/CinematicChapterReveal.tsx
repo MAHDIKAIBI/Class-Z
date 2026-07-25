@@ -126,18 +126,16 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
 
   // 6. CINEMATIC AUDIO CROSSFADE (No sudden cuts)
   // Fades in over the first 15 frames, stays at 100%, then fades out smoothly over the last 30 frames.
+  const safeFadeOutStart = Math.max(15.001, durationInFrames - 30);
   const audioVolume = interpolate(
     frame,
-    [0, 15, durationInFrames - 30, durationInFrames],
+    [0, 15, safeFadeOutStart, Math.max(safeFadeOutStart + 0.001, durationInFrames)],
     [0, 1, 1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#020202", overflow: "hidden" }}>
-      
-      {/* SYNCHRONIZED CINEMATIC AUDIO (Now rotating dynamically with smooth volume curves) */}
-      {finalSfxUrl && <Audio src={staticFile(finalSfxUrl)} volume={audioVolume} startFrom={audioStartOffset} />}
 
       <AbsoluteFill style={{ transform: `scale(${perpetualScale})`, justifyContent: "center", alignItems: "center" }}>
         
