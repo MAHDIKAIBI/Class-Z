@@ -320,6 +320,7 @@ jobs:
              echo "[+] Valid master_timeline.json detected. Bypassing TTS matrix and Brain Prep!"
              echo "skip_tts=true" >> $GITHUB_OUTPUT
              echo "skip_prep=true" >> $GITHUB_OUTPUT
+             echo "SKIP_PREP=true" >> $GITHUB_ENV
              
              # Count scenes without downloaded_video
              MISSING_VIDEOS=$(jq '[.timeline[] | select((.media_path == null or .media_path == "" or (.media_path | length) == 0) and (.media_paths == null or .media_paths == [] or (.media_paths | length) == 0))] | length' "$TIMELINE_JSON")

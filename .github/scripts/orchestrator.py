@@ -22,6 +22,7 @@ print(f"Topic: {topic}")
 print("Downloading core scripts from Google Drive...")
 ready_to_render = os.environ.get("READY_TO_RENDER", "false") == "true"
 skip_profile = os.environ.get("SKIP_PROFILE", "false") == "true"
+skip_prep = os.environ.get("SKIP_PREP", "false") == "true"
 
 if ready_to_render:
     print("\n[SUCCESS] Pipeline is 100% READY TO RENDER!")
@@ -54,6 +55,47 @@ if ready_to_render:
             f.write(f"total_frames={total_frames}\n")
             
     print("=== CLOUD ORCHESTRATOR COMPLETE ===")
+    sys.exit(0)
+
+# ── EXIT RAMP 2: Timeline exists, assets need downloading ──────────────────────
+# skip_prep=true means master_timeline.json already exists on Drive.
+# We do NOT need to re-run ChatGPT, TTS, or Gemini. Just pass through vault_name
+# so download_matrix and brain_finish_job can pick it up.
+if skip_prep:
+    print("\n[SKIP_PREP] master_timeline.json already exists on Drive!")
+    print("            Skipping ChatGPT scriptwriter + Gemini orchestration entirely.")
+    print("            download_matrix will handle asset downloading.")
+    
+    vault_name = safe_filename(topic)
+    total_frames = "0"
+    
+    try:
+        result = subprocess.run(["rclone", "cat", f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=False)
+        if result.returncode != 0:
+            subprocess.run(["rclone", "cat", f"data:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=True)
+            
+        with open("timeline.json", "r") as f:
+            data = json.load(f)
+            total_ms = data.get("meta", data.get("metadata", {})).get("total_duration_ms")
+            if total_ms:
+                total_frames = str(round((total_ms / 1000) * 30) + 60)
+            else:
+                total_frames = "360"
+    except Exception as e:
+        print(f"[SKIP_PREP] Warning: Could not read timeline frames: {e}")
+        total_frames = "360"
+    
+    # Write vault manifest for downstream jobs
+    with open("generated_vault.txt", "w") as f:
+        f.write(vault_name)
+    
+    if "GITHUB_OUTPUT" in os.environ:
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write(f"vault_name={vault_name}\n")
+            f.write(f"total_frames={total_frames}\n")
+    
+    print(f"    vault_name={vault_name}, total_frames={total_frames}")
+    print("=== CLOUD ORCHESTRATOR COMPLETE (SKIP_PREP) ===")
     sys.exit(0)
 
 rclone_cmd = [
