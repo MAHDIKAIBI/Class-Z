@@ -21,6 +21,11 @@ import { MonolithEngine } from './components/MonolithEngine';
 import { DioramaCanvas } from './components/Diorama';
 import { GlobalFinisher } from './components/GlobalFinisher';
 import { CinematicChapterReveal } from './components/CinematicChapterReveal';
+import { ZAxisCrashTransition } from './components/transition1';
+import { SpatialWhipTransition } from './components/transition2';
+import { ThermalFlareTransition } from './components/transition3';
+import { RackToBlackTransition } from './components/transition4';
+
 
 export const useCamera = () => ({ xPan: 0, yPan: 0, zScale: 1.0 });
 
@@ -33,6 +38,46 @@ const getParallaxMultiplier = (role: string, depth: number) => {
 
 const rawAny = masterJsonRaw as any;
 const normalisedTimeline = (rawAny.timeline ?? []).map((s: any) => s).filter(Boolean);
+
+
+// ==========================================
+// TRANSITION ROTATION ENGINE
+// ==========================================
+const transitionPool = ['ZAxisCrash', 'SpatialWhip', 'ThermalFlare', 'RackToBlack'];
+let activePool = [...transitionPool];
+
+const shuffle = (array, seedStr) => {
+    let currentIndex = array.length, randomIndex;
+    let seedOffset = 0;
+    while (currentIndex != 0) {
+        randomIndex = Math.floor(seededRandom(seedStr + seedOffset) * currentIndex);
+        seedOffset++;
+        currentIndex--;
+        [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+    }
+    return array;
+};
+
+const videoSeed = masterJsonRaw?.channel || 'default_video';
+activePool = shuffle([...transitionPool], videoSeed);
+let transitionIndex = 0;
+
+normalisedTimeline.forEach((scene, i) => {
+    const words = scene.words || [];
+    const lastWord = words.length > 0 ? words[words.length - 1].word : '';
+    const isEndOfPara = lastWord.endsWith('.') || lastWord.endsWith('?') || lastWord.endsWith('!');
+    
+    if (isEndOfPara) {
+        scene.outgoingTransition = activePool[transitionIndex];
+        transitionIndex++;
+        if (transitionIndex >= activePool.length) {
+            activePool = shuffle([...transitionPool], videoSeed + "_cycle_" + i);
+            transitionIndex = 0;
+        }
+    } else {
+        scene.outgoingTransition = 'none';
+    }
+});
 
 const masterJson: any = {
   ...rawAny,
@@ -175,6 +220,52 @@ const CinematicOverlay = ({ src, durationInFrames }: { src: string, durationInFr
     );
 };
 
+
+const SceneContent = ({ scene, index }: any) => {
+    const { fps } = useVideoConfig();
+    return (
+        <AbsoluteFill>
+            {/* VISUAL ROUTING ENGINE */}
+            {(scene.scene_type === 'monolith') ? (
+                <MonolithEngine payload={{...(scene.monolith_payload || {}), bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '', assetSrc: scene.monolith_payload?.assetSrc ? staticFile(scene.monolith_payload.assetSrc) : ''}} />
+            ) : (scene.scene_type === 'topic_reveal') ? (
+                <DioramaCanvas payload={{...(scene.diorama_payload || {}), bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '', subjects: (scene.diorama_payload?.subjects || []).map((sub: any, i: number) => ({...sub, imageUrl: (scene.media_paths?.[i + 1] && !scene.media_paths?.[i + 1].endsWith('.mp4')) ? scene.media_paths?.[i + 1] : undefined})), text: scene.diorama_payload?.text || []}} />
+            ) : (scene.scene_type === 'chapter_reveal') ? (
+                <CinematicChapterReveal chapterNumber={scene.chapter_payload?.chapterNumber || 1} subtitle={scene.chapter_payload?.subtitle || ""} bgImgUrl={scene.visual?.assets?.find((a:any) => a.role === 'bg_chapter')?.local_path || ""} leftAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'left_chapter')?.local_path || ""} rightAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'right_chapter')?.local_path || ""} />
+            ) : (scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') ? (
+                <DynamicLiquidGrid bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''} assets={(scene.visual?.assets || scene.assets || []).filter((a: any) => a.layer !== 'background' && a.type !== 'video').map((a: any, idx: number) => ({url: a.local_path || a.downloaded_path || '', title: a.title || '', subtitle: a.subtitle || '', trigger_frame: a.trigger_start_ms ? Math.round(((a.trigger_start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps) : (a.trigger_frame ?? (idx === 0 ? 0 : 9999))}))} />
+            ) : (
+                <div style={{ position: 'absolute', inset: 0, animationName: scene.cutStyle === 'split_cut' ? 'none' : 'crossFocus', animationDuration: `${scene.overlapFrames / fps}s` }}>
+                    <div style={{ position: 'absolute', inset: 0, animationName: scene.overlay_image ? 'slowZoomBg' : 'none', animationDuration: `${scene.visualDurFrames / fps}s`, animationTimingFunction: 'linear', animationFillMode: 'forwards' }}>
+                        <LayoutRouter scene={scene} duration={scene.visualDurFrames} isEven={scene.isEven} variants={scene.editorialVariants} />
+                    </div>
+                    <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', pointerEvents: 'none' }}>
+                        {scene.visual_elements?.map((el: any, elIdx: number) => {
+                            const mediaPath = (scene.media_paths || (scene.media_path ? [scene.media_path] : []))[elIdx];
+                            if (el.role && el.role !== 'background' && el.role !== 'video' && mediaPath && !mediaPath.endsWith('.mp4')) {
+                                return <DynamicElement key={`fg-${elIdx}`} src={staticFile(mediaPath)} duration={scene.visualDurFrames} motion={el.motion} continuousMotion={el.continuous_motion} delay={Math.round((scene.stagger || 0) * fps * elIdx)} treatment={el.treatment} depth={el.depth} transformOrigin={el.transform_origin} composition={el.composition} role={el.role} focus={scene.focus} />;
+                            }
+                            return null;
+                        })}
+                    </div>
+                </div>
+            )}
+            <EffectsDirector variants={scene.editorialVariants} events={scene.events} />
+            <Sequence from={0} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)}>
+                {scene.graphics ? <MotionGraphicsRouter graphics={{...scene.graphics, trigger_frame: scene.graphics.trigger_start_ms ? Math.round(((scene.graphics.trigger_start_ms - scene.timing.start_ms) / 1000) * fps) : scene.graphics.trigger_frame}} sceneIndex={index} variants={scene.editorialVariants} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)} /> : null}
+            </Sequence>
+            {scene.overlay_image && (
+                <Sequence from={Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps)} durationInFrames={Math.max(1, scene.visualDurFrames - Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps))}>
+                    <CinematicOverlay src={scene.overlay_image} durationInFrames={Math.max(1, scene.visualDurFrames - Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps))} />
+                </Sequence>
+            )}
+            {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'monolith' && !scene.diorama_payload && !scene.monolith_payload && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
+                <CaptionDirector scene={scene} />
+            )}
+        </AbsoluteFill>
+    );
+};
+
 const AutomatedDocumentary = () => {
   const { fps } = useVideoConfig();
   const msToFrames = (ms: number) => Math.round((ms / 1000) * fps);
@@ -225,147 +316,31 @@ const AutomatedDocumentary = () => {
                   
                   {/* VISUAL SEQUENCE */}
                   <Sequence from={scene.startFrame} durationInFrames={scene.visualDurFrames}>
-                     <AbsoluteFill>
-                        
-                        {/* VISUAL ROUTING ENGINE */}
-                        {(scene.scene_type === 'monolith') ? (
-                            /* MONOLITH ENGINE (Kinetic Parallax Hook) */
-                            <MonolithEngine
-                                payload={{
-                                    ...(scene.monolith_payload || {}),
-                                    bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '',
-                                    assetSrc: scene.monolith_payload?.assetSrc
-                                        ? staticFile(scene.monolith_payload.assetSrc)
-                                        : '',
-                                }}
-                            />
-                        ) : (scene.scene_type === 'topic_reveal') ? (
-                            /* TOPIC REVEAL DIORAMA (Liquid Glass Parallax Engine) */
-                            <DioramaCanvas
-                                payload={{
-                                    ...(scene.diorama_payload || {}),
-                                    bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '',
-                                    subjects: (scene.diorama_payload?.subjects || []).map((sub: any, i: number) => {
-                                        const imgPath = scene.media_paths?.[i + 1];
-                                        return {
-                                            ...sub,
-                                            imageUrl: (imgPath && !imgPath.endsWith('.mp4')) ? imgPath : undefined
-                                        };
-                                    }),
-                                    text: (() => {
-                                        let searchIdx = 0;
-                                        return (scene.diorama_payload?.text || []).map((t: any) => {
-                                            if (!scene.words || scene.words.length === 0) return t;
-                                            
-                                            const target = t.word.toLowerCase().replace(/[^a-z0-9]/g, '');
-                                            let bestMatch = null;
-                                            
-                                            for (let j = searchIdx; j < scene.words.length; j++) {
-                                                const w = scene.words[j].word.toLowerCase().replace(/[^a-z0-9]/g, '');
-                                                if (w && target && (w === target || w.includes(target) || target.includes(w))) {
-                                                    bestMatch = scene.words[j];
-                                                    searchIdx = j + 1;
-                                                    break;
-                                                }
-                                            }
-                                            
-                                            if (bestMatch && bestMatch.start_ms) {
-                                                const startFrame = Math.max(0, Math.round(((bestMatch.start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps));
-                                                return { ...t, start: startFrame };
-                                            }
-                                            return t;
-                                        });
-                                    })()
-                                }}
-                            />
-                        ) : (scene.scene_type === 'chapter_reveal') ? (
-                              /* CINEMATIC CHAPTER ENGINE */
-                              <CinematicChapterReveal 
-                                  chapterNumber={scene.chapter_payload?.chapterNumber || 1}
-                                  subtitle={scene.chapter_payload?.subtitle || ""}
-                                  bgImgUrl={scene.visual?.assets?.find((a:any) => a.role === 'bg_chapter')?.local_path || ""}
-                                  leftAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'left_chapter')?.local_path || ""}
-                                  rightAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'right_chapter')?.local_path || ""}
-                              />
-                        ) : (scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') ? (
-                            /* DYNAMIC LIQUID GRID (for specific/comparison scenes) */
-                            <DynamicLiquidGrid
-                                bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''}
-                                assets={(scene.visual?.assets || scene.assets || []).filter((a: any) => a.layer !== 'background' && a.type !== 'video').map((a: any, idx: number) => ({
-                                    // overlay_downloader.py writes to a.local_path
-                                    // a.trigger_start_ms is set by The_Brain word alignment (precise WhisperX ms)
-                                    // a.trigger_frame is the AI's estimated fallback
-                                    url: a.local_path || a.downloaded_path || '',
-                                    title: a.title || '',
-                                    subtitle: a.subtitle || '',
-                                    trigger_frame: a.trigger_start_ms
-                                        ? Math.round(((a.trigger_start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps)
-                                        : (a.trigger_frame ?? (idx === 0 ? 0 : 9999))
-                                }))}
-                            />
-                        ) : (
-                            /* STANDARD LAYOUT (for vibe/data scenes) */
-                            <div style={{
-                                position: 'absolute', inset: 0, 
-                                animationName: scene.cutStyle === 'split_cut' ? 'none' : 'crossFocus',
-                                animationDuration: `${scene.overlapFrames / fps}s`
-                            }}>
-                               <div style={{
-                                   position: 'absolute', inset: 0,
-                                   animationName: scene.overlay_image ? 'slowZoomBg' : 'none',
-                                   animationDuration: `${scene.visualDurFrames / fps}s`,
-                                   animationTimingFunction: 'linear',
-                                   animationFillMode: 'forwards'
-                               }}>
-                                   <LayoutRouter scene={scene} duration={scene.visualDurFrames} isEven={scene.isEven} variants={scene.editorialVariants} />
-                               </div>
-                               
-                                 {/* Foreground cutouts */}
-                                 <div style={{ position: 'absolute', inset: 0, transformStyle: 'preserve-3d', pointerEvents: 'none' }}>
-                                   {scene.visual_elements?.map((el: any, elIdx: number) => {
-                                     const mPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
-                                     const mediaPath = mPaths[elIdx];
-                                     if (el.role && el.role !== 'background' && el.role !== 'video' && mediaPath && !mediaPath.endsWith('.mp4')) {
-                                        const staggerDelay = Math.round((scene.stagger || 0) * fps * elIdx);
-                                        return <DynamicElement key={`fg-${elIdx}`} src={staticFile(mediaPath)} duration={scene.visualDurFrames} motion={el.motion} continuousMotion={el.continuous_motion} delay={staggerDelay} treatment={el.treatment} depth={el.depth} transformOrigin={el.transform_origin} composition={el.composition} role={el.role} focus={scene.focus} />;
-                                     }
-                                     return null;
-                                   })}
-                                 </div>
-                            </div>
-                        )}
-
-                        {/* Effects & Post FX overrides managed by Editorial Director */}
-                        <EffectsDirector variants={scene.editorialVariants} events={scene.events} />
-                        <Sequence from={0} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)}>
-                            {scene.graphics ? (() => {
-                                const g = { ...scene.graphics };
-                                if (g.trigger_start_ms) {
-                                    g.trigger_frame = Math.round(((g.trigger_start_ms - scene.timing.start_ms) / 1000) * fps);
-                                }
-                                return <MotionGraphicsRouter graphics={g} sceneIndex={index} variants={scene.editorialVariants} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)} />;
-                            })() : null}
-                        </Sequence>
-                        
-                        {scene.overlay_image && (() => {
-                              // If Gemini aligned the overlay to a specific trigger word, we delay the animation
-                              const overlayStartMs = scene.overlay_start_ms || scene.timing.start_ms;
-                              const delayMs = Math.max(0, overlayStartMs - scene.timing.start_ms);
-                              const delayFrames = Math.floor((delayMs / 1000) * fps);
-                              const actualDur = Math.max(1, scene.visualDurFrames - delayFrames);
-                              
-                              return (
-                                  <Sequence from={delayFrames} durationInFrames={actualDur}>
-                                      <CinematicOverlay src={scene.overlay_image} durationInFrames={actualDur} />
-                                  </Sequence>
-                              );
-                          })()}
-                        
-                        {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'monolith' && !scene.diorama_payload && !scene.monolith_payload && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (!scene.graphics || scene.graphics.graphics_type === 'none') && (
-                            <CaptionDirector scene={scene} />
-                        )}
-                     </AbsoluteFill>
+                      <SceneContent scene={scene} index={index} />
                   </Sequence>
+
+                  {/* CUSTOM TRANSITION ROUTER */}
+                  {scene.outgoingTransition && scene.outgoingTransition !== 'none' && mappedScenes[index + 1] && (
+                      <Sequence 
+                          from={scene.startFrame + scene.visualDurFrames - 15} 
+                          durationInFrames={30}
+                          layout="none"
+                          style={{ zIndex: 9999 }}
+                      >
+                          {scene.outgoingTransition === 'ZAxisCrash' && (
+                              <ZAxisCrashTransition SceneA={<SceneContent scene={scene} index={index} />} SceneB={<SceneContent scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                          )}
+                          {scene.outgoingTransition === 'SpatialWhip' && (
+                              <SpatialWhipTransition SceneA={<SceneContent scene={scene} index={index} />} SceneB={<SceneContent scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                          )}
+                          {scene.outgoingTransition === 'ThermalFlare' && (
+                              <ThermalFlareTransition SceneA={<SceneContent scene={scene} index={index} />} SceneB={<SceneContent scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                          )}
+                          {scene.outgoingTransition === 'RackToBlack' && (
+                              <RackToBlackTransition SceneA={<SceneContent scene={scene} index={index} />} SceneB={<SceneContent scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                          )}
+                      </Sequence>
+                  )}
 
                   {/* DECOUPLED AUDIO SEQUENCE (Allows exact J/L overlapping independently of visual duration) */}
                   <Sequence from={scene.startFrame} durationInFrames={scene.audioDurFrames}>
