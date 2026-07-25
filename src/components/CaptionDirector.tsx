@@ -90,15 +90,27 @@ export const CaptionDirector = ({ scene }: any) => {
         <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
             {chunks.map((chunk, i) => {
                 const chunkStartFrame = Math.max(0, Math.round(((chunk.start_ms - sceneStartMs) / 1000) * fps));
-                // Add a small 10-frame pad to chunk duration so text settles smoothly before unmounting
-                const chunkDurationFrames = Math.max(1, Math.round(((chunk.end_ms - chunk.start_ms) / 1000) * fps) + 15);
                 
-                // Map to WordTiming relative to the chunk's start frame
-                const script: WordTiming[] = chunk.words.map((w) => ({
-                    word: w.word,
-                    start: Math.max(0, Math.round(((w.start_ms - chunk.start_ms) / 1000) * fps)),
-                    end: Math.max(0, Math.round(((w.end_ms - chunk.start_ms) / 1000) * fps))
-                }));
+                let chunkDurationFrames = Math.max(1, Math.round(((chunk.end_ms - chunk.start_ms) / 1000) * fps));
+                
+                // Prevent sequence overlap that causes captions to stack on top of each other!
+                if (i < chunks.length - 1) {
+                    const nextStartFrame = Math.max(0, Math.round(((chunks[i+1].start_ms - sceneStartMs) / 1000) * fps));
+                    chunkDurationFrames = nextStartFrame - chunkStartFrame;
+                } else {
+                    chunkDurationFrames += 15;
+                }
+                
+                // Fix 1-frame desync drift by calculating absolute frames relative to scene start
+                const script: WordTiming[] = chunk.words.map((w) => {
+                    const absStart = Math.max(0, Math.round(((w.start_ms - sceneStartMs) / 1000) * fps));
+                    const absEnd = Math.max(0, Math.round(((w.end_ms - sceneStartMs) / 1000) * fps));
+                    return {
+                        word: w.word,
+                        start: Math.max(0, absStart - chunkStartFrame),
+                        end: Math.max(0, absEnd - chunkStartFrame)
+                    };
+                });
                 
                 let CaptionComponent = <GlassPillCaption script={script} />;
                 
