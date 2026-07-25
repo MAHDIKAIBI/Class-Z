@@ -1007,6 +1007,7 @@ jobs:
           python -m playwright install --with-deps chromium firefox
 
       - name: Merge Partial Timelines
+        if: needs.creation_job.outputs.skip_downloads != 'true'
         env:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
