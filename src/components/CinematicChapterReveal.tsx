@@ -331,7 +331,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
       {/* ========================================================= */}
       
       <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 400px rgba(0,0,0,0.9)", zIndex: 100, pointerEvents: "none" }} />
-      <AbsoluteFill style={{ backgroundImage: "url('https://raw.githubusercontent.com/remotion-dev/logo/main/public/noise.png')", opacity: 0.15, mixBlendMode: "screen", pointerEvents: "none", zIndex: 102 }} />
+      <AbsoluteFill style={{ backgroundImage: "url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48ZmlsdGVyIGlkPSJhIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC42NSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIvPjwvc3ZnPg==')", opacity: 0.15, mixBlendMode: "screen", pointerEvents: "none", zIndex: 102 }} />
       
       <div style={{ position: "absolute", inset: "-20%", backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 2px)", backgroundSize: "150px 150px", backgroundPosition: `${frame * 2}px ${frame * -1}px`, opacity: 0.2, mixBlendMode: "screen", zIndex: 102, pointerEvents: "none" }} />
       <div style={{ position: "absolute", inset: "-20%", backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 2px, transparent 3px)", backgroundSize: "250px 300px", backgroundPosition: `${frame * -2.5}px ${frame * -1.5}px`, opacity: 0.15, mixBlendMode: "screen", filter: "blur(1px)", zIndex: 102, pointerEvents: "none" }} />
