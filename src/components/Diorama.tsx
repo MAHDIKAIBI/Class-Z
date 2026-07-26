@@ -144,8 +144,10 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
           padding: "0 5%",
           transform: `translateY(15%)`
         }}>
-          {payload.subjects.map((sub, i) => {
-            const entrance = spring({ frame: Math.max(0, rawFrame - startFrame - (i * 10)), fps, config: { damping: 12, stiffness: 100 } });
+          {payload.subjects.map((sub: any, i) => {
+            // Each subject has its own trigger_frame so it reveals on its spoken word
+            const subTrigger = (sub as any).trigger_frame ?? (i * 10);
+            const entrance = spring({ frame: Math.max(0, rawFrame - startFrame - subTrigger), fps, config: { damping: 12, stiffness: 100 } });
             const popScale = interpolate(entrance, [0, 1], [0, 1]);
             const popOpacity = interpolate(entrance, [0, 0.5], [0, 1]);
             

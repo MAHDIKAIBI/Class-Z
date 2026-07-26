@@ -229,7 +229,23 @@ const SceneContent = ({ scene, index }: any) => {
             {(scene.scene_type === 'monolith') ? (
                 <MonolithEngine payload={{...(scene.monolith_payload || {}), bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '', assetSrc: scene.monolith_payload?.assetSrc ? staticFile(scene.monolith_payload.assetSrc) : ''}} />
             ) : (scene.scene_type === 'topic_reveal') ? (
-                <DioramaCanvas payload={{...(scene.diorama_payload || {}), bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '', subjects: (scene.diorama_payload?.subjects || []).map((sub: any, i: number) => ({...sub, imageUrl: (scene.media_paths?.[i + 1] && !scene.media_paths?.[i + 1].endsWith('.mp4')) ? scene.media_paths?.[i + 1] : undefined})), text: scene.diorama_payload?.text || []}} />
+                <DioramaCanvas payload={{
+                    ...(scene.diorama_payload || {}),
+                    bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '',
+                    subjects: (scene.diorama_payload?.subjects || []).map((sub: any, i: number) => {
+                        // visual.assets holds the downloaded subject images (index-matched to subjects)
+                        const asset = (scene.visual?.assets || [])[i];
+                        const resolvedImg = asset?.local_path || sub.imageUrl || '';
+                        return {
+                            ...sub,
+                            imageUrl: resolvedImg,
+                            // carry trigger timing so cards reveal on spoken word
+                            trigger_frame: asset?.trigger_frame ?? (i * 10),
+                            trigger_start_ms: asset?.trigger_start_ms,
+                        };
+                    }),
+                    text: scene.diorama_payload?.text || [],
+                }} />
             ) : (scene.scene_type === 'chapter_reveal') ? (
                 <CinematicChapterReveal chapterNumber={scene.chapter_payload?.chapterNumber || 1} subtitle={scene.chapter_payload?.subtitle || ""} bgImgUrl={scene.visual?.assets?.find((a:any) => a.role === 'bg_chapter')?.local_path || ""} leftAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'left_chapter')?.local_path || ""} rightAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'right_chapter')?.local_path || ""} />
             ) : (scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') ? (
