@@ -105,12 +105,16 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
       <AbsoluteFill style={{ zIndex: 10, justifyContent: "center", alignItems: "center", transform: `scale(${textScale}) translateY(-15%)` }}>
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", width: "90%", gap: "25px" }}>
           {payload.text.map((item, index) => {
-            const isActive = frame >= item.start && frame < item.end;
-            const hasPassed = frame >= item.end;
-            const duration = item.end - item.start;
+            const timeRatio = (payload as any).actualDurationFrames ? ((payload as any).actualDurationFrames / payload.duration) : 1;
+            const scaledStart = item.start * timeRatio;
+            const scaledEnd = (payload as any).actualDurationFrames || item.end; // Let it stay on screen till scene ends
+            
+            const isActive = frame >= scaledStart && frame < scaledEnd;
+            const hasPassed = frame >= scaledEnd;
+            const duration = scaledEnd - scaledStart;
             
             const wordSpring = spring({ 
-              frame: isActive ? frame - item.start : (hasPassed ? duration : 0), 
+              frame: isActive ? frame - scaledStart : (hasPassed ? duration : 0), 
               fps, config: { damping: 14, stiffness: 180, mass: 1.2 } 
             });
 
@@ -188,8 +192,12 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
       {/* LAYER 4: OPTICAL CSS FLARES */}
       <AbsoluteFill style={{ zIndex: 30, pointerEvents: "none" }}>
         {payload.particles.map((particle) => {
-          if (frame < particle.start || frame >= particle.end) return null;
-          const progress = interpolate(frame - particle.start, [0, particle.end - particle.start], [0, 1], { easing: Easing.linear });
+          const timeRatio = (payload as any).actualDurationFrames ? ((payload as any).actualDurationFrames / payload.duration) : 1;
+          const scaledStart = particle.start * timeRatio;
+          const scaledEnd = (payload as any).actualDurationFrames || particle.end;
+          
+          if (frame < scaledStart || frame >= scaledEnd) return null;
+          const progress = interpolate(frame - scaledStart, [0, scaledEnd - scaledStart], [0, 1], { easing: Easing.linear });
           const currentX = interpolate(progress, [0, 1], [particle.startX, particle.endX]);
           const currentY = interpolate(progress, [0, 1], [particle.startY, particle.endY]);
 
