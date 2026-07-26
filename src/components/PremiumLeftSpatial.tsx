@@ -1,85 +1,174 @@
-import { 
-  AbsoluteFill, 
-  useCurrentFrame, 
-  useVideoConfig, 
-  spring, 
-  interpolate, 
-  Img 
-} from "remotion";
+import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
 import React from "react";
 
-// ============================================================================
-// 1. THE VAULT COMPONENT (Heavy-Weight Volumetric Edition)
-// ============================================================================
-
+// ─────────────────────────────────────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────────────────────────────────────
 export type WordTiming = {
   word: string;
-  start: number;
+  start: number; // frames relative to chunk/Sequence start
   end: number;
+  isHighlight?: boolean;
 };
 
-export const PremiumLeftSpatial: React.FC<{ script: WordTiming[] }> = ({ script }) => {
+// ─────────────────────────────────────────────────────────────────────────────
+// SCENE-AWARE ACCENT PALETTE — rotates per chunk index
+// Covers warm, cool, vibrant tones for variety across different visuals
+// ─────────────────────────────────────────────────────────────────────────────
+const ACCENT_PALETTE = [
+  "#FFD93D", // warm gold
+  "#FF6B6B", // coral red
+  "#6BFFA8", // neon lime
+  "#FF8C42", // amber
+  "#C77DFF", // soft violet
+  "#00D4FF", // electric cyan
+  "#FF3D71", // hot pink
+  "#FFA07A", // salmon
+  "#FFE66D", // lemon yellow
+  "#B5EAD7", // mint
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FUNCTION WORDS — deprioritised for stress detection
+// ─────────────────────────────────────────────────────────────────────────────
+const FUNCTION_WORDS = new Set([
+  "the","a","an","is","are","was","were","be","been","being",
+  "to","of","and","in","for","on","with","as","at","by","from",
+  "or","but","not","it","he","she","they","we","you","i",
+  "my","your","his","her","its","our","their","that","this","which",
+  "have","has","had","do","does","did","will","would","could","should",
+  "may","might","can","up","out","so","if","about","than","then","just",
+]);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STRESS DETECTION: highest-scoring content word wins the accent colour
+// Score = duration (prosody) + character length (lexical weight)
+// ─────────────────────────────────────────────────────────────────────────────
+function findStressedWordIndex(words: WordTiming[]): number {
+  if (words.length === 0) return -1;
+  if (words.length === 1) return 0;
+
+  let bestIdx = -1;
+  let bestScore = -Infinity;
+
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i];
+    const clean = w.word.toLowerCase().replace(/[^a-z]/g, "");
+    // Skip function words unless we have no other option
+    if (FUNCTION_WORDS.has(clean) && words.length > 2) continue;
+
+    const duration = w.end - w.start;
+    const charLen = clean.length;
+    const score = duration * 0.6 + charLen * 4;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = i;
+    }
+  }
+
+  return bestIdx >= 0 ? bestIdx : 0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADAPTIVE FONT SIZE — long words shrink to stay on one line
+// ─────────────────────────────────────────────────────────────────────────────
+function wordFontSize(word: string): number {
+  const len = word.replace(/[^a-zA-Z]/g, "").length;
+  if (len > 13) return 54;
+  if (len > 10) return 66;
+  if (len > 7)  return 78;
+  return 90;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENT
+// ─────────────────────────────────────────────────────────────────────────────
+const MAX_ROWS = 4;
+
+interface Props {
+  script: WordTiming[];
+  chunkIndex?: number;
+}
+
+export const PremiumLeftSpatial: React.FC<Props> = ({ script, chunkIndex = 0 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
+  if (!script?.length) return null;
+
+  const accentColor = ACCENT_PALETTE[chunkIndex % ACCENT_PALETTE.length];
+  const stressedIdx = findStressedWordIndex(script);
+
+  // ── Sliding window: show the last MAX_ROWS triggered words ────────────────
+  let latestTriggeredIdx = -1;
+  for (let i = 0; i < script.length; i++) {
+    if (frame >= script[i].start) latestTriggeredIdx = i;
+  }
+
+  // Nothing started yet — render nothing
+  if (latestTriggeredIdx < 0) return null;
+
+  const windowEnd   = latestTriggeredIdx;
+  const windowStart = Math.max(0, windowEnd - MAX_ROWS + 1);
+
   return (
-    <div style={{
-      position: "absolute",
-      left: "8%",
-      top: "0", 
-      height: "100%", 
-      width: "45%", 
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "center",
-      alignItems: "flex-start", 
-      gap: "32px 28px", // Adjusted gap for massive text
-      zIndex: 50
-    }}>
+    <div
+      style={{
+        position: "absolute",
+        left: "6%",
+        top: "50%",
+        transform: "translateY(-50%)",
+        width: "40%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        gap: "6px",
+        zIndex: 50,
+        pointerEvents: "none",
+      }}
+    >
       {script.map((item, index) => {
-        const isActive = frame >= item.start && frame < item.end;
-        const hasPassed = frame >= item.end;
-        
-        // GLOBAL DYNAMIC MATH ENGINE: Perfect Sync
-        const duration = item.end - item.start;
-        const wordSpring = spring({ 
-          frame: isActive ? frame - item.start : (hasPassed ? duration : 0), 
-          fps, 
-          config: { 
-            damping: 16, 
-            stiffness: duration < 15 ? 350 : (duration < 30 ? 200 : 120),
-            mass: 1.5 // Increased mass for a heavier visual landing
-          } 
+        const hasTriggered = frame >= item.start;
+        const inWindow     = index >= windowStart && index <= windowEnd;
+
+        // Only render words that have been spoken AND are in the visible window
+        if (!hasTriggered || !inWindow) return null;
+
+        const elapsed = Math.max(0, frame - item.start);
+
+        // Entry spring — snappy but weighted
+        const revealSpring = spring({
+          frame: elapsed,
+          fps,
+          config: { damping: 22, stiffness: 280, mass: 1.0 },
         });
-        
-        // High-End Animations: Heavy drop, deep blur reveal
-        const blurAmount = isActive ? interpolate(wordSpring, [0, 1], [30, 0]) : 0;
-        const yShift = isActive ? interpolate(wordSpring, [0, 1], [60, 0]) : 0; // Deeper drop
-        const scale = isActive ? interpolate(wordSpring, [0, 1], [0.85, 1.02]) : 1;
-        
-        let opacity = 0;
-        if (isActive) opacity = interpolate(wordSpring, [0, 0.4], [0, 1]);
-        else if (hasPassed) opacity = 0.3; // Dimmer inactive state for higher contrast
+
+        const opacity = interpolate(revealSpring, [0, 0.35], [0, 1], {
+          extrapolateRight: "clamp",
+        });
+        const yShift = interpolate(revealSpring, [0, 1], [22, 0]);
+
+        const isStressed = index === stressedIdx;
+        const fontSize   = wordFontSize(item.word);
 
         return (
           <span
             key={index}
             style={{
-              color: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.7)",
-              opacity: opacity,
-              fontSize: "84px", // Massive, authoritative size
-              fontFamily: '"Geist", "Inter", system-ui, sans-serif',
-              fontWeight: isActive ? 900 : 500, // Maximum density when active
-              
-              filter: isActive ? `blur(${blurAmount}px)` : "none",
-              textShadow: isActive 
-                ? `0 25px 50px rgba(0,0,0,0.9), 0 0 40px rgba(255,255,255,0.3)` 
-                : `0 15px 30px rgba(0,0,0,0.9)`,
-              transition: "color 0.2s ease, opacity 0.3s ease, filter 0.2s ease",
-              display: "inline-block",
-              textTransform: "capitalize",
-              letterSpacing: "-2.5px", // Extremely tight kerning for that premium look
-              lineHeight: "1"
+              display: "block",
+              color: isStressed ? accentColor : "#FFFFFF",
+              fontSize: `${fontSize}px`,
+              fontFamily: '"Inter", "Geist", system-ui, sans-serif',
+              fontWeight: 900,
+              lineHeight: 1.0,
+              letterSpacing: "-2.5px",
+              whiteSpace: "nowrap",
+              opacity,
+              transform: `translateY(${yShift}px)`,
+              // Hard drop shadow — pure contrast, zero glow
+              textShadow:
+                "2px 3px 0px rgba(0,0,0,1), 5px 7px 18px rgba(0,0,0,0.85)",
             }}
           >
             {item.word}
@@ -87,40 +176,5 @@ export const PremiumLeftSpatial: React.FC<{ script: WordTiming[] }> = ({ script 
         );
       })}
     </div>
-  );
-};
-
-// ============================================================================
-// 2. THE TEST WRAPPER 
-// ============================================================================
-
-export const Scene = () => {
-  const dummyJSONPayload: WordTiming[] = [
-    { word: "The", start: 10, end: 20 },
-    { word: "design", start: 20, end: 40 },
-    { word: "is", start: 40, end: 50 },
-    { word: "flawless.", start: 50, end: 90 },
-  ];
-
-  return (
-    <AbsoluteFill style={{ backgroundColor: "#020202" }}>
-      
-      {/* 1. Full Screen Image Canvas */}
-      <Img 
-        src="https://images.unsplash.com/photo-1617788138017-80ad40651399?q=80&w=2564&auto=format&fit=crop" 
-        style={{ width: "100%", height: "100%", objectFit: "cover" }} 
-      />
-      
-      {/* 2. The Cinematic Vignette (Environmental Bleed) */}
-      <div style={{
-        position: "absolute",
-        inset: 0,
-        background: "linear-gradient(to right, rgba(2,2,2,0.95) 0%, rgba(2,2,2,0.7) 35%, rgba(2,2,2,0) 70%)",
-        pointerEvents: "none"
-      }} />
-      
-      <PremiumLeftSpatial script={dummyJSONPayload} />
-      
-    </AbsoluteFill>
   );
 };

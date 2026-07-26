@@ -117,8 +117,8 @@ export const CaptionDirector = ({ scene }: any) => {
                 let CaptionComponent = <GlassPillCaption script={script} />;
                 
                 if (preset === 'HighlightReelCaption') CaptionComponent = <HighlightReelCaption script={script} />;
-                else if (preset === 'PremiumLeftSpatial') CaptionComponent = <PremiumLeftSpatial script={script} />;
-                else if (preset === 'PremiumRightSpatial') CaptionComponent = <PremiumRightSpatial script={script} />;
+                else if (preset === 'PremiumLeftSpatial') CaptionComponent = <PremiumLeftSpatial script={script} chunkIndex={i} />;
+                else if (preset === 'PremiumRightSpatial') CaptionComponent = <PremiumRightSpatial script={script} chunkIndex={i} />;
                 else if (preset === 'LiquidMirrorCaption') CaptionComponent = <LiquidMirrorCaption script={script} />;
                 else if (preset === 'CinematicDocumentaryCaption') CaptionComponent = <CinematicDocumentaryCaption script={script} />;
 
