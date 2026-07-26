@@ -366,8 +366,18 @@ const AutomatedDocumentary = () => {
   );
 };
 
+
 const RemotionRoot = () => {
-  const totalDurationMs = masterJson.meta?.total_duration_ms || masterJson.metadata?.total_duration_ms || 10000;
+  // meta.total_duration_ms can be stale when chapter reveals add 5000ms each but the
+  // merged master_timeline.json carries the pre-chapter-reveal value from the PREP phase.
+  // Always derive from the actual last scene end so the composition is never truncated.
+  const metaDurationMs = masterJson.meta?.total_duration_ms || masterJson.metadata?.total_duration_ms || 0;
+  const lastSceneEndMs = masterJson.timeline?.length
+    ? Math.max(...masterJson.timeline.map((s: any) =>
+        (s.timing?.start_ms || 0) + (s.timing?.duration_ms || 0)
+      ))
+    : 0;
+  const totalDurationMs = Math.max(metaDurationMs, lastSceneEndMs, 10000);
   const totalFrames = Math.max(1, Math.round((totalDurationMs / 1000) * 30)) + 60;
   return <Composition id="AutomatedDocumentary" component={AutomatedDocumentary} durationInFrames={totalFrames} fps={30} width={1920} height={1080} />;
 };
