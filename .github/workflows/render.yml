@@ -382,7 +382,7 @@ jobs:
             echo "total_frames=$TOTAL_FRAMES" >> $GITHUB_OUTPUT
           
       - name: Sync Refreshed ChatGPT Cookies to Engine Drive
-        if: always()
+        if: success()
         run: |
           echo "Syncing refreshed ChatGPT cookies back to engine drive..."
           if [ -f chatgpt_cookies.json ]; then
@@ -595,24 +595,16 @@ jobs:
         run: xvfb-run -a python -u The_Brain.py
 
 
-      - name: Save Fresh Cookies to Drive (Guarded)
-        if: always()
+      - name: Save Fresh Cookies to Drive
+        if: success()
         run: |
-          # ── GEMINI COOKIE GUARD ──
-          # Only upload if the file exists, is non-empty, AND contains critical auth cookies.
-          # This prevents crashed/dead sessions from overwriting good cookies on Drive.
           if [ -f gemini_cookies.json ] && [ -s gemini_cookies.json ]; then
-            HAS_SID=$(python3 -c "import json; cs=json.load(open('gemini_cookies.json')); names={c.get('name','') for c in cs}; critical={'SID','HSID','SSID','APISID','SAPISID'}; found=critical&names; print(len(found))" 2>/dev/null || echo "0")
-            if [ "$HAS_SID" -ge 3 ]; then
-              echo "[Cookie Guard] ✅ Validated $HAS_SID/5 critical auth cookies present. Uploading fresh gemini_cookies.json..."
-              rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
-            else
-              echo "[Cookie Guard] ⛔ BLOCKED upload — only $HAS_SID/5 critical cookies found. Session was dead. Protecting Drive file."
-            fi
+            echo "[+] Uploading fresh gemini_cookies.json..."
+            rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
           else
-            echo "[Cookie Guard] ⛔ gemini_cookies.json missing or empty. Nothing to upload."
+            echo "[!] gemini_cookies.json missing or empty. Nothing to upload."
           fi
-          # MotionArray cookies (no guard needed, always safe to overwrite)
+          # MotionArray cookies (always safe to overwrite)
           rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
 
       - name: Upload Timeline to Drive
@@ -1027,24 +1019,16 @@ jobs:
           AUTO_TARGET_FOLDER: "channels/${{ inputs.channel_name }}/to upload/${{ needs.creation_job.outputs.vault_name }}"
         run: xvfb-run -a python -u The_Brain.py
 
-      - name: Save Fresh Cookies to Drive (Guarded)
-        if: always()
+      - name: Save Fresh Cookies to Drive
+        if: success()
         run: |
-          # ── GEMINI COOKIE GUARD ──
-          # Only upload if the file exists, is non-empty, AND contains critical auth cookies.
-          # This prevents crashed/dead sessions from overwriting good cookies on Drive.
           if [ -f gemini_cookies.json ] && [ -s gemini_cookies.json ]; then
-            HAS_SID=$(python3 -c "import json; cs=json.load(open('gemini_cookies.json')); names={c.get('name','') for c in cs}; critical={'SID','HSID','SSID','APISID','SAPISID'}; found=critical&names; print(len(found))" 2>/dev/null || echo "0")
-            if [ "$HAS_SID" -ge 3 ]; then
-              echo "[Cookie Guard] ✅ Validated $HAS_SID/5 critical auth cookies present. Uploading fresh gemini_cookies.json..."
-              rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
-            else
-              echo "[Cookie Guard] ⛔ BLOCKED upload — only $HAS_SID/5 critical cookies found. Session was dead. Protecting Drive file."
-            fi
+            echo "[+] Uploading fresh gemini_cookies.json..."
+            rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
           else
-            echo "[Cookie Guard] ⛔ gemini_cookies.json missing or empty. Nothing to upload."
+            echo "[!] gemini_cookies.json missing or empty. Nothing to upload."
           fi
-          # MotionArray cookies (no guard needed, always safe to overwrite)
+          # MotionArray cookies (always safe to overwrite)
           rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
 
       - name: Upload Final Assets to Drive
