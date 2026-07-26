@@ -7,7 +7,6 @@ import {
   spring,
   Img, staticFile as remotionStaticFile
 } from "remotion";
-import { ThreeCanvas } from "@remotion/three";
 import React from "react";
 
 const staticFile = (path: string) => {
@@ -24,7 +23,112 @@ const staticFile = (path: string) => {
 
 
 // ============================================================================
-// 1. THE VAULT COMPONENT (100% Adaptable 3D Data Engine)
+// 1. CSS 3D BAR COMPONENT (replaces WebGL ThreeCanvas)
+// ============================================================================
+
+const CSS3DBar: React.FC<{
+  height: number;
+  maxHeight: number;
+  color: string;
+  opacity: number;
+}> = ({ height, maxHeight, color, opacity }) => {
+  const barHeight = Math.max(2, (height / maxHeight) * 320);
+  
+  return (
+    <div style={{
+      width: "140px",
+      height: `${barHeight}px`,
+      position: "relative",
+      transformStyle: "preserve-3d",
+      opacity,
+      transition: "none",
+    }}>
+      {/* Front face */}
+      <div style={{
+        position: "absolute",
+        width: "100%",
+        height: "100%",
+        background: `linear-gradient(180deg, ${color} 0%, ${color}88 100%)`,
+        boxShadow: `0 0 40px ${color}40, inset 0 1px 0 rgba(255,255,255,0.15)`,
+        borderRadius: "4px 4px 0 0",
+        transform: "translateZ(35px)",
+      }} />
+      {/* Right face */}
+      <div style={{
+        position: "absolute",
+        width: "70px",
+        height: "100%",
+        background: `linear-gradient(180deg, ${color}99 0%, ${color}44 100%)`,
+        right: 0,
+        transformOrigin: "right center",
+        transform: "rotateY(90deg)",
+        borderRadius: "0 4px 0 0",
+      }} />
+      {/* Top face */}
+      <div style={{
+        position: "absolute",
+        width: "100%",
+        height: "70px",
+        background: `linear-gradient(135deg, ${color}dd 0%, ${color}aa 100%)`,
+        top: 0,
+        transformOrigin: "top center",
+        transform: "rotateX(90deg)",
+        borderRadius: "4px",
+        boxShadow: `0 0 20px ${color}60`,
+      }} />
+    </div>
+  );
+};
+
+// ============================================================================
+// 2. GRID FLOOR COMPONENT
+// ============================================================================
+
+const GridFloor: React.FC<{ frame: number }> = ({ frame }) => {
+  const lines = [];
+  const gridSize = 12;
+  
+  for (let i = -gridSize; i <= gridSize; i++) {
+    const x = ((i + gridSize) / (gridSize * 2)) * 100;
+    lines.push(
+      <div key={`v-${i}`} style={{
+        position: "absolute",
+        left: `${x}%`,
+        top: 0,
+        bottom: 0,
+        width: "1px",
+        background: i === 0 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.025)",
+      }} />
+    );
+    lines.push(
+      <div key={`h-${i}`} style={{
+        position: "absolute",
+        top: `${x}%`,
+        left: 0,
+        right: 0,
+        height: "1px",
+        background: i === 0 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.025)",
+      }} />
+    );
+  }
+  
+  return (
+    <div style={{
+      position: "absolute",
+      width: "900px",
+      height: "400px",
+      bottom: "15%",
+      left: "50%",
+      transform: "translateX(-50%) perspective(800px) rotateX(65deg)",
+      transformOrigin: "center bottom",
+    }}>
+      {lines}
+    </div>
+  );
+};
+
+// ============================================================================
+// 3. THE VAULT COMPONENT (100% Adaptable CSS 3D Data Engine)
 // ============================================================================
 
 export type Bar3DItem = {
@@ -45,9 +149,9 @@ export type Comparison3DProps = {
 
 export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, itemB }) => {
   const frame = useCurrentFrame();
-  const { width, height, fps } = useVideoConfig(); 
+  const { fps } = useVideoConfig(); 
 
-  // Core Math: Find the max value so the 3D bars scale perfectly inside the camera view
+  // Core Math: Find the max value so the bars scale perfectly
   const MAX_3D_HEIGHT = 24; 
   const maxValue = Math.max(itemA.value, itemB.value);
   const targetHeightA = (itemA.value / maxValue) * MAX_3D_HEIGHT;
@@ -97,49 +201,80 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
     { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
   );
 
-  // ==========================================================================
-  // CINEMATICS
-  // ==========================================================================
-  const cameraZ = interpolate(frame, [0, 200], [48, 38], { extrapolateRight: "clamp" });
-
   return (
     <AbsoluteFill style={{ background: "transparent", justifyContent: "center", alignItems: "center" }}>
       
-      {/* 3D RENDER ENGINE (Background) */}
-      <ThreeCanvas
-        width={width}
-        height={height}
-        camera={{ position: [0, 5, cameraZ], fov: 45 }}
-        style={{ position: "absolute", zIndex: 0 }}
-      >
-        <ambientLight intensity={0.2} />
-        <spotLight position={[0, 30, 20]} intensity={2.5} color="#ffffff" penumbra={1} />
-        <gridHelper args={[150, 60, "#1a1a1a", "#050505"]} position={[0, -10, 0]} />
+      {/* CSS 3D RENDER ENGINE (Background) */}
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        perspective: "1200px",
+        perspectiveOrigin: "50% 35%",
+        zIndex: 0,
+      }}>
+        <GridFloor frame={frame} />
+        
+        {/* 3D Bar Container */}
+        <div style={{
+          position: "absolute",
+          bottom: "28%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          display: "flex",
+          gap: "120px",
+          alignItems: "flex-end",
+          transformStyle: "preserve-3d",
+          perspective: "1000px",
+        }}>
+          {/* Item A Bar */}
+          <div style={{
+            transform: "rotateY(-15deg) rotateX(5deg)",
+            transformStyle: "preserve-3d",
+          }}>
+            <CSS3DBar 
+              height={heightA} 
+              maxHeight={MAX_3D_HEIGHT} 
+              color={itemA.color} 
+              opacity={opacityA}
+            />
+            {/* Glow reflection on floor */}
+            <div style={{
+              position: "absolute",
+              bottom: "-20px",
+              left: "-30%",
+              width: "160%",
+              height: "40px",
+              background: `radial-gradient(ellipse, ${itemA.color}30 0%, transparent 70%)`,
+              filter: "blur(10px)",
+              opacity: opacityA * 0.6,
+            }} />
+          </div>
 
-        {/* Item A 3D Bar */}
-        <mesh position={[-4, -10 + heightA / 2, 0]} scale={[1, Math.max(0.01, heightA), 1]}>
-          <boxGeometry args={[3, 1, 3]} />
-          <meshStandardMaterial 
-            color={itemA.color} 
-            emissive={itemA.color} 
-            emissiveIntensity={0.6} 
-            metalness={0.8}
-            roughness={0.2}
-          />
-        </mesh>
-
-        {/* Item B 3D Bar */}
-        <mesh position={[4, -10 + heightB / 2, 0]} scale={[1, Math.max(0.01, heightB), 1]}>
-          <boxGeometry args={[3, 1, 3]} />
-          <meshStandardMaterial 
-            color={itemB.color} 
-            emissive={itemB.color} 
-            emissiveIntensity={0.6}
-            metalness={0.8}
-            roughness={0.2}
-          />
-        </mesh>
-      </ThreeCanvas>
+          {/* Item B Bar */}
+          <div style={{
+            transform: "rotateY(-15deg) rotateX(5deg)",
+            transformStyle: "preserve-3d",
+          }}>
+            <CSS3DBar 
+              height={heightB} 
+              maxHeight={MAX_3D_HEIGHT} 
+              color={itemB.color} 
+              opacity={opacityB}
+            />
+            {/* Glow reflection on floor */}
+            <div style={{
+              position: "absolute",
+              bottom: "-20px",
+              left: "-30%",
+              width: "160%",
+              height: "40px",
+              background: `radial-gradient(ellipse, ${itemB.color}30 0%, transparent 70%)`,
+              filter: "blur(10px)",
+              opacity: opacityB * 0.6,
+            }} />
+          </div>
+        </div>
+      </div>
 
       {/* PREMIUM GLASSMORPHISM HUD (Foreground) */}
       <div 
@@ -223,7 +358,7 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
 };
 
 // ============================================================================
-// 2. THE TEST WRAPPER 
+// 4. THE TEST WRAPPER 
 // ============================================================================
 
 export const Scene = () => {
