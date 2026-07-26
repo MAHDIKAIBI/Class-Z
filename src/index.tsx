@@ -259,7 +259,7 @@ const SceneContent = ({ scene, index }: any) => {
                     <CinematicOverlay src={scene.overlay_image} durationInFrames={Math.max(1, scene.visualDurFrames - Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps))} />
                 </Sequence>
             )}
-            {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'monolith' && !scene.diorama_payload && !scene.monolith_payload && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (
+            {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'monolith' && (!scene.diorama_payload || Object.keys(scene.diorama_payload).length === 0) && (!scene.monolith_payload || Object.keys(scene.monolith_payload).length === 0) && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (
                 <CaptionDirector scene={scene} />
             )}
         </AbsoluteFill>
