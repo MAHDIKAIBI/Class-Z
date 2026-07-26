@@ -117,8 +117,8 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
         <gridHelper args={[150, 60, "#1a1a1a", "#050505"]} position={[0, -10, 0]} />
 
         {/* Item A 3D Bar */}
-        <mesh position={[-4, -10 + heightA / 2, 0]}>
-          <boxGeometry args={[3, Math.max(0.1, heightA), 3]} />
+        <mesh position={[-4, -10 + heightA / 2, 0]} scale={[1, Math.max(0.01, heightA), 1]}>
+          <boxGeometry args={[3, 1, 3]} />
           <meshStandardMaterial 
             color={itemA.color} 
             emissive={itemA.color} 
@@ -129,8 +129,8 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
         </mesh>
 
         {/* Item B 3D Bar */}
-        <mesh position={[4, -10 + heightB / 2, 0]}>
-          <boxGeometry args={[3, Math.max(0.1, heightB), 3]} />
+        <mesh position={[4, -10 + heightB / 2, 0]} scale={[1, Math.max(0.01, heightB), 1]}>
+          <boxGeometry args={[3, 1, 3]} />
           <meshStandardMaterial 
             color={itemB.color} 
             emissive={itemB.color} 
