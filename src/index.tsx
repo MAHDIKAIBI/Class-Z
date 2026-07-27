@@ -2,7 +2,7 @@ import { AbsoluteFill, Sequence, Img, Audio, useVideoConfig, useCurrentFrame, st
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
-    const cleanPath = path.startsWith('public/') ? path.slice(7) : path;
+    let cleanPath = path.startsWith('public/') ? path.slice(7) : path;
     if (cleanPath.trim() === '' || cleanPath.endsWith('/')) return TRANSPARENT_PIXEL;
     try { cleanPath = decodeURIComponent(cleanPath); } catch(e) {}
     return remotionStaticFile(cleanPath);
@@ -179,8 +179,8 @@ const DynamicElement = ({ src, duration, motion, continuousMotion, delay, treatm
           width: `${sizePct}%`, 
           height: `${sizePct}%`, 
           objectFit: composition?.fit || 'contain',
+          ...treatmentStyles,
           filter: blurStr,
-          ...treatmentStyles
         }} 
       />
     </AbsoluteFill>

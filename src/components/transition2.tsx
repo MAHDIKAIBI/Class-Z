@@ -1,4 +1,4 @@
-﻿import { 
+import { 
   AbsoluteFill, 
   useCurrentFrame, 
   interpolate, 
@@ -55,7 +55,7 @@ export const SpatialWhipTransition: React.FC<SpatialWhipTransitionProps> = ({
     frame,
     [0, durationInFrames / 2, durationInFrames],
     [0, 0.7, 0],
-    { easing: Easing.triangle, extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+    { easing: Easing.inOut(Easing.ease), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
   // 6. AUDIO DYNAMICS
