@@ -223,7 +223,6 @@ const CinematicOverlay = ({ src, durationInFrames }: { src: string, durationInFr
 
 const SceneContent = ({ scene, index }: any) => {
     const { fps } = useVideoConfig();
-    const { fps } = useVideoConfig();
     return (
         <AbsoluteFill>
             {/* VISUAL ROUTING ENGINE */}
