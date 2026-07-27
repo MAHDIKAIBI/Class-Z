@@ -704,10 +704,10 @@ jobs:
       - name: Setup Local Ollama Brain & 4GB Swap Space
         run: |
           echo "[*] Creating 4GB Swap File to prevent OOM crashes..."
-          sudo fallocate -l 4G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          sudo fallocate -l 4G /swapfile2 || sudo dd if=/dev/zero of=/swapfile2 bs=1M count=4096
+          sudo chmod 600 /swapfile2
+          sudo mkswap /swapfile2
+          sudo swapon /swapfile2 || true
           
           echo "[*] Installing Ollama directly into the worker..."
           curl -fsSL https://ollama.com/install.sh | sh
