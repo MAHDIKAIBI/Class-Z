@@ -1,4 +1,4 @@
-import { AbsoluteFill, Sequence, Img, Audio, useVideoConfig, useCurrentFrame, staticFile as remotionStaticFile, registerRoot, Composition, interpolate, spring, Easing, random as seededRandom } from 'remotion';
+import { AbsoluteFill, Sequence, Img, Audio, useVideoConfig, useCurrentFrame, staticFile as remotionStaticFile, registerRoot, Composition, interpolate, spring, Easing, random as seededRandom, Freeze } from 'remotion';
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
@@ -477,6 +477,29 @@ const SceneContent = ({ scene, index }: any) => {
     );
 };
 
+const TransitionSceneA = ({ scene, index }: any) => {
+    return (
+        <Sequence from={15 - scene.visualDurFrames} layout="none">
+            <SceneContent scene={scene} index={index} />
+        </Sequence>
+    );
+};
+
+const TransitionSceneB = ({ scene, index }: any) => {
+    return (
+        <AbsoluteFill>
+            <Sequence durationInFrames={15} layout="none">
+                <Freeze frame={0}>
+                    <SceneContent scene={scene} index={index} />
+                </Freeze>
+            </Sequence>
+            <Sequence from={15} layout="none">
+                <SceneContent scene={scene} index={index} />
+            </Sequence>
+        </AbsoluteFill>
+    );
+};
+
 const AutomatedDocumentary = () => {
   const { fps } = useVideoConfig();
   const msToFrames = (ms: number) => Math.round((ms / 1000) * fps);
@@ -538,16 +561,16 @@ const AutomatedDocumentary = () => {
                           style={{ zIndex: 9999 }}
                       >
                           {scene.outgoingTransition === 'ZAxisCrash' && (
-                              <ZAxisCrashTransition SceneA={<SceneContent scene={scene} index={index} />} SceneB={<SceneContent scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              <ZAxisCrashTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
                           )}
                           {scene.outgoingTransition === 'SpatialWhip' && (
-                              <SpatialWhipTransition SceneA={<SceneContent scene={scene} index={index} />} SceneB={<SceneContent scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              <SpatialWhipTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
                           )}
                           {scene.outgoingTransition === 'ThermalFlare' && (
-                              <ThermalFlareTransition SceneA={<SceneContent scene={scene} index={index} />} SceneB={<SceneContent scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              <ThermalFlareTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
                           )}
                           {scene.outgoingTransition === 'RackToBlack' && (
-                              <RackToBlackTransition SceneA={<SceneContent scene={scene} index={index} />} SceneB={<SceneContent scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              <RackToBlackTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
                           )}
                       </Sequence>
                   )}
