@@ -155,7 +155,7 @@ jobs:
           
           echo "Ollama API is live at: $OLLAMA_URL"
           echo "$OLLAMA_URL" > ollama_url.txt
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s ollama_url.txt "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt"
+          rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s ollama_url.txt "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt"
 
       - name: Keep Alive (Wait for shutdown)
         if: env.READY_TO_RENDER != 'true'
@@ -195,7 +195,7 @@ jobs:
               if [ -n "$BORE_PORT" ]; then
                 OLLAMA_URL="http://bore.pub:$BORE_PORT"
                 echo "$OLLAMA_URL" > ollama_url.txt
-                rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s ollama_url.txt "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt"
+                rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s ollama_url.txt "data:Colab_AutoVideoCreator/ollama_url_${{ github.run_id }}.txt"
               fi
               rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_restart_${{ github.run_id }}.txt" || true
             fi
@@ -386,7 +386,7 @@ jobs:
         run: |
           echo "Syncing refreshed ChatGPT cookies back to engine drive..."
           if [ -f chatgpt_cookies.json ]; then
-            rclone copyto --tpslimit 5 --retries 3 --contimeout 30s --ignore-times \
+            rclone copyto --update --tpslimit 5 --retries 3 --contimeout 30s \
                 "chatgpt_cookies.json" "engine:Colab_AutoVideoCreator/chatgpt_cookies.json" -v
             echo "[+] ChatGPT cookies synced back to engine drive."
           else
@@ -600,12 +600,12 @@ jobs:
         run: |
           if [ -f gemini_cookies.json ] && [ -s gemini_cookies.json ]; then
             echo "[+] Uploading fresh gemini_cookies.json..."
-            rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
+            rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
           else
             echo "[!] gemini_cookies.json missing or empty. Nothing to upload."
           fi
           # MotionArray cookies (always safe to overwrite)
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
+          rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
 
       - name: Upload Timeline to Drive
         if: always()
@@ -732,7 +732,7 @@ jobs:
             OLLAMA_URL="http://bore.pub:$BORE_PORT"
             echo "$OLLAMA_URL" > ollama_url.txt
             if [ -n "$WORKER_ID" ]; then
-              rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s ollama_url.txt "$POOL_DIR/worker_${WORKER_ID}.txt"
+              rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s ollama_url.txt "$POOL_DIR/worker_${WORKER_ID}.txt"
               echo "[Ollama Pool Worker $WORKER_ID] Live at $OLLAMA_URL"
             fi
           }
@@ -1024,12 +1024,12 @@ jobs:
         run: |
           if [ -f gemini_cookies.json ] && [ -s gemini_cookies.json ]; then
             echo "[+] Uploading fresh gemini_cookies.json..."
-            rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
+            rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:Colab_AutoVideoCreator/gemini_cookies.json" -v || true
           else
             echo "[!] gemini_cookies.json missing or empty. Nothing to upload."
           fi
           # MotionArray cookies (always safe to overwrite)
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
+          rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
 
       - name: Upload Final Assets to Drive
         if: always()
@@ -1047,7 +1047,7 @@ jobs:
         if: always()
         run: |
           echo "shutdown" > shutdown.txt
-          rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
+          rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
           echo "[+] Original ollama_server shutdown signal sent."
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1296,7 +1296,7 @@ jobs:
           # Clean up ollama pool directory
           echo "shutdown" > shutdown.txt
             for i in {0..7}; do
-              rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
+              rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
             done
             rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
 
@@ -1363,7 +1363,7 @@ jobs:
       - name: Send Global Failsafe Shutdown Signal to Ollama
         run: |
             echo "shutdown" > shutdown.txt
-            rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
+            rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
             echo "[+] Failsafe shutdown signal sent!"
             
             # Give the Master Brain 30 seconds to receive it and cleanly shut down
@@ -1375,7 +1375,9 @@ jobs:
             rclone delete --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_restart_${{ github.run_id }}.txt" || true
             
             for i in {0..7}; do
-              rclone copyto --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
+              rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
             done
             rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
             echo "[+] Sweep complete. Next run will be 100% fresh!"
+
+
