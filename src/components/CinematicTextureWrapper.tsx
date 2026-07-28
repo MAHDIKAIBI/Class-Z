@@ -1,5 +1,10 @@
 import React from 'react';
-import { AbsoluteFill, Video } from 'remotion';
+import { AbsoluteFill, Video, staticFile as remotionStaticFile } from 'remotion';
+
+const staticFile = (path: string) => {
+    let cleanPath = path.startsWith('public/') ? path.slice(7) : path;
+    return remotionStaticFile(cleanPath);
+};
 
 export interface CinematicTextureWrapperProps {
   /** The deep background layer (e.g. KenBurnsMedia, plain Video, or MapScene) */
@@ -35,8 +40,8 @@ export const CinematicTextureWrapper: React.FC<CinematicTextureWrapperProps> = (
   grainSrc,
 }) => {
   // Mathematical SVG Noise Fallback for perfect performance if no MP4 is provided
-  const mathematicalGrain = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`;
-
+  const actualGrainSrc = grainSrc || staticFile('assets/grain.mp4');
+  
   return (
     <AbsoluteFill style={{ backgroundColor: '#020202', overflow: 'hidden' }}>
       
@@ -95,13 +100,11 @@ export const CinematicTextureWrapper: React.FC<CinematicTextureWrapperProps> = (
           opacity: 0.12, // 12% heavy grain for the background
           mixBlendMode: 'overlay',
           pointerEvents: 'none',
-          backgroundImage: grainSrc ? 'none' : mathematicalGrain,
+          backgroundImage: 'none',
           backgroundSize: '200px 200px', // Prevents stretching of the SVG noise
         }} 
       >
-        {grainSrc && (
-          <Video src={grainSrc} muted loop style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        )}
+        <Video src={actualGrainSrc} muted loop style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </AbsoluteFill>
 
 
@@ -149,13 +152,11 @@ export const CinematicTextureWrapper: React.FC<CinematicTextureWrapperProps> = (
           opacity: 0.03, // Barely visible, but psychologically powerful
           mixBlendMode: 'overlay',
           pointerEvents: 'none',
-          backgroundImage: grainSrc ? 'none' : mathematicalGrain,
+          backgroundImage: 'none',
           backgroundSize: '200px 200px',
         }} 
       >
-        {grainSrc && (
-          <Video src={grainSrc} muted loop style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        )}
+        <Video src={actualGrainSrc} muted loop style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </AbsoluteFill>
 
     </AbsoluteFill>
