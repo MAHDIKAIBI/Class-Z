@@ -34,3 +34,4 @@ google-auth-oauthlib
 curl_cffi
 
 git+https://github.com/m-bain/whisperx.git
+seleniumbase
