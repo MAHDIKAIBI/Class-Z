@@ -11,7 +11,7 @@ import {
   random
 } from "remotion";
 import React, { useMemo } from "react";
-
+import { CinematicTextureWrapper } from './CinematicTextureWrapper';
 const staticFile = (path: string) => {
     if (!path) return '';
     let cleanPath = path;
@@ -48,14 +48,18 @@ export type ChapterRevealProps = {
 // ... (BasePlate stays same)
 const BasePlate: React.FC<{ bgImgUrl: string; text: string }> = ({ bgImgUrl, text }) => {
   return (
-    <AbsoluteFill>
-      <Img 
-        src={bgImgUrl ? staticFile(bgImgUrl) : undefined} 
-        style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.5)" }} 
-      />
-      <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(150, 0, 15, 0.7)", mixBlendMode: "multiply" }} />
-      <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(255, 0, 0, 0.3)", mixBlendMode: "color-burn" }} />
-      
+    <CinematicTextureWrapper
+       backgroundLayer={
+         <AbsoluteFill>
+           <Img 
+             src={bgImgUrl ? staticFile(bgImgUrl) : undefined} 
+             style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.5)" }} 
+           />
+           <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(150, 0, 15, 0.7)", mixBlendMode: "multiply" }} />
+           <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(255, 0, 0, 0.3)", mixBlendMode: "color-burn" }} />
+         </AbsoluteFill>
+       }
+    >
       <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
         <h1 style={{ 
           color: "rgba(255, 255, 255, 0.95)", 
@@ -68,7 +72,7 @@ const BasePlate: React.FC<{ bgImgUrl: string; text: string }> = ({ bgImgUrl, tex
           {text}
         </h1>
       </AbsoluteFill>
-    </AbsoluteFill>
+    </CinematicTextureWrapper>
   );
 };
 
@@ -136,6 +140,9 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#020202", overflow: "hidden" }}>
+      
+      {/* SYNCHRONIZED CINEMATIC AUDIO (Now rotating dynamically with smooth volume curves) */}
+      {finalSfxUrl && <Audio src={staticFile(finalSfxUrl)} volume={audioVolume} startFrom={audioStartOffset} />}
 
       <AbsoluteFill style={{ transform: `scale(${perpetualScale})`, justifyContent: "center", alignItems: "center" }}>
         
@@ -212,11 +219,15 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
         {/* ========================================================= */}
         <AbsoluteFill style={{ opacity: interpolate(frame, [40, 48], [0, 1], { extrapolateRight: "clamp" }), justifyContent: "center", alignItems: "center" }}>
           
-          <AbsoluteFill>
-            <Img src={bgImgUrl ? staticFile(bgImgUrl) : undefined} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.2)" }} />
-            <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(5, 0, 5, 0.85)" }} />
-            <div style={{ position: "absolute", inset: "-50%", background: "radial-gradient(circle at center, rgba(200, 0, 20, 0.15) 0%, transparent 60%)", opacity: interpolate(frame, [45, 100], [0, 1], { extrapolateRight: "clamp" }) + Math.sin(frame / 20) * 0.1 }} />
-          </AbsoluteFill>
+          <CinematicTextureWrapper
+            backgroundLayer={
+              <AbsoluteFill>
+                <Img src={bgImgUrl ? staticFile(bgImgUrl) : undefined} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.2)" }} />
+                <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(5, 0, 5, 0.85)" }} />
+                <div style={{ position: "absolute", inset: "-50%", background: "radial-gradient(circle at center, rgba(200, 0, 20, 0.15) 0%, transparent 60%)", opacity: interpolate(frame, [45, 100], [0, 1], { extrapolateRight: "clamp" }) + Math.sin(frame / 20) * 0.1 }} />
+              </AbsoluteFill>
+            }
+          >
 
           <div style={{
             position: "absolute",
@@ -349,19 +360,10 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
             opacity: 0.6, mixBlendMode: "screen", pointerEvents: "none", zIndex: 100
           }} />
 
+          </CinematicTextureWrapper>
+
         </AbsoluteFill>
       </AbsoluteFill>
-
-      {/* ========================================================= */}
-      {/* GLOBAL ATMOSPHERICS */}
-      {/* ========================================================= */}
-      
-      <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 400px rgba(0,0,0,0.9)", zIndex: 100, pointerEvents: "none" }} />
-      <AbsoluteFill style={{ backgroundImage: "url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48ZmlsdGVyIGlkPSJhIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iMC42NSIgbnVtT2N0YXZlcz0iMyIgc3RpdGNoVGlsZXM9InN0aXRjaCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNhKSIvPjwvc3ZnPg==')", opacity: 0.15, mixBlendMode: "screen", pointerEvents: "none", zIndex: 102 }} />
-      
-      <div style={{ position: "absolute", inset: "-20%", backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 2px)", backgroundSize: "150px 150px", backgroundPosition: `${frame * 2}px ${frame * -1}px`, opacity: 0.2, mixBlendMode: "screen", zIndex: 102, pointerEvents: "none" }} />
-      <div style={{ position: "absolute", inset: "-20%", backgroundImage: "radial-gradient(circle, rgba(255,255,255,1) 2px, transparent 3px)", backgroundSize: "250px 300px", backgroundPosition: `${frame * -2.5}px ${frame * -1.5}px`, opacity: 0.15, mixBlendMode: "screen", filter: "blur(1px)", zIndex: 102, pointerEvents: "none" }} />
-      <div style={{ position: "absolute", inset: "-20%", backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.5) 3px, transparent 4px)", backgroundSize: "400px 400px", backgroundPosition: `${frame * 0.5}px ${frame * -3}px`, opacity: 0.15, mixBlendMode: "screen", filter: "blur(4px)", zIndex: 102, pointerEvents: "none" }} />
 
     </AbsoluteFill>
   );

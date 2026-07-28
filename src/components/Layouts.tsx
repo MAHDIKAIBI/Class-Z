@@ -10,6 +10,7 @@ import React from 'react';
 import { useCamera } from '../index';
 import { SmartMotion } from './SmartMotion';
 import { VolumetricDust, FilmGrain, HeavySmoke, LensFlare, WindowLight, EdgeGlow, LightRays, GlassReflection, DustBurst } from './Effects';
+import { CinematicTextureWrapper } from './CinematicTextureWrapper';
 
 
 export const SmartMedia: React.FC<{ src: string, style?: any, className?: string, durationFrames?: number, sceneId?: string, [key: string]: any }> = ({ src, style, className, durationFrames, sceneId, ...props }) => {
@@ -78,27 +79,32 @@ export const DualClipBackground: React.FC<{
     let accumulatedFrames = 0;
     
     return (
-      <>
-        {mediaPaths.map((path, idx) => {
-          const trim = mediaTrims[idx];
-          const startFrameOffset = Math.max(0, Math.round((trim.start_ms / 1000) * fps));
-          
-          // Last clip fills exactly the remaining duration to prevent math jitter
-          const isLast = idx === mediaPaths.length - 1;
-          const playDurationFrames = isLast 
-            ? Math.max(1, duration - accumulatedFrames) 
-            : Math.max(1, Math.round((trim.play_duration_ms / 1000) * fps));
-            
-          const currentStart = accumulatedFrames;
-          accumulatedFrames += playDurationFrames;
-          
-          return (
-            <Sequence key={idx} from={currentStart} durationInFrames={playDurationFrames}>
-              <KenBurnsMedia src={staticFile(path)} type={path.endsWith('.mp4') ? 'video' : 'image'} duration={playDurationFrames} isEven={idx % 2 === 0 ? isEven : !isEven} style={style} startFromFrame={startFrameOffset} />
-            </Sequence>
-          );
-        })}
-      </>
+      <CinematicTextureWrapper
+        particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? staticFile('assets/particles_dust.mp4') : undefined}
+        backgroundLayer={
+          <>
+            {mediaPaths.map((path, idx) => {
+              const trim = mediaTrims[idx];
+              const startFrameOffset = Math.max(0, Math.round((trim.start_ms / 1000) * fps));
+              
+              // Last clip fills exactly the remaining duration to prevent math jitter
+              const isLast = idx === mediaPaths.length - 1;
+              const playDurationFrames = isLast 
+                ? Math.max(1, duration - accumulatedFrames) 
+                : Math.max(1, Math.round((trim.play_duration_ms / 1000) * fps));
+                
+              const currentStart = accumulatedFrames;
+              accumulatedFrames += playDurationFrames;
+              
+              return (
+                <Sequence key={idx} from={currentStart} durationInFrames={playDurationFrames}>
+                  <KenBurnsMedia src={staticFile(path)} type={path.endsWith('.mp4') ? 'video' : 'image'} duration={playDurationFrames} isEven={idx % 2 === 0 ? isEven : !isEven} style={style} startFromFrame={startFrameOffset} />
+                </Sequence>
+              );
+            })}
+          </>
+        }
+      />
     );
   }
 
@@ -108,20 +114,30 @@ export const DualClipBackground: React.FC<{
   const path2 = mediaPaths[1] ? staticFile(mediaPaths[1]) : '';
 
   if (!path2 || clip_cut_ms <= 0) {
-    return path1 ? <KenBurnsMedia src={path1} type="video" duration={duration} isEven={isEven} style={style} /> : null;
+    return path1 ? (
+      <CinematicTextureWrapper
+        particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? staticFile('assets/particles_dust.mp4') : undefined}
+        backgroundLayer={<KenBurnsMedia src={path1} type="video" duration={duration} isEven={isEven} style={style} />}
+      />
+    ) : null;
   }
 
   const cutFrame = Math.round((clip_cut_ms / 1000) * fps);
 
   return (
-    <>
-      <Sequence from={0} durationInFrames={cutFrame}>
-        <KenBurnsMedia src={path1} type="video" duration={cutFrame} isEven={isEven} style={style} />
-      </Sequence>
-      <Sequence from={cutFrame} durationInFrames={Math.max(1, duration - cutFrame)}>
-        <KenBurnsMedia src={path2} type="video" duration={Math.max(1, duration - cutFrame)} isEven={!isEven} style={style} />
-      </Sequence>
-    </>
+    <CinematicTextureWrapper
+      particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? staticFile('assets/particles_dust.mp4') : undefined}
+      backgroundLayer={
+        <>
+          <Sequence from={0} durationInFrames={cutFrame}>
+            <KenBurnsMedia src={path1} type="video" duration={cutFrame} isEven={isEven} style={style} />
+          </Sequence>
+          <Sequence from={cutFrame} durationInFrames={Math.max(1, duration - cutFrame)}>
+            <KenBurnsMedia src={path2} type="video" duration={Math.max(1, duration - cutFrame)} isEven={!isEven} style={style} />
+          </Sequence>
+        </>
+      }
+    />
   );
 };
 

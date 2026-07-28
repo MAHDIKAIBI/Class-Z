@@ -11,7 +11,7 @@ import {
   staticFile as remotionStaticFile
 } from "remotion";
 import React from "react";
-
+import { CinematicTextureWrapper } from './CinematicTextureWrapper';
 const staticFile = (path: string) => {
     if (!path) return '';
     let cleanPath = path;
@@ -64,20 +64,21 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
   const subjectScale = interpolate(frame, [0, payload.duration], [0.85, 1.15], { extrapolateRight: "clamp" });
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#020202", overflow: "hidden" }}>
-      
-      {/* LAYER 0: CINEMATIC VIDEO BACKGROUND */}
-      <AbsoluteFill style={{ zIndex: 0, transform: `scale(${interpolate(rawFrame, [0, payload.duration], [1, 1.05], { extrapolateRight: 'clamp' })})` }}>
-        {payload.bgVideoSrc && (
-          <Video 
-            src={payload.bgVideoSrc ? (payload.bgVideoSrc.startsWith('http') ? payload.bgVideoSrc : staticFile(payload.bgVideoSrc)) : undefined} 
-            style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.4 }} 
-            muted 
-          onError={(e) => console.log("Media playback error caught on Video:", e)} />
-        )}
-        {/* Heavy vignette to crush the edges and focus the center */}
-        <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 400px rgba(0,0,0,1)", pointerEvents: "none" }} />
-      </AbsoluteFill>
+    <CinematicTextureWrapper
+       backgroundLayer={
+         <AbsoluteFill style={{ zIndex: 0, transform: `scale(${interpolate(rawFrame, [0, payload.duration], [1, 1.05], { extrapolateRight: 'clamp' })})` }}>
+           {payload.bgVideoSrc && (
+             <Video 
+               src={payload.bgVideoSrc ? (payload.bgVideoSrc.startsWith('http') ? payload.bgVideoSrc : staticFile(payload.bgVideoSrc)) : undefined} 
+               style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.4 }} 
+               muted 
+             onError={(e) => console.log("Media playback error caught on Video:", e)} />
+           )}
+           {/* Heavy vignette to crush the edges and focus the center */}
+           <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 400px rgba(0,0,0,1)", pointerEvents: "none" }} />
+         </AbsoluteFill>
+       }
+    >
 
       {/* LAYER 1: ATMOSPHERIC SMOKE */}
       <AbsoluteFill style={{ zIndex: 5, opacity: 0.6, pointerEvents: "none" }}>
@@ -212,7 +213,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
         })}
       </AbsoluteFill>
 
-    </AbsoluteFill>
+    </CinematicTextureWrapper>
   );
 };
 

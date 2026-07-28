@@ -9,11 +9,11 @@ import {
   staticFile as remotionStaticFile
 } from "remotion";
 import React from "react";
-
+import { CinematicTextureWrapper } from './CinematicTextureWrapper';
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
-    let cleanPath = path.startsWith('public/') ? path.slice(7) : path;
+    const cleanPath = path.startsWith('public/') ? path.slice(7) : path;
     if (cleanPath.trim() === '' || cleanPath.endsWith('/')) return TRANSPARENT_PIXEL;
     try { cleanPath = decodeURIComponent(cleanPath); } catch(e) {}
     return remotionStaticFile(cleanPath);
@@ -73,26 +73,32 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
   const bgIsVideo = ['mp4', 'mov', 'webm'].includes(bgExt);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "transparent", fontFamily: '"Geist", "Inter", system-ui, sans-serif' }}>
-      
-      {/* BACKGROUND LAYER (Clean, hardware-accelerated, no animating filters) */}
-      <AbsoluteFill style={{ transform: "scale(1.1) translateZ(0)", zIndex: 0 }}>
-        {bgIsVideo ? (
-          <Video src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => console.log("Media playback error caught on Video:", e)} />
-        ) : (
-          <Img src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        )}
-      </AbsoluteFill>
+    <CinematicTextureWrapper
+      backgroundLayer={
+        <AbsoluteFill>
+          {/* BACKGROUND LAYER (Clean, hardware-accelerated, no animating filters) */}
+          <AbsoluteFill style={{ transform: "scale(1.1) translateZ(0)", zIndex: 0 }}>
+            {bgIsVideo ? (
+              <Video src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => console.log("Media playback error caught on Video:", e)} />
+            ) : (
+              <Img src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            )}
+          </AbsoluteFill>
 
-      {/* BLUR OVERLAY (Animates opacity instead of CSS blur radius to save GPU) */}
-      <AbsoluteFill style={{ 
-          backgroundColor: `rgba(0,0,0,${blurOpacity * 0.4})`,
-          backdropFilter: "blur(40px) saturate(150%)",
-          WebkitBackdropFilter: "blur(40px) saturate(150%)",
-          opacity: blurOpacity,
-          zIndex: 1,
-          pointerEvents: "none"
-      }} />
+          {/* BLUR OVERLAY (Animates opacity instead of CSS blur radius to save GPU) */}
+          <AbsoluteFill style={{ 
+              backgroundColor: `rgba(0,0,0,${blurOpacity * 0.4})`,
+              backdropFilter: "blur(40px) saturate(150%)",
+              WebkitBackdropFilter: "blur(40px) saturate(150%)",
+              opacity: blurOpacity,
+              zIndex: 1,
+              pointerEvents: "none"
+          }} />
+        </AbsoluteFill>
+      }
+    >
+      <AbsoluteFill style={{ backgroundColor: "transparent", fontFamily: '"Geist", "Inter", system-ui, sans-serif' }}>
+
 
       {/* DYNAMIC GRID CONTAINER */}
       <div style={{
@@ -134,6 +140,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
           );
         })}
       </div>
-    </AbsoluteFill>
+      </AbsoluteFill>
+    </CinematicTextureWrapper>
   );
 };

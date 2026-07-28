@@ -9,7 +9,7 @@ import {
   Video
 } from "remotion";
 import React from "react";
-
+import { CinematicTextureWrapper } from './CinematicTextureWrapper';
 const staticFile = (path: string) => {
     if (!path) return '';
     let cleanPath = path;
@@ -54,29 +54,28 @@ export const MonolithEngine: React.FC<{ payload: MonolithPayload }> = ({ payload
   const opacity = interpolate(cardSpring, [0, 0.5], [0, 1]);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#07070a", overflow: "hidden", perspective: "1000px" }}>
-      
-      {/* LAYER 0: THE DEEP GRID OR CINEMATIC VIDEO */}
-      <AbsoluteFill style={{ zIndex: 0, opacity: payload.bgVideoSrc ? 0.4 : 0.15, transform: cameraTransform }}>
-        {payload.bgVideoSrc ? (
-            <Video 
-                src={payload.bgVideoSrc ? staticFile(payload.bgVideoSrc) : undefined} 
-                style={{ width: "100%", height: "100%", objectFit: "cover" }} 
-                muted 
-            />
-        ) : (
-            <div style={{
-              width: "200%", height: "200%",
-              position: "absolute", top: "-50%", left: "-50%",
-              backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 2px, transparent 2px), linear-gradient(90deg, rgba(255,255,255,0.1) 2px, transparent 2px)",
-              backgroundSize: "100px 100px",
-              transform: `rotateX(60deg) translateY(${-(frame * 2)}px)`,
-            }} />
-        )}
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at center, transparent 0%, #07070a 70%)" }} />
-      </AbsoluteFill>
-
-      {/* LAYER 1: KINETIC BACKGROUND TYPOGRAPHY */}
+    <CinematicTextureWrapper
+      backgroundLayer={
+        <AbsoluteFill style={{ zIndex: 0, opacity: payload.bgVideoSrc ? 0.4 : 0.15, transform: cameraTransform }}>
+          {payload.bgVideoSrc ? (
+              <Video 
+                  src={payload.bgVideoSrc ? staticFile(payload.bgVideoSrc) : undefined} 
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                  muted 
+              />
+          ) : (
+              <div style={{
+                width: "200%", height: "200%",
+                position: "absolute", top: "-50%", left: "-50%",
+                backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 2px, transparent 2px), linear-gradient(90deg, rgba(255,255,255,0.1) 2px, transparent 2px)",
+                backgroundSize: "100px 100px",
+                transform: `rotateX(60deg) translateY(${-(frame * 2)}px)`,
+              }} />
+          )}
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at center, transparent 0%, #07070a 70%)" }} />
+        </AbsoluteFill>
+      }
+    >
       <AbsoluteFill style={{ zIndex: 5, justifyContent: "center", alignItems: "center", transform: cameraTransform, opacity: 0.1 }}>
         <div style={{
           fontSize: "400px", fontFamily: '"Geist", "Inter", sans-serif', fontWeight: 900,
@@ -159,7 +158,6 @@ export const MonolithEngine: React.FC<{ payload: MonolithPayload }> = ({ payload
       </AbsoluteFill>
 
       <AbsoluteFill style={{ zIndex: 50, pointerEvents: "none", boxShadow: "inset 0 0 300px rgba(0,0,0,0.9)" }} />
-
-    </AbsoluteFill>
+    </CinematicTextureWrapper>
   );
 };
