@@ -232,15 +232,41 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
           </div>
 
           {leftAssetUrl && (
-            <div style={{ position: "absolute", transform: `translateX(${leftFlankX}px) translateY(${50 + Math.sin(frame / 15) * 15}px)`, zIndex: 1, opacity: interpolate(flankSpring, [0, 0.3], [0, 1]) }}>
-              <Img src={staticFile(leftAssetUrl)} style={{ width: "600px", height: "auto", filter: "drop-shadow(0 50px 50px rgba(0,0,0,0.9))" }} />
-              <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle, rgba(255,0,0,0.2) 0%, transparent 70%)", zIndex: -1, filter: "blur(40px)" }} />
+            <div style={{ 
+              position: "absolute", 
+              transform: `translateX(${interpolate(flankSpring, [0, 1], [-800, -350])}px) translateY(${Math.sin(frame / 20) * 30}px) scale(${perpetualScale})`, 
+              zIndex: 1, 
+              opacity: interpolate(flankSpring, [0, 0.5], [0, 0.75]),
+              mixBlendMode: "overlay"
+            }}>
+              <Img 
+                src={staticFile(leftAssetUrl)} 
+                style={{ 
+                  width: "1200px", 
+                  height: "auto", 
+                  WebkitMaskImage: "radial-gradient(circle at center, black 10%, transparent 65%)",
+                  filter: "grayscale(100%) sepia(80%) hue-rotate(320deg) contrast(150%) brightness(0.8)" 
+                }} 
+              />
             </div>
           )}
           {rightAssetUrl && (
-            <div style={{ position: "absolute", transform: `translateX(${rightFlankX}px) translateY(${50 + Math.cos(frame / 18) * 15}px)`, zIndex: 1, opacity: interpolate(flankSpring, [0, 0.3], [0, 1]) }}>
-              <Img src={staticFile(rightAssetUrl)} style={{ width: "600px", height: "auto", filter: "drop-shadow(0 50px 50px rgba(0,0,0,0.9))" }} />
-              <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle, rgba(255,0,0,0.2) 0%, transparent 70%)", zIndex: -1, filter: "blur(40px)" }} />
+            <div style={{ 
+              position: "absolute", 
+              transform: `translateX(${interpolate(flankSpring, [0, 1], [800, 350])}px) translateY(${Math.cos(frame / 25) * 30}px) scale(${perpetualScale})`, 
+              zIndex: 1, 
+              opacity: interpolate(flankSpring, [0, 0.5], [0, 0.75]),
+              mixBlendMode: "overlay"
+            }}>
+              <Img 
+                src={staticFile(rightAssetUrl)} 
+                style={{ 
+                  width: "1200px", 
+                  height: "auto", 
+                  WebkitMaskImage: "radial-gradient(circle at center, black 10%, transparent 65%)",
+                  filter: "grayscale(100%) sepia(80%) hue-rotate(320deg) contrast(150%) brightness(0.8)" 
+                }} 
+              />
             </div>
           )}
 
