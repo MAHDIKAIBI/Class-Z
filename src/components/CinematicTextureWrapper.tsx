@@ -138,26 +138,7 @@ export const CinematicTextureWrapper: React.FC<CinematicTextureWrapperProps> = (
       </AbsoluteFill>
 
 
-      {/* ==========================================
-          LAYER 6: THE SECRET SAUCE GLOBAL MICRO-GRAIN (Z-INDEX 999)
-          ========================================== */}
-      {/* 
-        This is the 3% ultra-light grain that sits over absolutely everything (even the UI).
-        It prevents the UI from looking like a cheap digital sticker by subtly dithering the pixels,
-        creating the optical illusion that the text was physically photographed by a real lens. 
-      */}
-      <AbsoluteFill 
-        style={{ 
-          zIndex: 999, 
-          opacity: 0.03, // Barely visible, but psychologically powerful
-          mixBlendMode: 'overlay',
-          pointerEvents: 'none',
-          backgroundImage: 'none',
-          backgroundSize: '200px 200px',
-        }} 
-      >
-        <Video src={actualGrainSrc} muted loop style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      </AbsoluteFill>
+
 
     </AbsoluteFill>
   );
