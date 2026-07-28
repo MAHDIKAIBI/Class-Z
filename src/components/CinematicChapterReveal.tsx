@@ -229,6 +229,8 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
             }
           >
 
+          <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
+
           <div style={{
             position: "absolute",
             fontSize: "1500px",
@@ -359,6 +361,8 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
             filter: "blur(12px)", transform: `translateY(${Math.sin(frame / 30) * 150}px) rotate(2deg)`,
             opacity: 0.6, mixBlendMode: "screen", pointerEvents: "none", zIndex: 100
           }} />
+
+          </AbsoluteFill>
 
           </CinematicTextureWrapper>
 

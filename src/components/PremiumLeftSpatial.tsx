@@ -1,178 +1,172 @@
 import { useCurrentFrame, useVideoConfig, spring, interpolate } from "remotion";
-import React from "react";
+import React, { useMemo } from "react";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────────────────────
 export type WordTiming = {
   word: string;
-  start: number; // frames relative to chunk/Sequence start
+  start: number;
   end: number;
   isHighlight?: boolean;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SCENE-AWARE ACCENT PALETTE — rotates per chunk index
-// Covers warm, cool, vibrant tones for variety across different visuals
-// ─────────────────────────────────────────────────────────────────────────────
 const ACCENT_PALETTE = [
-  "#FFD93D", // warm gold
-  "#FF6B6B", // coral red
-  "#6BFFA8", // neon lime
-  "#FF8C42", // amber
-  "#C77DFF", // soft violet
-  "#00D4FF", // electric cyan
-  "#FF3D71", // hot pink
-  "#FFA07A", // salmon
-  "#FFE66D", // lemon yellow
-  "#B5EAD7", // mint
+  "#FFD93D", "#FF6B6B", "#6BFFA8", "#FF8C42", "#C77DFF",
+  "#00D4FF", "#FF3D71", "#FFA07A", "#FFE66D", "#B5EAD7"
 ];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FUNCTION WORDS — deprioritised for stress detection
-// ─────────────────────────────────────────────────────────────────────────────
 const FUNCTION_WORDS = new Set([
   "the","a","an","is","are","was","were","be","been","being",
   "to","of","and","in","for","on","with","as","at","by","from",
   "or","but","not","it","he","she","they","we","you","i",
   "my","your","his","her","its","our","their","that","this","which",
   "have","has","had","do","does","did","will","would","could","should",
-  "may","might","can","up","out","so","if","about","than","then","just",
+  "may","might","can","up","out","so","if","about","than","then","just"
 ]);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// STRESS DETECTION: highest-scoring content word wins the accent colour
-// Score = duration (prosody) + character length (lexical weight)
-// ─────────────────────────────────────────────────────────────────────────────
 function findStressedWordIndex(words: WordTiming[]): number {
   if (words.length === 0) return -1;
   if (words.length === 1) return 0;
-
   let bestIdx = -1;
   let bestScore = -Infinity;
-
   for (let i = 0; i < words.length; i++) {
-    const w = words[i];
-    const clean = w.word.toLowerCase().replace(/[^a-z]/g, "");
-    // Skip function words unless we have no other option
+    const clean = words[i].word.toLowerCase().replace(/[^a-z]/g, "");
     if (FUNCTION_WORDS.has(clean) && words.length > 2) continue;
-
-    const duration = w.end - w.start;
-    const charLen = clean.length;
-    const score = duration * 0.6 + charLen * 4;
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestIdx = i;
-    }
+    const score = (words[i].end - words[i].start) * 0.6 + clean.length * 4;
+    if (score > bestScore) { bestScore = score; bestIdx = i; }
   }
-
   return bestIdx >= 0 ? bestIdx : 0;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ADAPTIVE FONT SIZE — long words shrink to stay on one line
-// ─────────────────────────────────────────────────────────────────────────────
-function wordFontSize(word: string): number {
-  const len = word.replace(/[^a-zA-Z]/g, "").length;
-  if (len > 13) return 54;
-  if (len > 10) return 66;
-  if (len > 7)  return 78;
-  return 90;
+function groupWordsIntoLines(words: WordTiming[]): WordTiming[][] {
+  const lines: WordTiming[][] = [];
+  let currentLine: WordTiming[] = [];
+  let currentLen = 0;
+  for (const w of words) {
+    const clean = w.word.replace(/[^a-zA-Z]/g, "");
+    if (currentLine.length > 0 && (currentLen + clean.length > 18 || currentLine.length >= 3)) {
+      lines.push(currentLine);
+      currentLine = [w];
+      currentLen = clean.length;
+    } else {
+      currentLine.push(w);
+      currentLen += clean.length;
+    }
+  }
+  if (currentLine.length > 0) lines.push(currentLine);
+  return lines;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPONENT
-// ─────────────────────────────────────────────────────────────────────────────
+function lineFontSize(line: WordTiming[]): number {
+  const len = line.reduce((acc, w) => acc + w.word.replace(/[^a-zA-Z]/g, "").length, 0);
+  if (len > 18) return 60;
+  if (len > 14) return 75;
+  if (len > 10) return 90;
+  return 110;
+}
+
 const MAX_ROWS = 4;
 
-interface Props {
-  script: WordTiming[];
-  chunkIndex?: number;
-}
+interface Props { script: WordTiming[]; chunkIndex?: number; }
 
 export const PremiumLeftSpatial: React.FC<Props> = ({ script, chunkIndex = 0 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  if (!script?.length) return null;
+  const lines = useMemo(() => groupWordsIntoLines(script || []), [script]);
+  if (!lines.length) return null;
 
   const accentColor = ACCENT_PALETTE[chunkIndex % ACCENT_PALETTE.length];
   const stressedIdx = findStressedWordIndex(script);
 
-  // ── Sliding window: show the last MAX_ROWS triggered words ────────────────
   let latestTriggeredIdx = -1;
-  for (let i = 0; i < script.length; i++) {
-    if (frame >= script[i].start) latestTriggeredIdx = i;
+  for (let i = 0; i < lines.length; i++) {
+    if (frame >= lines[i][0].start) latestTriggeredIdx = i;
   }
-
-  // Nothing started yet — render nothing
   if (latestTriggeredIdx < 0) return null;
 
-  const windowEnd   = latestTriggeredIdx;
+  const windowEnd = latestTriggeredIdx;
   const windowStart = Math.max(0, windowEnd - MAX_ROWS + 1);
+  
+  // Perpetual 3D drift container
+  // For Left: scale up slightly, drift right slightly
+  const containerElapsed = Math.max(0, frame - lines[0][0].start);
+  const driftScale = interpolate(containerElapsed, [0, 150], [1, 1.08], { extrapolateRight: "clamp" });
+  const driftX = interpolate(containerElapsed, [0, 150], [0, 40], { extrapolateRight: "clamp" });
 
   return (
     <div
       style={{
         position: "absolute",
-        left: "6%",
+        left: "5%",
         top: "50%",
-        transform: "translateY(-50%)",
-        width: "40%",
+        transform: `translateY(-50%) perspective(1000px) rotateY(10deg) scale(${driftScale}) translateX(${driftX}px)`,
+        transformOrigin: "left center",
+        width: "45%",
         display: "flex",
         flexDirection: "column",
         alignItems: "flex-start",
-        gap: "6px",
+        gap: "4px",
         zIndex: 50,
         pointerEvents: "none",
       }}
     >
-      {script.map((item, index) => {
-        const hasTriggered = frame >= item.start;
-        const inWindow     = index >= windowStart && index <= windowEnd;
-
-        // Only render words that have been spoken AND are in the visible window
+      {lines.map((line, lineIndex) => {
+        const hasTriggered = frame >= line[0].start;
+        const inWindow = lineIndex >= windowStart && lineIndex <= windowEnd;
         if (!hasTriggered || !inWindow) return null;
 
-        const elapsed = Math.max(0, frame - item.start);
-
-        // Entry spring — snappy but weighted
-        const revealSpring = spring({
-          frame: elapsed,
-          fps,
-          config: { damping: 22, stiffness: 280, mass: 1.0 },
-        });
-
-        const opacity = interpolate(revealSpring, [0, 0.35], [0, 1], {
-          extrapolateRight: "clamp",
-        });
-        const yShift = interpolate(revealSpring, [0, 1], [22, 0]);
-
-        const isStressed = index === stressedIdx;
-        const fontSize   = wordFontSize(item.word);
+        const elapsed = Math.max(0, frame - line[0].start);
+        const revealSpring = spring({ frame: elapsed, fps, config: { damping: 18, stiffness: 300, mass: 1.2 } });
+        
+        const opacity = interpolate(revealSpring, [0, 0.4], [0, 1], { extrapolateRight: "clamp" });
+        const yShift = interpolate(revealSpring, [0, 1], [30, 0]);
+        const blur = interpolate(revealSpring, [0, 1], [15, 0], { extrapolateRight: "clamp" });
+        const fontSize = lineFontSize(line);
 
         return (
-          <span
-            key={index}
+          <div
+            key={lineIndex}
             style={{
-              display: "block",
-              color: isStressed ? accentColor : "#FFFFFF",
-              fontSize: `${fontSize}px`,
-              fontFamily: '"Inter", "Geist", system-ui, sans-serif',
-              fontWeight: 900,
-              lineHeight: 1.0,
-              letterSpacing: "-2.5px",
-              whiteSpace: "nowrap",
+              display: "flex",
+              flexDirection: "row",
+              gap: "14px",
               opacity,
               transform: `translateY(${yShift}px)`,
-              // Hard drop shadow — pure contrast, zero glow
-              textShadow:
-                "2px 3px 0px rgba(0,0,0,1), 5px 7px 18px rgba(0,0,0,0.85)",
+              filter: `blur(${blur}px)`,
             }}
           >
-            {item.word}
-          </span>
+            {line.map((item, wordIdx) => {
+              // Find global index to check if it's the stressed word
+              const globalIdx = script.findIndex(s => s === item);
+              const isStressed = globalIdx === stressedIdx;
+
+              // Sub-word spring for sequential word pop within the line
+              const wordElapsed = Math.max(0, frame - item.start);
+              const wordSpring = spring({ frame: wordElapsed, fps, config: { damping: 20, stiffness: 400 } });
+              const wordY = interpolate(wordSpring, [0, 1], [15, 0]);
+
+              return (
+                <span
+                  key={wordIdx}
+                  style={{
+                    color: isStressed ? accentColor : "#FFFFFF",
+                    fontSize: `${fontSize}px`,
+                    fontFamily: '"Inter", "Geist", system-ui, sans-serif',
+                    fontWeight: 900,
+                    textTransform: "uppercase",
+                    lineHeight: 0.95,
+                    letterSpacing: "-3.5px",
+                    transform: `translateY(${wordY}px)`,
+                    opacity: wordElapsed > 0 ? 1 : 0.001, // hide until its exact start frame
+                    textShadow: isStressed 
+                      ? `0 0 35px ${accentColor}, 3px 4px 0px rgba(0,0,0,1), 6px 8px 15px rgba(0,0,0,0.9)`
+                      : `3px 4px 0px rgba(0,0,0,1), 6px 8px 15px rgba(0,0,0,0.9)`,
+                  }}
+                >
+                  {item.word}
+                </span>
+              );
+            })}
+          </div>
         );
       })}
     </div>
