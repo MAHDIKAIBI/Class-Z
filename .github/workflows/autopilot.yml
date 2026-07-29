@@ -11,7 +11,7 @@ on:
         required: false
         type: choice
         options:
-          - ""
+          - "auto"
           - "ClassZ"
           - "Midi-Fi"
 
@@ -23,7 +23,7 @@ jobs:
         id: channel
         run: |
           FORCE="${{ inputs.force_channel }}"
-          if [ -n "$FORCE" ]; then
+          if [ -n "$FORCE" ] && [ "$FORCE" != "auto" ]; then
             echo "channel=$FORCE" >> $GITHUB_OUTPUT
           else
             CRON="${{ github.event.schedule }}"
