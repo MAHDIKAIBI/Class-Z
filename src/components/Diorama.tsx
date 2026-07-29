@@ -52,6 +52,33 @@ export type DioramaPayload = {
   particles: { id: string; start: number; end: number; startX: number; startY: number; endX: number; endY: number; scale: number; blur: number }[];
 };
 
+function groupDioramaWords(words: DynamicWord[]): DynamicWord[][] {
+  const lines: DynamicWord[][] = [];
+  let currentLine: DynamicWord[] = [];
+  let currentLen = 0;
+  for (const w of words) {
+    const clean = w.word.replace(/[^a-zA-Z]/g, "");
+    if (currentLine.length > 0 && (currentLen + clean.length > 18 || currentLine.length >= 3)) {
+      lines.push(currentLine);
+      currentLine = [w];
+      currentLen = clean.length;
+    } else {
+      currentLine.push(w);
+      currentLen += clean.length;
+    }
+  }
+  if (currentLine.length > 0) lines.push(currentLine);
+  return lines;
+}
+
+function getDioramaFontSize(line: DynamicWord[]): number {
+  const len = line.reduce((acc, w) => acc + w.word.replace(/[^a-zA-Z]/g, "").length, 0);
+  if (len > 18) return 90;
+  if (len > 14) return 110;
+  if (len > 10) return 140;
+  return 180;
+}
+
 export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }) => {
   const rawFrame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -103,37 +130,45 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
       </AbsoluteFill>
 
       {/* LAYER 2: TYPOGRAPHY (AUTO-LAYOUT, ANCHORED IN MIDGROUND) */}
-      <AbsoluteFill style={{ zIndex: 10, justifyContent: "center", alignItems: "center", transform: `scale(${textScale}) translateY(-15%)` }}>
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", width: "90%", gap: "25px" }}>
-          {payload.text.map((item, index) => {
-            const timeRatio = (payload as any).actualDurationFrames ? ((payload as any).actualDurationFrames / payload.duration) : 1;
-            const scaledStart = item.start * timeRatio;
-            const scaledEnd = (payload as any).actualDurationFrames || item.end; // Let it stay on screen till scene ends
-            
-            const isActive = frame >= scaledStart && frame < scaledEnd;
-            const hasPassed = frame >= scaledEnd;
-            const duration = scaledEnd - scaledStart;
-            
-            const wordSpring = spring({ 
-              frame: isActive ? frame - scaledStart : (hasPassed ? duration : 0), 
-              fps, config: { damping: 14, stiffness: 180, mass: 1.2 } 
-            });
-
-            const yShift = isActive ? interpolate(wordSpring, [0, 1], [item.yOffset, 0]) : 0;
-            const blur = isActive ? interpolate(wordSpring, [0, 1], [40, 0]) : 0;
-            const opacity = isActive ? interpolate(wordSpring, [0, 0.5], [0, 1]) : (hasPassed ? 0.3 : 0);
-            const scalePop = item.scale ? interpolate(wordSpring, [0, 0.5, 1], [0.5, 1.2, item.scale]) : 1;
-
+      <AbsoluteFill style={{ zIndex: 10, justifyContent: "center", alignItems: "center", transform: `scale(${textScale}) translateY(-15%) translateX(${interpolate(frame, [0, payload.duration], [0, 40], { extrapolateRight: "clamp" })}px)` }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+          {groupDioramaWords(payload.text).map((line, lineIndex) => {
+            const fontSize = getDioramaFontSize(line);
             return (
-              <span key={index} style={{
-                color: item.color || "#ffffff", opacity, 
-                fontSize: "140px", fontFamily: '"Geist", "Inter", sans-serif', fontWeight: 900, 
-                letterSpacing: "-4px", transform: `translateY(${yShift}px) scale(${scalePop})`,
-                filter: `blur(${blur}px)`, textShadow: "0 30px 60px rgba(0,0,0,0.9)", 
-                textTransform: "uppercase", lineHeight: 1
-              }}>
-                {item.word}
-              </span>
+              <div key={lineIndex} style={{ display: "flex", flexDirection: "row", gap: "25px", flexShrink: 0, whiteSpace: "nowrap" }}>
+                {line.map((item, wordIdx) => {
+                  const timeRatio = (payload as any).actualDurationFrames ? ((payload as any).actualDurationFrames / payload.duration) : 1;
+                  const scaledStart = item.start * timeRatio;
+                  const scaledEnd = (payload as any).actualDurationFrames || item.end;
+                  
+                  const isActive = frame >= scaledStart && frame < scaledEnd;
+                  const hasPassed = frame >= scaledEnd;
+                  const duration = scaledEnd - scaledStart;
+                  
+                  const wordSpring = spring({ 
+                    frame: isActive ? frame - scaledStart : (hasPassed ? duration : 0), 
+                    fps, config: { damping: 14, stiffness: 180, mass: 1.2 } 
+                  });
+
+                  const yShift = isActive ? interpolate(wordSpring, [0, 1], [item.yOffset, 0]) : 0;
+                  const blur = isActive ? interpolate(wordSpring, [0, 1], [40, 0]) : 0;
+                  const opacity = isActive ? interpolate(wordSpring, [0, 0.5], [0, 1]) : (hasPassed ? 0.3 : 0);
+                  const scalePop = item.scale ? interpolate(wordSpring, [0, 0.5, 1], [0.5, 1.2, item.scale]) : 1;
+
+                  return (
+                    <span key={wordIdx} style={{
+                      color: item.color || "#ffffff", opacity, 
+                      fontSize: `${fontSize}px`, fontFamily: '"Geist", "Inter", sans-serif', fontWeight: 900, 
+                      letterSpacing: "-4px", transform: `translateY(${yShift}px) scale(${scalePop})`,
+                      filter: `blur(${blur}px)`, textShadow: "0 30px 60px rgba(0,0,0,0.9)", 
+                      textTransform: "uppercase", lineHeight: 1,
+                      display: "inline-block", flexShrink: 0, whiteSpace: "nowrap"
+                    }}>
+                      {item.word}
+                    </span>
+                  );
+                })}
+              </div>
             );
           })}
         </div>
@@ -177,12 +212,21 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
               {sub.imageUrl ? (
                 <Img src={staticFile(sub.imageUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.9 }} />
               ) : (
-                /* Gradient shimmer placeholder instead of emoji — never show raw emoji in a premium video */
+                /* Cinematic Void Fallback */
                 <div style={{
                   width: "100%", height: "100%",
-                  background: `linear-gradient(135deg, ${sub.color || 'rgba(255,255,255,0.05)'}, rgba(255,255,255,0.02), ${sub.color || 'rgba(255,255,255,0.05)'})`,
+                  background: `linear-gradient(135deg, rgba(5,5,5,0.9), rgba(15,15,15,0.95))`,
                   display: "flex", justifyContent: "center", alignItems: "center",
-                }} />
+                  position: "relative",
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    position: "absolute", inset: "-50%",
+                    background: `radial-gradient(circle at center, ${sub.color || 'rgba(255,0,50,0.2)'} 0%, transparent 60%)`,
+                    opacity: 0.6 + Math.sin(frame / 20) * 0.3,
+                    filter: "blur(20px)"
+                  }} />
+                </div>
               )}
             </div>
             );
