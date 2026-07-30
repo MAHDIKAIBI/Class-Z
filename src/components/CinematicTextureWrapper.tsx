@@ -102,23 +102,7 @@ export const CinematicTextureWrapper: React.FC<CinematicTextureWrapperProps> = (
       />
 
 
-      {/* ==========================================
-          LAYER 3: FILM GRAIN — PURE CSS SVG (Z-INDEX 4)
-          NO <Video>, NO delayRender(), NO file I/O.
-          The SVG feTurbulence filter generates per-frame photographic grain
-          directly in the browser compositor. Renders in < 1ms.
-          ========================================== */}
-      <AbsoluteFill
-        style={{
-          zIndex: 4,
-          opacity: 0.12,
-          mixBlendMode: 'overlay',
-          pointerEvents: 'none',
-          backgroundImage: grainBg,
-          backgroundSize: '256px 256px',
-          backgroundRepeat: 'repeat',
-        }}
-      />
+
 
 
       {/* ==========================================

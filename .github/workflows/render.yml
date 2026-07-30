@@ -697,7 +697,8 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; fi
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          python -m pip install -U g4f curl_cffi aiohttp nest_asyncio
           
           python -m playwright install --with-deps chromium firefox
 
@@ -714,10 +715,6 @@ jobs:
           sudo systemctl stop ollama || true
           OLLAMA_HOST="127.0.0.1" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
-          
-          echo "[*] Pulling qwen2.5:7b and llava directly into the worker..."
-          for i in {1..5}; do ollama pull qwen2.5:7b && break || sleep 5; done
-          for i in {1..5}; do ollama pull llava && break || sleep 5; done
 
       - name: Run Download Worker
         env:
@@ -726,7 +723,12 @@ jobs:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
-        run: xvfb-run -a python -u download_worker.py
+        run: |
+          echo "[*] Pulling deepseek-r1:8b for text processing..."
+          for i in {1..5}; do ollama pull deepseek-r1:8b && break || sleep 5; done
+          xvfb-run -a python -u download_worker.py
+          echo "[*] Removing deepseek-r1:8b to free SSD space..."
+          ollama rm deepseek-r1:8b || true
 
       - name: Run Overlay Worker
         env:
@@ -735,7 +737,12 @@ jobs:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
-        run: xvfb-run -a python -u overlay_worker.py
+        run: |
+          echo "[*] Pulling qwen2.5-vl for vision processing..."
+          for i in {1..5}; do ollama pull qwen2.5-vl && break || sleep 5; done
+          xvfb-run -a python -u overlay_worker.py
+          echo "[*] Removing qwen2.5-vl to free SSD space..."
+          ollama rm qwen2.5-vl || true
 
       - name: Batch Upload Assets and Partial Timeline to Drive
         if: always()
@@ -1037,7 +1044,7 @@ jobs:
 
       - name: Render Video Chunk
         run: |
-          npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --concurrency=1 --timeout=300000 --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
+          npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --concurrency=1 --timeout=300000 --crf=14 --video-bitrate=50M --pixel-format=yuv444p --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
 
       - name: Upload Chunk Artifact
         uses: actions/upload-artifact@v4
@@ -1137,7 +1144,7 @@ jobs:
           done
           
           ffmpeg -f concat -safe 0 -i file_list.txt -c copy final_video_sfx.mp4
-          ffmpeg -i final_video_sfx.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
+          ffmpeg -i final_video_sfx.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -map 0:v:0 -map 1:a:0 -c:v libx264 -preset slow -crf 16 -vf "noise=alls=10:allf=t+u,unsharp=3:3:0.5:3:3:0.0,eq=saturation=1.15:contrast=1.05" -c:a aac -b:a 320k -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
           
       - name: Clean Up Public Assets Folder
         run: |
