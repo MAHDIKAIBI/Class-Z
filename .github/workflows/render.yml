@@ -1158,8 +1158,11 @@ jobs:
             fi
           done
           
-          ffmpeg -f concat -safe 0 -i file_list.txt -c copy final_video_sfx.mp4
-          ffmpeg -i final_video_sfx.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -map 0:v:0 -map 1:a:0 -c:v libx264 -preset slow -crf 16 -vf "noise=alls=10:allf=t+u,unsharp=3:3:0.5:3:3:0.0,eq=saturation=1.15:contrast=1.05" -c:a aac -b:a 320k -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
+          echo "[*] Pass 1: Binary-concat muted chunks into single raw video..."
+          ffmpeg -f concat -safe 0 -i file_list.txt -c copy -an raw_video.mp4
+          
+          echo "[*] Pass 2: Re-encode with CFR enforcement + mux master_audio.wav..."
+          ffmpeg -i raw_video.mp4 -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -map 0:v:0 -map 1:a:0 -r 30 -vsync cfr -c:v libx264 -preset slow -crf 16 -vf "noise=alls=10:allf=t+u,unsharp=3:3:0.5:3:3:0.0,eq=saturation=1.15:contrast=1.05" -c:a aac -b:a 320k -ar 48000 "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
           
       - name: Clean Up Public Assets Folder
         run: |
