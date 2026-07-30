@@ -16,4 +16,4 @@ Config.setHardwareAcceleration('if-possible');
 Config.setPixelFormat('yuv420p');
 Config.setDelayRenderTimeoutInMilliseconds(120000);
 
-Config.overrideFfmpegCommand((command) => [...command, '-bf', '0']);
+Config.overrideFfmpegCommand(({ args }) => [...args, '-bf', '0']);
