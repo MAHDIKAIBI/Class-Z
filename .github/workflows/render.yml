@@ -25,6 +25,17 @@ on:
         description: 'Topic Name'
         required: false
         type: string
+  workflow_call:
+    inputs:
+      action_type:
+        required: true
+        type: string
+      channel_name:
+        required: true
+        type: string
+      topic:
+        required: false
+        type: string
 
 env:
   INPUT_TOPIC: ${{ inputs.topic }}
