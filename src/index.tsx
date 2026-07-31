@@ -326,6 +326,9 @@ const AutomatedDocumentary = () => {
           const nextStartMs = masterJson.timeline[i+1].timing?.start_ms || ((i+1) * 3000);
           const nextStartFrame = msToFrames(nextStartMs);
           visualDurFrames = nextStartFrame - startFrame;
+          if (visualDurFrames <= 0) {
+              visualDurFrames = Math.max(1, audioDurFrames);
+          }
       }
       
       // Cut Director Variables
