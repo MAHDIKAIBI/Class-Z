@@ -97,7 +97,7 @@ export const CaptionDirector = ({ scene }: any) => {
                 // Prevent sequence overlap that causes captions to stack on top of each other!
                 if (i < chunks.length - 1) {
                     const nextStartFrame = Math.max(0, Math.round(((chunks[i+1].start_ms - sceneStartMs) / 1000) * fps));
-                    chunkDurationFrames = nextStartFrame - chunkStartFrame;
+                    chunkDurationFrames = Math.max(1, nextStartFrame - chunkStartFrame);
                 } else {
                     chunkDurationFrames += 15;
                 }

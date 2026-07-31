@@ -129,7 +129,7 @@ export const DualClipBackground: React.FC<{
       particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? staticFile('assets/particles_dust.mp4') : undefined}
       backgroundLayer={
         <>
-          <Sequence from={0} durationInFrames={cutFrame}>
+          <Sequence from={0} durationInFrames={Math.max(1, cutFrame)}>
             <KenBurnsMedia src={path1} type="video" duration={cutFrame} isEven={isEven} style={style} />
           </Sequence>
           <Sequence from={cutFrame} durationInFrames={Math.max(1, duration - cutFrame)}>
