@@ -1,5 +1,9 @@
 name: "Render a video & YouTube Upload"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
     inputs:
