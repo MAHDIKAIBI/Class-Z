@@ -113,14 +113,14 @@ jobs:
           sudo systemctl stop ollama || true
           OLLAMA_HOST="0.0.0.0" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
-          for i in {1..5}; do ollama pull qwen2.5:7b && break || sleep 5; done
-          for i in {1..5}; do ollama pull llava && break || sleep 5; done
+          for i in {1..5}; do ollama pull deepseek-r1:8b && break || sleep 5; done
+          for i in {1..5}; do ollama pull qwen2.5-vl && break || sleep 5; done
           
           # Pre-warm models into memory so brain_job gets instant responses (no 503 cold-load)
-          echo "Warming up qwen2.5:7b..."
-          curl -s -X POST http://localhost:11434/api/generate -d '{"model":"qwen2.5:7b","prompt":"hi","stream":false}' > /dev/null
-          echo "Warming up llava..."
-          curl -s -X POST http://localhost:11434/api/generate -d '{"model":"llava","prompt":"hi","stream":false}' > /dev/null
+          echo "Warming up deepseek-r1:8b..."
+          curl -s -X POST http://localhost:11434/api/generate -d '{"model":"deepseek-r1:8b","prompt":"hi","stream":false}' > /dev/null
+          echo "Warming up qwen2.5-vl..."
+          curl -s -X POST http://localhost:11434/api/generate -d '{"model":"qwen2.5-vl","prompt":"hi","stream":false}' > /dev/null
           echo "[+] Models pre-loaded and ready."
           
           # Download and run Bore Tunnel (raw TCP) with Exponential Backoff Retry Loop
@@ -753,10 +753,10 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
           echo "[*] Pulling llava for vision processing..."
-          for i in {1..5}; do ollama pull llava && break || sleep 5; done
+          for i in {1..5}; do ollama pull qwen2.5-vl && break || sleep 5; done
           xvfb-run -a python -u overlay_worker.py
-          echo "[*] Removing llava to free SSD space..."
-          ollama rm llava || true
+          echo "[*] Removing qwen2.5-vl to free SSD space..."
+          ollama rm qwen2.5-vl || true
 
       - name: Batch Upload Assets and Partial Timeline to Drive
         if: always()
