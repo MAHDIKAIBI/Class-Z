@@ -30,11 +30,11 @@ jobs:
           
           $batContent = @"
           @echo off
-          echo [*] Mounting Google Drive to Z:\...
-          start /b rclone --config `"C:\Users\Public\rclone.conf`" mount engine: Z: --vfs-cache-mode writes --network-mode
+          echo [*] Mounting Google Drive to H:\...
+          start /b rclone --config `"C:\Users\Public\rclone.conf`" mount engine: H: --vfs-cache-mode writes --network-mode
           timeout /t 5
           echo [*] Launching ChatGPT Setup...
-          python `"Z:\Colab_AutoVideoCreator\setup_chatgpt_cookies.py`"
+          python `"H:\Colab_AutoVideoCreator\setup_chatgpt_cookies.py`"
           pause
           "@
           Out-File -FilePath "C:\Users\Public\Desktop\1_Run_ChatGPT_Setup.bat" -InputObject $batContent -Encoding ascii
