@@ -1158,7 +1158,7 @@ jobs:
             fi
           done
           
-          ffmpeg -f concat -safe 0 -i file_list.txt -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -map 0:v:0 -map 1:a:0 -c:v libx264 -preset slow -crf 16 -vf "noise=alls=10:allf=t+u,unsharp=3:3:0.5:3:3:0.0,eq=saturation=1.15:contrast=1.05" -c:a aac -b:a 320k -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
+          ffmpeg -f concat -safe 0 -i file_list.txt -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 320k -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
           
       - name: Clean Up Public Assets Folder
         run: |

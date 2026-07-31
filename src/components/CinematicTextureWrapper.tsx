@@ -60,7 +60,7 @@ export const CinematicTextureWrapper: React.FC<CinematicTextureWrapperProps> = (
       {/* ==========================================
           LAYER 0: RAW BACKGROUND FOOTAGE (Z-INDEX 0)
           ========================================== */}
-      <AbsoluteFill style={{ zIndex: 0 }}>
+      <AbsoluteFill style={{ zIndex: 0, filter: 'contrast(1.05) saturate(1.15)' }}>
         {backgroundLayer}
       </AbsoluteFill>
 
@@ -97,6 +97,19 @@ export const CinematicTextureWrapper: React.FC<CinematicTextureWrapperProps> = (
         style={{
           zIndex: 3,
           background: 'radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.7) 100%)',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* ==========================================
+          LAYER 3: FILM GRAIN (Z-INDEX 4)
+          ========================================== */}
+      <AbsoluteFill
+        style={{
+          zIndex: 4,
+          backgroundImage: grainBg,
+          mixBlendMode: 'overlay',
+          opacity: 0.15,
           pointerEvents: 'none',
         }}
       />
