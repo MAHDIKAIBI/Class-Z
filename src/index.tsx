@@ -317,18 +317,15 @@ const AutomatedDocumentary = () => {
       const startMs = scene.timing?.start_ms || (i * 3000);
       const audioDurMs = scene.timing?.duration_ms || 3000;
       
-      const startFrame = msToFrames(startMs);
-      const audioDurFrames = msToFrames(audioDurMs);
+      const startFrame = Math.max(0, msToFrames(startMs));
+      const audioDurFrames = Math.max(1, msToFrames(audioDurMs));
       
       // Look ahead to the next scene to prevent 1-frame rounding gaps
       let visualDurFrames = audioDurFrames;
       if (i < masterJson.timeline.length - 1) {
           const nextStartMs = masterJson.timeline[i+1].timing?.start_ms || ((i+1) * 3000);
-          const nextStartFrame = msToFrames(nextStartMs);
-          visualDurFrames = nextStartFrame - startFrame;
-          if (visualDurFrames <= 0) {
-              visualDurFrames = Math.max(1, audioDurFrames);
-          }
+          const nextStartFrame = Math.max(0, msToFrames(nextStartMs));
+          visualDurFrames = Math.max(1, nextStartFrame - startFrame);
       }
       
       // Cut Director Variables
