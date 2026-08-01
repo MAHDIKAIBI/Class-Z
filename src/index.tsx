@@ -191,12 +191,13 @@ const DynamicElement = ({ src, duration, motion, continuousMotion, delay, treatm
 const CinematicOverlay = ({ src, durationInFrames }: { src: string, durationInFrames: number }) => {
     if (!src) return null;
     const frame = useCurrentFrame();
+    const safeDuration = Number(durationInFrames) || 150;
     
     // Smooth fade in over half a second
     const opacity = interpolate(frame, [0, 15], [0, 1], { extrapolateRight: 'clamp' });
     
     // Slow cinematic zoom - gently scale slightly more
-    const scale = interpolate(frame, [0, durationInFrames], [1.05, 1.18]);
+    const scale = interpolate(frame, [0, safeDuration], [1.05, 1.18]);
     
     // 3D parallax tilt (drifting slowly across the scene)
     const rotateX = Math.sin(frame * 0.02) * 4; // -4 to 4 degrees

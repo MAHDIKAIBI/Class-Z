@@ -84,16 +84,17 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
   const { fps } = useVideoConfig();
   const startFrame = (payload as any).trigger_frame ?? 0;
   const frame = Math.max(0, rawFrame - startFrame);
+  const dur = Number(payload.duration) || 150;
 
   // GLOBAL CAMERA PARALLAX (Z-Axis Push)
-  const bgScale = interpolate(frame, [0, payload.duration], [1, 1.05], { extrapolateRight: "clamp" });
-  const textScale = interpolate(frame, [0, payload.duration], [1, 1.08], { extrapolateRight: "clamp" });
-  const subjectScale = interpolate(frame, [0, payload.duration], [0.85, 1.15], { extrapolateRight: "clamp" });
+  const bgScale = interpolate(frame, [0, dur], [1, 1.05], { extrapolateRight: "clamp" });
+  const textScale = interpolate(frame, [0, dur], [1, 1.08], { extrapolateRight: "clamp" });
+  const subjectScale = interpolate(frame, [0, dur], [0.85, 1.15], { extrapolateRight: "clamp" });
 
   return (
     <CinematicTextureWrapper
        backgroundLayer={
-         <AbsoluteFill style={{ zIndex: 0, transform: `scale(${interpolate(rawFrame, [0, payload.duration], [1, 1.05], { extrapolateRight: 'clamp' })})` }}>
+         <AbsoluteFill style={{ zIndex: 0, transform: `scale(${interpolate(rawFrame, [0, dur], [1, 1.05], { extrapolateRight: 'clamp' })})` }}>
            {payload.bgVideoSrc && (
              <Video 
                src={payload.bgVideoSrc ? (payload.bgVideoSrc.startsWith('http') ? payload.bgVideoSrc : staticFile(payload.bgVideoSrc)) : undefined} 
@@ -112,7 +113,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
         <div style={{
           position: "absolute",
           bottom: "-20%",
-          left: `${interpolate(frame, [0, payload.duration], [-20, 20])}%`,
+          left: `${interpolate(frame, [0, dur], [-20, 20])}%`,
           width: "150%", height: "80%",
           background: "radial-gradient(ellipse at center, rgba(150,150,150,0.15) 0%, transparent 60%)",
           filter: "blur(100px)",
@@ -121,7 +122,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
         <div style={{
           position: "absolute",
           bottom: "0%",
-          left: `${interpolate(frame, [0, payload.duration], [20, -10])}%`,
+          left: `${interpolate(frame, [0, dur], [20, -10])}%`,
           width: "120%", height: "60%",
           background: "radial-gradient(ellipse at center, rgba(200,200,200,0.08) 0%, transparent 70%)",
           filter: "blur(80px)",
@@ -130,14 +131,14 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
       </AbsoluteFill>
 
       {/* LAYER 2: TYPOGRAPHY (AUTO-LAYOUT, ANCHORED IN MIDGROUND) */}
-      <AbsoluteFill style={{ zIndex: 10, justifyContent: "center", alignItems: "center", transform: `scale(${textScale}) translateY(-15%) translateX(${interpolate(frame, [0, payload.duration], [0, 40], { extrapolateRight: "clamp" })}px)` }}>
+      <AbsoluteFill style={{ zIndex: 10, justifyContent: "center", alignItems: "center", transform: `scale(${textScale}) translateY(-15%) translateX(${interpolate(frame, [0, dur], [0, 40], { extrapolateRight: "clamp" })}px)` }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
           {groupDioramaWords(payload.text).map((line, lineIndex) => {
             const fontSize = getDioramaFontSize(line);
             return (
               <div key={lineIndex} style={{ display: "flex", flexDirection: "row", gap: "25px", flexShrink: 0, whiteSpace: "nowrap" }}>
                 {line.map((item, wordIdx) => {
-                  const timeRatio = (payload as any).actualDurationFrames ? ((payload as any).actualDurationFrames / payload.duration) : 1;
+                  const timeRatio = (payload as any).actualDurationFrames ? ((payload as any).actualDurationFrames / dur) : 1;
                   const scaledStart = item.start * timeRatio;
                   const scaledEnd = (payload as any).actualDurationFrames || item.end;
                   
@@ -237,7 +238,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
       {/* LAYER 4: OPTICAL CSS FLARES */}
       <AbsoluteFill style={{ zIndex: 30, pointerEvents: "none" }}>
         {payload.particles.map((particle) => {
-          const timeRatio = (payload as any).actualDurationFrames ? ((payload as any).actualDurationFrames / payload.duration) : 1;
+          const timeRatio = (payload as any).actualDurationFrames ? ((payload as any).actualDurationFrames / dur) : 1;
           const scaledStart = particle.start * timeRatio;
           const scaledEnd = (payload as any).actualDurationFrames || particle.end;
           

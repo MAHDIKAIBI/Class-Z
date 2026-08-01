@@ -40,9 +40,10 @@ export type MonolithPayload = {
 export const MonolithEngine: React.FC<{ payload: MonolithPayload }> = ({ payload }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
+  const dur = Number(payload.duration) || 150;
 
   // CAMERA LOGIC
-  const scale = interpolate(frame, [0, payload.duration], [1, 1.15], { extrapolateRight: 'clamp' });
+  const scale = interpolate(frame, [0, dur], [1, 1.15], { extrapolateRight: 'clamp' });
   const driftX = Math.sin(frame / 60) * 2;
   const driftY = Math.cos(frame / 60) * 2;
   const cameraTransform = `scale(${scale}) translate(${driftX}%, ${driftY}%)`;
