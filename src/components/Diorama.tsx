@@ -185,7 +185,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
           padding: "0 5%",
           transform: `translateY(15%)`
         }}>
-          {payload.subjects.map((sub: any, i) => {
+          {(payload.subjects || []).map((sub: any, i) => {
             // Each subject has its own trigger_frame so it reveals on its spoken word
             const subTrigger = (sub as any).trigger_frame ?? (i * 10);
             const entrance = spring({ frame: Math.max(0, rawFrame - startFrame - subTrigger), fps, config: { damping: 12, stiffness: 100 } });
@@ -237,7 +237,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
 
       {/* LAYER 4: OPTICAL CSS FLARES */}
       <AbsoluteFill style={{ zIndex: 30, pointerEvents: "none" }}>
-        {payload.particles.map((particle) => {
+        {(payload.particles || []).map((particle) => {
           const timeRatio = (payload as any).actualDurationFrames ? ((payload as any).actualDurationFrames / dur) : 1;
           const scaledStart = particle.start * timeRatio;
           const scaledEnd = (payload as any).actualDurationFrames || particle.end;
