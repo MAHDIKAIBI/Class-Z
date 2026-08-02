@@ -49,15 +49,17 @@ export type ChapterRevealProps = {
 const BasePlate: React.FC<{ bgImgUrl: string; text: string }> = ({ bgImgUrl, text }) => {
   return (
     <CinematicTextureWrapper
-       backgroundLayer={
+       backgroundLayer={(
          <AbsoluteFill>
-           {bgImgUrl ? <Img src={staticFile(bgImgUrl)} 
-             style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.5)" }} 
-           /> : null}
+           {bgImgUrl ? (
+             <Img src={staticFile(bgImgUrl)} 
+               style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.5)" }} 
+             />
+           ) : null}
            <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(150, 0, 15, 0.7)", mixBlendMode: "multiply" }} />
            <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(255, 0, 0, 0.3)", mixBlendMode: "color-burn" }} />
          </AbsoluteFill>
-       }
+       )}
     >
       <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
         <h1 style={{ 
