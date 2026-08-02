@@ -81,7 +81,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
             {bgIsVideo ? (
               <Video src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => console.log("Media playback error caught on Video:", e)} />
             ) : (
-              <Img src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {bgVideoUrl ? <Img src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", backgroundColor: "#0a0a0a" }} />}
             )}
           </AbsoluteFill>
 
@@ -126,7 +126,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
               <div style={{ position: "absolute", top: 0, width: "100%", height: "40%", background: "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 100%)", zIndex: 2, pointerEvents: "none" }} />
 
               {/* Asset Image */}
-              <Img src={staticFile(asset.url)} style={{ width: "100%", height: "100%", objectFit: "cover", zIndex: 1 }} />
+              {asset.url ? <Img src={staticFile(asset.url)} style={{ width: "100%", height: "100%", objectFit: "cover", zIndex: 1 }} /> : <div style={{ width: "100%", height: "100%", backgroundColor: "#111", zIndex: 1 }} />}
               
               {/* Text HUD */}
               <div style={{
