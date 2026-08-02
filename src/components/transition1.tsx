@@ -1,4 +1,4 @@
-import { 
+﻿import { 
   AbsoluteFill, 
   useCurrentFrame, 
   interpolate, 
@@ -64,7 +64,7 @@ export const ZAxisCrashTransition: React.FC<ZCrashTransitionProps> = ({
       
       {/* LOCAL SFX */}
       <Audio 
-        src={staticFile("crash.wav")}
+        src={staticFile("audio/sfx/transitions/crash.wav")}
         volume={sfxVolume}
       />
 
@@ -115,3 +115,4 @@ export const ZAxisCrashTransition: React.FC<ZCrashTransitionProps> = ({
     </AbsoluteFill>
   );
 };
+

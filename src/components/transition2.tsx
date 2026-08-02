@@ -1,4 +1,4 @@
-import { 
+﻿import { 
   AbsoluteFill, 
   useCurrentFrame, 
   interpolate, 
@@ -67,7 +67,7 @@ export const SpatialWhipTransition: React.FC<SpatialWhipTransitionProps> = ({
       
       {/* DYNAMIC SFX: Sharp Whip Pan Swish */}
       <Audio 
-        src={staticFile("whip.wav")}
+        src={staticFile("audio/sfx/transitions/whip.wav")}
         volume={sfxVolume}
       />
 
@@ -119,3 +119,4 @@ export const SpatialWhipTransition: React.FC<SpatialWhipTransitionProps> = ({
     </AbsoluteFill>
   );
 };
+

@@ -53,7 +53,7 @@ export const ThermalFlareTransition: React.FC<ThermalFlareTransitionProps> = ({
       
       {/* HIGH-END SFX INTEGRATION */}
       <Audio 
-        src={staticFile("pcht.wav")} 
+        src={staticFile("audio/sfx/transitions/pcht.wav")} 
         volume={thermalFlash}
       />
 
@@ -110,3 +110,4 @@ export const ThermalFlareTransition: React.FC<ThermalFlareTransitionProps> = ({
     </AbsoluteFill>
   );
 };
+
