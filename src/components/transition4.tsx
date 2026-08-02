@@ -3,8 +3,6 @@ import {
   useCurrentFrame, 
   interpolate, 
   Easing,
-  staticFile,
-  Audio
 } from "remotion";
 import React from "react";
 
@@ -66,8 +64,8 @@ export const RackToBlackTransition: React.FC<RackToBlackTransitionProps> = ({
         THE SUB-BASS IMPACT
         Deep, cinematic low-frequency boom.
       */}
-      <Audio 
-        src={staticFile("audio/sfx/transitions/sub_bass_drop.wav")} 
+      < 
+        src={("audio/sfx/transitions/sub_bass_drop.wav")} 
         volume={(f) => interpolate(f, [0, durationInFrames / 2, durationInFrames], [0, 1, 0], { extrapolateRight: "clamp" })}
       />
 

@@ -3,8 +3,6 @@
   useCurrentFrame, 
   interpolate, 
   Easing,
-  staticFile,
-  Audio
 } from "remotion";
 import React from "react";
 
@@ -52,8 +50,8 @@ export const ThermalFlareTransition: React.FC<ThermalFlareTransitionProps> = ({
     <AbsoluteFill style={{ backgroundColor: "#020202", overflow: "hidden" }}>
       
       {/* HIGH-END SFX INTEGRATION */}
-      <Audio 
-        src={staticFile("audio/sfx/transitions/pcht.wav")} 
+      < 
+        src={("audio/sfx/transitions/pcht.wav")} 
         volume={thermalFlash}
       />
 

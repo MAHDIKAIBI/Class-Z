@@ -3,8 +3,6 @@
   useCurrentFrame, 
   interpolate, 
   Easing,
-  Audio,
-  staticFile
 } from "remotion";
 import React from "react";
 
@@ -66,8 +64,8 @@ export const SpatialWhipTransition: React.FC<SpatialWhipTransitionProps> = ({
     <AbsoluteFill style={{ backgroundColor: "#020202", perspective: "1500px", overflow: "hidden" }}>
       
       {/* DYNAMIC SFX: Sharp Whip Pan Swish */}
-      <Audio 
-        src={staticFile("audio/sfx/transitions/whip.wav")}
+      < 
+        src={("audio/sfx/transitions/whip.wav")}
         volume={sfxVolume}
       />
 

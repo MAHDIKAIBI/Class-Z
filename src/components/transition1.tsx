@@ -3,8 +3,6 @@
   useCurrentFrame, 
   interpolate, 
   Easing,
-  Audio,
-  staticFile
 } from "remotion";
 import React from "react";
 
@@ -63,8 +61,8 @@ export const ZAxisCrashTransition: React.FC<ZCrashTransitionProps> = ({
     <AbsoluteFill style={{ backgroundColor: "#020202", perspective: "1500px", overflow: "hidden" }}>
       
       {/* LOCAL SFX */}
-      <Audio 
-        src={staticFile("audio/sfx/transitions/crash.wav")}
+      < 
+        src={("audio/sfx/transitions/crash.wav")}
         volume={sfxVolume}
       />
 
