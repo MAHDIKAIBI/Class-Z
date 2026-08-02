@@ -1,4 +1,4 @@
-﻿import { 
+import { 
   AbsoluteFill, 
   useCurrentFrame, 
   interpolate, 
@@ -67,7 +67,7 @@ export const RackToBlackTransition: React.FC<RackToBlackTransitionProps> = ({
         Deep, cinematic low-frequency boom.
       */}
       <Audio 
-        src={staticFile("sub_bass_drop.wav")} 
+        src={staticFile("audio/sfx/transitions/sub_bass_drop.wav")} 
         volume={(f) => interpolate(f, [0, durationInFrames / 2, durationInFrames], [0, 1, 0], { extrapolateRight: "clamp" })}
       />
 
