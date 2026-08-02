@@ -1,4 +1,4 @@
-﻿import { 
+import { 
   AbsoluteFill, 
   useCurrentFrame, 
   interpolate, 
@@ -61,10 +61,7 @@ export const ZAxisCrashTransition: React.FC<ZCrashTransitionProps> = ({
     <AbsoluteFill style={{ backgroundColor: "#020202", perspective: "1500px", overflow: "hidden" }}>
       
       {/* LOCAL SFX */}
-      < 
-        src={("audio/sfx/transitions/crash.wav")}
-        volume={sfxVolume}
-      />
+
 
       {/* THE 3D MOVEMENT RIG */}
       <AbsoluteFill style={{

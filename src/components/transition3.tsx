@@ -1,4 +1,4 @@
-﻿import { 
+import { 
   AbsoluteFill, 
   useCurrentFrame, 
   interpolate, 
@@ -50,10 +50,7 @@ export const ThermalFlareTransition: React.FC<ThermalFlareTransitionProps> = ({
     <AbsoluteFill style={{ backgroundColor: "#020202", overflow: "hidden" }}>
       
       {/* HIGH-END SFX INTEGRATION */}
-      < 
-        src={("audio/sfx/transitions/pcht.wav")} 
-        volume={thermalFlash}
-      />
+
 
       {/* THE CAMERA RIG */}
       <AbsoluteFill style={{

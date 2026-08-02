@@ -64,10 +64,7 @@ export const RackToBlackTransition: React.FC<RackToBlackTransitionProps> = ({
         THE SUB-BASS IMPACT
         Deep, cinematic low-frequency boom.
       */}
-      < 
-        src={("audio/sfx/transitions/sub_bass_drop.wav")} 
-        volume={(f) => interpolate(f, [0, durationInFrames / 2, durationInFrames], [0, 1, 0], { extrapolateRight: "clamp" })}
-      />
+
 
       {/* SCENE A (Fading into the void) */}
       <AbsoluteFill style={{ 

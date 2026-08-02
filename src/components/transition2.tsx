@@ -1,4 +1,4 @@
-﻿import { 
+import { 
   AbsoluteFill, 
   useCurrentFrame, 
   interpolate, 
@@ -64,10 +64,7 @@ export const SpatialWhipTransition: React.FC<SpatialWhipTransitionProps> = ({
     <AbsoluteFill style={{ backgroundColor: "#020202", perspective: "1500px", overflow: "hidden" }}>
       
       {/* DYNAMIC SFX: Sharp Whip Pan Swish */}
-      < 
-        src={("audio/sfx/transitions/whip.wav")}
-        volume={sfxVolume}
-      />
+
 
       {/* THE 3D ROTATION RIG */}
       <AbsoluteFill style={{
