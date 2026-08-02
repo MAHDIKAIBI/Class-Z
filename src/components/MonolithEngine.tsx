@@ -60,7 +60,7 @@ export const MonolithEngine: React.FC<{ payload: MonolithPayload }> = ({ payload
         <AbsoluteFill style={{ zIndex: 0, opacity: payload.bgVideoSrc ? 0.4 : 0.15, transform: cameraTransform }}>
           {payload.bgVideoSrc ? (
               <Video 
-                  src={payload.bgVideoSrc ? staticFile(payload.bgVideoSrc) : undefined} 
+                  src={payload.bgVideoSrc ? staticFile(payload.bgVideoSrc) : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"} 
                   style={{ width: "100%", height: "100%", objectFit: "cover" }} 
                   muted 
               />
@@ -103,7 +103,7 @@ export const MonolithEngine: React.FC<{ payload: MonolithPayload }> = ({ payload
         }}>
           
           {payload.assetSrc && (
-            <Img src={payload.assetSrc ? staticFile(payload.assetSrc) : undefined} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.2) grayscale(0.3) brightness(0.7)" }} />
+            <Img src={payload.assetSrc ? staticFile(payload.assetSrc) : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.2) grayscale(0.3) brightness(0.7)" }} />
           )}
           
           <div style={{

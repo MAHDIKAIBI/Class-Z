@@ -53,10 +53,11 @@ export type DioramaPayload = {
 };
 
 function groupDioramaWords(words: DynamicWord[]): DynamicWord[][] {
-  const lines: DynamicWord[][] = [];
-  let currentLine: DynamicWord[] = [];
-  let currentLen = 0;
-  for (const w of words) {
+    if (!words || !Array.isArray(words)) return [];
+    const lines: DynamicWord[][] = [];
+    let currentLine: DynamicWord[] = [];
+    let currentLen = 0;
+    for (const w of words) {
     const clean = w.word.replace(/[^a-zA-Z]/g, "");
     if (currentLine.length > 0 && (currentLen + clean.length > 18 || currentLine.length >= 3)) {
       lines.push(currentLine);
@@ -133,7 +134,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
       {/* LAYER 2: TYPOGRAPHY (AUTO-LAYOUT, ANCHORED IN MIDGROUND) */}
       <AbsoluteFill style={{ zIndex: 10, justifyContent: "center", alignItems: "center", transform: `scale(${textScale}) translateY(-15%) translateX(${interpolate(frame, [0, dur], [0, 40], { extrapolateRight: "clamp" })}px)` }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-          {groupDioramaWords(payload.text).map((line, lineIndex) => {
+          {groupDioramaWords(payload.text || []).map((line, lineIndex) => {
             const fontSize = getDioramaFontSize(line);
             return (
               <div key={lineIndex} style={{ display: "flex", flexDirection: "row", gap: "25px", flexShrink: 0, whiteSpace: "nowrap" }}>

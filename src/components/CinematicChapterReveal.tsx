@@ -51,8 +51,7 @@ const BasePlate: React.FC<{ bgImgUrl: string; text: string }> = ({ bgImgUrl, tex
     <CinematicTextureWrapper
        backgroundLayer={
          <AbsoluteFill>
-           <Img 
-             src={bgImgUrl ? staticFile(bgImgUrl) : undefined} 
+           {bgImgUrl ? <Img src={staticFile(bgImgUrl)} 
              style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.5)" }} 
            />
            <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(150, 0, 15, 0.7)", mixBlendMode: "multiply" }} />
@@ -212,7 +211,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
           <CinematicTextureWrapper
             backgroundLayer={
               <AbsoluteFill>
-                <Img src={bgImgUrl ? staticFile(bgImgUrl) : undefined} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.2)" }} />
+                {bgImgUrl ? <Img src={staticFile(bgImgUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.2)" }} />
                 <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(5, 0, 5, 0.85)" }} />
                 <div style={{ position: "absolute", inset: "-50%", background: "radial-gradient(circle at center, rgba(200, 0, 20, 0.15) 0%, transparent 60%)", opacity: interpolate(frame, [45, 100], [0, 1], { extrapolateRight: "clamp" }) + Math.sin(frame / 20) * 0.1 }} />
               </AbsoluteFill>
@@ -243,8 +242,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
               opacity: interpolate(flankSpring, [0, 0.5], [0, 0.75]),
               mixBlendMode: "overlay"
             }}>
-              <Img 
-                src={staticFile(leftAssetUrl)} 
+              <Img src={leftAssetUrl ? staticFile(leftAssetUrl) : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"} 
                 style={{ 
                   width: "750px", 
                   height: "auto", 
@@ -262,8 +260,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
               opacity: interpolate(flankSpring, [0, 0.5], [0, 0.75]),
               mixBlendMode: "overlay"
             }}>
-              <Img 
-                src={staticFile(rightAssetUrl)} 
+              <Img src={rightAssetUrl ? staticFile(rightAssetUrl) : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"} 
                 style={{ 
                   width: "750px", 
                   height: "auto", 
