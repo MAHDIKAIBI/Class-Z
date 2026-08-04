@@ -328,6 +328,7 @@ jobs:
           TTS_TOTAL_WORKERS: "15"
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python -u tts_worker.py
 
       - name: Upload WAV Chunks to Drive
