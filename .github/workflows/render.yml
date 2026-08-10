@@ -515,7 +515,7 @@ jobs:
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN_ENGINE }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -552,7 +552,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          python -m pip install seleniumbase
+          python -m pip install seleniumbase playwright
           python -m playwright install --with-deps chromium firefox
 
       - name: Run Master Hunter (Google Images)
