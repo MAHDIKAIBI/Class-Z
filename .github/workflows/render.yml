@@ -232,6 +232,22 @@ jobs:
             echo "[!] No refreshed cookies found to sync (Playwright may have been skipped)."
           fi
 
+      - name: Cache HuggingFace Models
+        uses: actions/cache@v4
+        id: hf-cache
+        with:
+          path: ~/.cache/huggingface
+          key: hf-cache-qwen3-tts
+
+      - name: Pre-download Qwen3-TTS Model
+        if: steps.hf-cache.outputs.cache-hit != 'true'
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -m pip install -U huggingface_hub
+          huggingface-cli login --token $HF_TOKEN
+          huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-Base
+
       # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
       # finishes, because The_Brain.py needs Ollama for footage/image search queries.
 
@@ -322,6 +338,12 @@ jobs:
           if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; fi
           python -m pip install -U g4f curl_cffi aiohttp nest_asyncio
 
+      - name: Cache HuggingFace Models
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-cache-qwen3-tts
+
       - name: Run TTS Worker
         env:
           TTS_WORKER_ID: ${{ matrix.worker }}
@@ -329,7 +351,12 @@ jobs:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: python -u tts_worker.py
+        run: |
+          for i in {1..10}; do
+            python -u tts_worker.py && break
+            echo "[!] Worker crashed or hit 429. Rebooting instantly (Attempt $i/10)..."
+            sleep 5
+          done
 
       - name: Upload WAV Chunks to Drive
         run: |
