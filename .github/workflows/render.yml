@@ -245,8 +245,8 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           python -m pip install -U huggingface_hub
-          huggingface-cli login --token $HF_TOKEN
-          huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-Base
+          hf auth login --token $HF_TOKEN
+          hf download Qwen/Qwen3-TTS-12Hz-1.7B-Base
 
       # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
       # finishes, because The_Brain.py needs Ollama for footage/image search queries.
@@ -488,6 +488,88 @@ jobs:
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 -v || true
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/$VAULT" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" --transfers 16 -v || true
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/audio" "data:Colab_AutoVideoCreator/public/audio" --transfers 16 -v || true
+
+  # ---------------------------------------------------------
+  # PHASE 2b (Parallel): overlay_hunter_job
+  # Scrapes Google Images while download_matrix is busy with video b-rolls.
+  # ---------------------------------------------------------
+  overlay_hunter_job:
+    needs: [creation_job, brain_prep_job, tts_matrix]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install System Dependencies
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list
+          sudo apt-get update || true
+          sudo apt-get install rclone jq xvfb -y
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Download Scripts & Workspace from Drive
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /.git/**" --filter "- /global_used_assets/**" --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" --filter "- /ChatTTS_Models/**" --transfers 16
+          mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT"  "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" --transfers 1 || true
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install seleniumbase
+          python -m playwright install --with-deps chromium firefox
+
+      - name: Run Master Hunter (Google Images)
+        env:
+          CHANNEL_NAME: ${{ inputs.channel_name }}
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          xvfb-run -a python -u overlay_hunter.py
+
+      - name: Upload Candidates Map to Drive
+        if: always()
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          if [ -f "public/channels/${{ inputs.channel_name }}/$VAULT/google_image_candidates.json" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --include "google_image_candidates.json" -v || true
+          fi
 
   download_matrix:
     needs: [creation_job, brain_prep_job, tts_matrix]
