@@ -560,7 +560,7 @@ jobs:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
-            GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           xvfb-run -a python -u overlay_hunter.py
 
