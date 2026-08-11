@@ -552,8 +552,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          python -m pip install seleniumbase playwright
-          python -m playwright install --with-deps chromium firefox
+          python -m pip install seleniumbase
 
       - name: Run Master Hunter (Google Images)
         env:
