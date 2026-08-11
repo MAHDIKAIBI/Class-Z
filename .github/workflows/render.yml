@@ -476,6 +476,10 @@ jobs:
           fi
           # MotionArray cookies (always safe to overwrite)
           rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
+          if [ -f google_cookies.json ] && [ -s google_cookies.json ]; then
+            echo "[+] Uploading fresh google_cookies.json..."
+            rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s google_cookies.json "engine:Colab_AutoVideoCreator/google_cookies.json" -v || true
+          fi
 
       - name: Upload Timeline to Drive
         if: always()
@@ -570,6 +574,14 @@ jobs:
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
           if [ -f "public/channels/${{ inputs.channel_name }}/$VAULT/google_image_candidates.json" ]; then
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --include "google_image_candidates.json" -v || true
+          fi
+
+      - name: Save Fresh Google Cookies to Drive
+        if: always()
+        run: |
+          if [ -f google_cookies.json ] && [ -s google_cookies.json ]; then
+            echo "[+] Uploading fresh google_cookies.json..."
+            rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s google_cookies.json "engine:Colab_AutoVideoCreator/google_cookies.json" -v || true
           fi
 
   download_matrix:
@@ -859,6 +871,10 @@ jobs:
           fi
           # MotionArray cookies (always safe to overwrite)
           rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:Colab_AutoVideoCreator/motionarray_cookies.json" -v || true
+          if [ -f google_cookies.json ] && [ -s google_cookies.json ]; then
+            echo "[+] Uploading fresh google_cookies.json..."
+            rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s google_cookies.json "engine:Colab_AutoVideoCreator/google_cookies.json" -v || true
+          fi
 
       - name: Upload Final Assets to Drive
         if: always()
@@ -1154,4 +1170,3 @@ jobs:
           
           echo "Running YouTube Uploader..."
           python youtube_uploader.py
-
