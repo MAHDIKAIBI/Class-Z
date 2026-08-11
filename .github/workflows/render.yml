@@ -692,14 +692,14 @@ jobs:
           GITHUB_RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
         run: |
-            echo "[*] Waiting for overlay_hunter_job to finish (Fast-Track Sync)..."
-            while true; do
-              STATUS=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[] | select(.name == "overlay_hunter_job") | .status' || echo "unknown")
-              if [ "$STATUS" == "completed" ]; then break; fi
-              if [ "$STATUS" == "unknown" ]; then echo "API error, retrying..."; fi
-              sleep 15
-            done
-            echo "[+] Fast-Track ready! Booting Overlay Worker..."
+          echo "[*] Waiting for overlay_hunter_job to finish (Fast-Track Sync)..."
+          while true; do
+            STATUS=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[] | select(.name == "overlay_hunter_job") | .status' || echo "unknown")
+            if [ "$STATUS" == "completed" ]; then break; fi
+            if [ "$STATUS" == "unknown" ]; then echo "API error, retrying..."; fi
+            sleep 15
+          done
+          echo "[+] Fast-Track ready! Booting Overlay Worker..."
           echo "[*] Pulling qwen2.5vl for vision processing..."
           for i in {1..5}; do ollama pull qwen2.5vl && break || sleep 5; done
           xvfb-run -a python -u overlay_worker.py
