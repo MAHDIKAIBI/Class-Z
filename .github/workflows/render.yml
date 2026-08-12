@@ -455,6 +455,7 @@ jobs:
         env:
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
           BRAIN_PHASE: "prep"
           CURRENT_AUTO_MODE: "1"
           CURRENT_SAFE_TOPIC: "public/channels/${{ inputs.channel_name }}/${{ needs.creation_job.outputs.vault_name }}"
@@ -856,6 +857,7 @@ jobs:
         env:
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
           BRAIN_PHASE: "finish"
           CURRENT_AUTO_MODE: "1"
           CURRENT_SAFE_TOPIC: "public/channels/${{ inputs.channel_name }}/${{ needs.creation_job.outputs.vault_name }}"
