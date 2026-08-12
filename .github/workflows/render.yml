@@ -454,6 +454,7 @@ jobs:
       - name: Run The_Brain PREP phase (audio + timeline, no clip downloads)
         env:
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           BRAIN_PHASE: "prep"
           CURRENT_AUTO_MODE: "1"
           CURRENT_SAFE_TOPIC: "public/channels/${{ inputs.channel_name }}/${{ needs.creation_job.outputs.vault_name }}"
@@ -854,6 +855,7 @@ jobs:
       - name: Run The_Brain FINISH phase (overlay + audio master + git push)
         env:
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           BRAIN_PHASE: "finish"
           CURRENT_AUTO_MODE: "1"
           CURRENT_SAFE_TOPIC: "public/channels/${{ inputs.channel_name }}/${{ needs.creation_job.outputs.vault_name }}"
