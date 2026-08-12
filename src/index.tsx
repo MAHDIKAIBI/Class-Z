@@ -2,7 +2,7 @@ import { AbsoluteFill, Sequence, Img, Audio, useVideoConfig, useCurrentFrame, st
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
-    let cleanPath = path.startsWith('public/') ? path.slice(7) : path;
+    let cleanPath = path.replace(/^\/?public\//, '');
     if (cleanPath.trim() === '' || cleanPath.endsWith('/')) return TRANSPARENT_PIXEL;
     try { cleanPath = decodeURIComponent(cleanPath); } catch(e) {}
     return remotionStaticFile(cleanPath);

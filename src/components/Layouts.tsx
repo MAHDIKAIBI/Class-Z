@@ -2,7 +2,7 @@ import { AbsoluteFill, useCurrentFrame, staticFile as remotionStaticFile, Img as
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
-    const cleanPath = path.startsWith('public/') ? path.slice(7) : path;
+    const cleanPath = path.replace(/^\/?public\//, '');
     if (cleanPath.trim() === '' || cleanPath.endsWith('/')) return TRANSPARENT_PIXEL;
     return remotionStaticFile(cleanPath);
 };
