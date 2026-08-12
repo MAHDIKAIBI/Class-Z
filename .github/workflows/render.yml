@@ -712,6 +712,8 @@ jobs:
             sleep 15
           done
           echo "[+] Fast-Track ready! Booting Overlay Worker..."
+          echo "Fetching google_image_candidates.json from Drive..."
+          rclone copy --tpslimit 10 --retries 10 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "google_image_candidates.json" -v || true
           echo "[*] Pulling qwen2.5vl for vision processing..."
           for i in {1..5}; do ollama pull qwen2.5vl && break || sleep 5; done
           xvfb-run -a python -u overlay_worker.py
