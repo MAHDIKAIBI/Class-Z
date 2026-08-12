@@ -178,7 +178,7 @@ if topic:
 # 4. Execute the pipeline
 print("Executing Video Creation Pipeline...")
 try:
-    subprocess.run(["xvfb-run", "-a", "python", "-u", "state_machine_scriptwriter.py"], check=True)
+    subprocess.run(["xvfb-run", "-a", "python", "-u", "claude_scraper.py"], check=True)
 except subprocess.CalledProcessError as e:
     print(f"Pipeline failed with code {e.returncode}")
     sys.exit(1)
