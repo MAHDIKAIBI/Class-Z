@@ -573,7 +573,7 @@ jobs:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
         run: |
-          xvfb-run -a python -u overlay_hunter.py
+          echo "DISABLED xvfb-run -a python -u overlay_hunter.py"
 
       - name: Upload Candidates Map to Drive
         if: always()
