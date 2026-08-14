@@ -260,7 +260,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
     steps:
       - uses: actions/checkout@v4
 
@@ -570,6 +570,8 @@ jobs:
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
+            NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+            NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
         run: |
           xvfb-run -a python -u overlay_hunter.py
 
@@ -694,6 +696,8 @@ jobs:
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
+            NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+            NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
         run: |
           echo "[*] Pulling deepseek-r1:8b for text processing..."
           for i in {1..5}; do ollama pull deepseek-r1:8b && break || sleep 5; done
@@ -709,6 +713,8 @@ jobs:
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
+            NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+            NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
         run: |
           echo "[*] Waiting for overlay_hunter_job to finish (Fast-Track Sync)..."
           while true; do
@@ -856,6 +862,8 @@ jobs:
           DOWNLOAD_TOTAL_WORKERS: "17"
           GITHUB_RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
+            NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+            NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
         run: python -u merge_timelines.py
 
       - name: Run The_Brain FINISH phase (overlay + audio master + git push)
