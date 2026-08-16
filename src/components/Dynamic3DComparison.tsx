@@ -3,9 +3,10 @@ import {
   useCurrentFrame, 
   useVideoConfig, 
   interpolate, 
-  Easing,
-  spring,
-  Img, staticFile as remotionStaticFile
+  Easing, 
+  spring, 
+  Img, 
+  staticFile as remotionStaticFile 
 } from "remotion";
 import React from "react";
 
@@ -21,116 +22,121 @@ const staticFile = (path: string) => {
     return remotionStaticFile(cleanPath);
 };
 
-
 // ============================================================================
-// 1. CSS 3D BAR COMPONENT (replaces WebGL ThreeCanvas)
+// 1. ELITE CSS 3D BAR (Neon Core + Dark Glass Shell)
 // ============================================================================
-
-const CSS3DBar: React.FC<{
+const Cinematic3DBar: React.FC<{
   height: number;
   maxHeight: number;
   color: string;
   opacity: number;
 }> = ({ height, maxHeight, color, opacity }) => {
-  const barHeight = Math.max(2, (height / maxHeight) * 320);
+  const barHeight = Math.max(2, (height / maxHeight) * 380);
   
   return (
     <div style={{
-      width: "140px",
+      width: "160px",
       height: `${barHeight}px`,
       position: "relative",
       transformStyle: "preserve-3d",
       opacity,
       transition: "none",
     }}>
-      {/* Front face */}
+      {/* Front Face: Dark Glass Shell + Neon Core */}
       <div style={{
         position: "absolute",
         width: "100%",
         height: "100%",
-        background: `linear-gradient(180deg, ${color} 0%, ${color}88 100%)`,
-        boxShadow: `0 0 40px ${color}40, inset 0 1px 0 rgba(255,255,255,0.15)`,
+        background: `linear-gradient(180deg, rgba(10,15,20,0.9) 0%, rgba(5,5,10,0.95) 100%)`,
+        border: `1px solid ${color}40`,
+        boxShadow: `inset 0 0 20px rgba(0,0,0,0.8), 0 20px 50px rgba(0,0,0,0.9)`,
         borderRadius: "4px 4px 0 0",
-        transform: "translateZ(35px)",
-      }} />
-      {/* Right face */}
+        transform: "translateZ(40px)",
+        overflow: "hidden",
+        display: "flex",
+        justifyContent: "center",
+      }}>
+        {/* The Internal Glowing Core */}
+        <div style={{
+          width: "40%",
+          height: "100%",
+          background: `linear-gradient(180deg, ${color} 0%, ${color}40 100%)`,
+          boxShadow: `0 0 40px ${color}, 0 0 80px ${color}80`,
+          opacity: 0.85
+        }} />
+        {/* Glass reflection sweep */}
+        <div style={{
+          position: "absolute",
+          top: 0,
+          left: "-50%",
+          width: "200%",
+          height: "100%",
+          background: "linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.1) 45%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.1) 55%, transparent 60%)",
+          mixBlendMode: "overlay"
+        }} />
+      </div>
+
+      {/* Right Face: Dimensional Shadow */}
       <div style={{
         position: "absolute",
-        width: "70px",
+        width: "80px",
         height: "100%",
-        background: `linear-gradient(180deg, ${color}99 0%, ${color}44 100%)`,
+        background: `linear-gradient(180deg, ${color}30 0%, rgba(0,0,0,0.9) 100%)`,
+        borderRight: `1px solid ${color}20`,
         right: 0,
         transformOrigin: "right center",
         transform: "rotateY(90deg)",
         borderRadius: "0 4px 0 0",
       }} />
-      {/* Top face */}
+
+      {/* Top Face: The Hot Emitter */}
       <div style={{
         position: "absolute",
         width: "100%",
-        height: "70px",
-        background: `linear-gradient(135deg, ${color}dd 0%, ${color}aa 100%)`,
+        height: "80px",
+        background: color,
         top: 0,
         transformOrigin: "top center",
         transform: "rotateX(90deg)",
         borderRadius: "4px",
-        boxShadow: `0 0 20px ${color}60`,
+        boxShadow: `0 0 50px ${color}, 0 0 100px ${color}`,
+        border: "2px solid #ffffff",
       }} />
     </div>
   );
 };
 
 // ============================================================================
-// 2. GRID FLOOR COMPONENT
+// 2. KINETIC CYBER-GRID (Animated Forward Momentum)
 // ============================================================================
-
-const GridFloor: React.FC<{ frame: number }> = ({ frame }) => {
-  const lines = [];
-  const gridSize = 12;
-  
-  for (let i = -gridSize; i <= gridSize; i++) {
-    const x = ((i + gridSize) / (gridSize * 2)) * 100;
-    lines.push(
-      <div key={`v-${i}`} style={{
-        position: "absolute",
-        left: `${x}%`,
-        top: 0,
-        bottom: 0,
-        width: "1px",
-        background: i === 0 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.025)",
-      }} />
-    );
-    lines.push(
-      <div key={`h-${i}`} style={{
-        position: "absolute",
-        top: `${x}%`,
-        left: 0,
-        right: 0,
-        height: "1px",
-        background: i === 0 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.025)",
-      }} />
-    );
-  }
+const HolographicFloor: React.FC<{ frame: number }> = ({ frame }) => {
+  // Move grid forward over time to simulate camera pushing in
+  const drift = (frame * 2) % 100;
   
   return (
     <div style={{
       position: "absolute",
-      width: "900px",
-      height: "400px",
-      bottom: "15%",
-      left: "50%",
-      transform: "translateX(-50%) perspective(800px) rotateX(65deg)",
-      transformOrigin: "center bottom",
-    }}>
-      {lines}
-    </div>
+      width: "200%",
+      height: "200%",
+      bottom: "-50%",
+      left: "-50%",
+      transform: "perspective(800px) rotateX(75deg)",
+      transformOrigin: "center center",
+      backgroundImage: `
+        linear-gradient(to right, rgba(255,255,255,0.03) 2px, transparent 2px),
+        linear-gradient(to bottom, rgba(255,255,255,0.03) 2px, transparent 2px)
+      `,
+      backgroundSize: "100px 100px",
+      backgroundPosition: `0px ${drift}px`,
+      // Mask edges so it fades into the darkness perfectly
+      WebkitMaskImage: "radial-gradient(ellipse at center, black 0%, transparent 60%)",
+    }} />
   );
 };
 
 // ============================================================================
-// 3. THE VAULT COMPONENT (100% Adaptable CSS 3D Data Engine)
+// 3. THE MAGNATES MEDIA ARENA (Full Orchestration)
 // ============================================================================
-
 export type Bar3DItem = {
   title: string;
   subtitle: string;
@@ -149,238 +155,159 @@ export type Comparison3DProps = {
 
 export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, itemB }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig(); 
+  const { fps, durationInFrames } = useVideoConfig();
 
-  // Core Math: Find the max value so the bars scale perfectly
+  // Continuous Camera Drone Drift
+  const camScale = interpolate(frame, [0, durationInFrames], [1, 1.08], { extrapolateRight: "clamp" });
+  const camPanY = interpolate(frame, [0, durationInFrames], [10, -10], { extrapolateRight: "clamp" });
+
   const MAX_3D_HEIGHT = 24; 
   const maxValue = Math.max(itemA.value, itemB.value);
   const targetHeightA = (itemA.value / maxValue) * MAX_3D_HEIGHT;
   const targetHeightB = (itemB.value / maxValue) * MAX_3D_HEIGHT;
 
-  // ==========================================================================
-  // ITEM A (LEFT) MATH
-  // ==========================================================================
+  // ================= ITEM A LOGIC =================
   const isActiveA = frame >= itemA.start && frame < itemA.end;
-  const durationA = itemA.end - itemA.start;
-
-  const springA = spring({ 
-    frame: isActiveA ? frame - itemA.start : 0, 
-    fps, 
-    config: { damping: 18, stiffness: 120 } 
-  });
-
+  const springA = spring({ frame: isActiveA ? frame - itemA.start : 0, fps, config: { damping: 16, stiffness: 100 } });
   const heightA = interpolate(springA, [0, 1], [0.1, targetHeightA]);
   const opacityA = isActiveA ? interpolate(springA, [0, 0.3], [0, 1]) : 0;
-  
-  const displayValueA = interpolate(
-    frame - itemA.start,
-    [10, Math.max(11, durationA - 30)],
-    [0, itemA.value],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
-  );
+  const displayValueA = interpolate(frame - itemA.start, [10, Math.max(11, (itemA.end - itemA.start) - 30)], [0, itemA.value], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
 
-  // ==========================================================================
-  // ITEM B (RIGHT) MATH
-  // ==========================================================================
+  // ================= ITEM B LOGIC =================
   const isActiveB = frame >= itemB.start && frame < itemB.end;
-  const durationB = itemB.end - itemB.start;
-
-  const springB = spring({ 
-    frame: isActiveB ? frame - itemB.start : 0, 
-    fps, 
-    config: { damping: 18, stiffness: 120 } 
-  });
-
+  const springB = spring({ frame: isActiveB ? frame - itemB.start : 0, fps, config: { damping: 16, stiffness: 100 } });
   const heightB = interpolate(springB, [0, 1], [0.1, targetHeightB]);
   const opacityB = isActiveB ? interpolate(springB, [0, 0.3], [0, 1]) : 0;
-
-  const displayValueB = interpolate(
-    frame - itemB.start,
-    [10, Math.max(11, durationB - 30)],
-    [0, itemB.value],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
-  );
+  const displayValueB = interpolate(frame - itemB.start, [10, Math.max(11, (itemB.end - itemB.start) - 30)], [0, itemB.value], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
 
   return (
-    <AbsoluteFill style={{ background: "transparent", justifyContent: "center", alignItems: "center" }}>
+    <AbsoluteFill style={{ background: "transparent", justifyContent: "center", alignItems: "center", overflow: "hidden" }}>
       
-      {/* CSS 3D RENDER ENGINE (Background) */}
-      <div style={{
-        position: "absolute",
-        inset: 0,
-        perspective: "1200px",
-        perspectiveOrigin: "50% 35%",
-        zIndex: 0,
-      }}>
-        <GridFloor frame={frame} />
+      {/* GLOBAL DRONE CAMERA WRAPPER */}
+      <AbsoluteFill style={{ transform: `scale(${camScale}) translateY(${camPanY}px)`, transformOrigin: "center center" }}>
         
-        {/* 3D Bar Container */}
-        <div style={{
-          position: "absolute",
-          bottom: "28%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          gap: "120px",
-          alignItems: "flex-end",
-          transformStyle: "preserve-3d",
-          perspective: "1000px",
-        }}>
-          {/* Item A Bar */}
+        {/* THE ARENA FLOOR */}
+        <div style={{ position: "absolute", inset: 0, perspective: "1200px", perspectiveOrigin: "50% 40%", zIndex: 0 }}>
+          <HolographicFloor frame={frame} />
+          
+          {/* Central 3D Container */}
           <div style={{
-            transform: "rotateY(-15deg) rotateX(5deg)",
+            position: "absolute",
+            bottom: "32%",
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            gap: "180px",
+            alignItems: "flex-end",
             transformStyle: "preserve-3d",
+            perspective: "1000px",
           }}>
-            <CSS3DBar 
-              height={heightA} 
-              maxHeight={MAX_3D_HEIGHT} 
-              color={itemA.color} 
-              opacity={opacityA}
-            />
-            {/* Glow reflection on floor */}
-            <div style={{
-              position: "absolute",
-              bottom: "-20px",
-              left: "-30%",
-              width: "160%",
-              height: "40px",
-              background: `radial-gradient(ellipse, ${itemA.color}30 0%, transparent 70%)`,
-              filter: "blur(10px)",
-              opacity: opacityA * 0.6,
-            }} />
-          </div>
+            {/* PILLAR A */}
+            <div style={{ transform: "rotateY(-20deg) rotateX(10deg)", transformStyle: "preserve-3d" }}>
+              <Cinematic3DBar height={heightA} maxHeight={MAX_3D_HEIGHT} color={itemA.color} opacity={opacityA} />
+              {/* Ultra-realistic floor cast light */}
+              <div style={{
+                position: "absolute", bottom: "-30px", left: "-50%", width: "200%", height: "60px",
+                background: `radial-gradient(ellipse, ${itemA.color}80 0%, transparent 60%)`,
+                filter: "blur(15px)", opacity: opacityA, transform: "rotateX(75deg)"
+              }} />
+            </div>
 
-          {/* Item B Bar */}
-          <div style={{
-            transform: "rotateY(-15deg) rotateX(5deg)",
-            transformStyle: "preserve-3d",
-          }}>
-            <CSS3DBar 
-              height={heightB} 
-              maxHeight={MAX_3D_HEIGHT} 
-              color={itemB.color} 
-              opacity={opacityB}
-            />
-            {/* Glow reflection on floor */}
-            <div style={{
-              position: "absolute",
-              bottom: "-20px",
-              left: "-30%",
-              width: "160%",
-              height: "40px",
-              background: `radial-gradient(ellipse, ${itemB.color}30 0%, transparent 70%)`,
-              filter: "blur(10px)",
-              opacity: opacityB * 0.6,
-            }} />
+            {/* PILLAR B */}
+            <div style={{ transform: "rotateY(-20deg) rotateX(10deg)", transformStyle: "preserve-3d" }}>
+              <Cinematic3DBar height={heightB} maxHeight={MAX_3D_HEIGHT} color={itemB.color} opacity={opacityB} />
+              {/* Ultra-realistic floor cast light */}
+              <div style={{
+                position: "absolute", bottom: "-30px", left: "-50%", width: "200%", height: "60px",
+                background: `radial-gradient(ellipse, ${itemB.color}80 0%, transparent 60%)`,
+                filter: "blur(15px)", opacity: opacityB, transform: "rotateX(75deg)"
+              }} />
+            </div>
           </div>
         </div>
+      </AbsoluteFill>
+
+      {/* FOREGROUND: PREMIUM GLASS HUD */}
+      <div style={{ position: "absolute", bottom: "8%", display: "flex", gap: "60px", zIndex: 10 }}>
+        
+        {[
+          { item: itemA, opac: opacityA, val: displayValueA },
+          { item: itemB, opac: opacityB, val: displayValueB }
+        ].map((card, idx) => {
+          // Continuous micro-floating for the UI cards
+          const floatY = Math.sin((frame + idx * 30) * 0.05) * 8;
+          // Animated light glare across the glass
+          const glarePos = ((frame * 2 + idx * 50) % 300) - 100;
+
+          return (
+            <div key={idx} style={{
+              position: "relative",
+              background: "linear-gradient(145deg, rgba(15, 18, 25, 0.75) 0%, rgba(5, 7, 10, 0.95) 100%)",
+              backdropFilter: "blur(40px) saturate(150%)",
+              WebkitBackdropFilter: "blur(40px) saturate(150%)",
+              border: `1px solid ${card.item.color}50`,
+              borderTop: `1px solid ${card.item.color}90`, // Heavy top rim light
+              borderRadius: "24px",
+              padding: "35px 45px",
+              boxShadow: `0 40px 80px rgba(0,0,0,0.9), inset 0 0 40px ${card.item.color}15`,
+              opacity: card.opac,
+              transform: `translateY(${interpolate(card.opac, [0, 1], [40, 0]) + floatY}px)`,
+              fontFamily: '"Geist", "Inter", system-ui, sans-serif',
+              minWidth: "360px",
+              flexShrink: 0,
+              overflow: "hidden" // Contains the glare
+            }}>
+              {/* Animated Glare Sweep */}
+              <div style={{
+                position: "absolute", top: 0, bottom: 0, width: "150%",
+                background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)",
+                transform: `translateX(${glarePos}%) skewX(-30deg)`,
+                pointerEvents: "none", zIndex: 0
+              }} />
+
+              <div style={{ position: "relative", zIndex: 1 }}>
+                <p style={{ color: "rgba(255,255,255,0.6)", margin: 0, fontSize: "14px", letterSpacing: "4px", textTransform: "uppercase", fontWeight: 700 }}>
+                  {card.item.subtitle}
+                </p>
+                <h2 style={{ color: "white", margin: "10px 0 25px 0", fontSize: "28px", fontWeight: "800", letterSpacing: "-0.5px", textShadow: "0 5px 15px rgba(0,0,0,0.5)" }}>
+                  {card.item.title}
+                </h2>
+
+                {card.item.imageUrl && (
+                  <div style={{ width: "100%", height: "160px", borderRadius: "16px", overflow: "hidden", marginBottom: "25px", border: `1px solid rgba(255,255,255,0.1)`, position: "relative" }}>
+                    <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, rgba(5,5,8,1), transparent 80%)`, zIndex: 1 }} />
+                    <Img src={card.item.imageUrl ? staticFile(card.item.imageUrl) : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.1) saturate(1.2)" }} />
+                  </div>
+                )}
+
+                <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
+                  <span style={{ 
+                    color: card.item.color, 
+                    fontSize: "64px", 
+                    fontWeight: "900", 
+                    fontVariantNumeric: "tabular-nums", 
+                    // Color-Dodge emulation for intense HDR glow
+                    textShadow: `0 0 30px ${card.item.color}, 0 0 60px ${card.item.color}80, 0 5px 10px rgba(0,0,0,0.8)`, 
+                    lineHeight: 1 
+                  }}>
+                    {Math.floor(card.val).toLocaleString()}
+                  </span>
+                  <span style={{ color: "rgba(255,255,255,0.8)", fontSize: "24px", fontWeight: "700", textShadow: "0 2px 10px rgba(0,0,0,0.5)" }}>
+                    {unit}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
-      {/* PREMIUM GLASSMORPHISM HUD (Foreground) */}
-      <div 
-        style={{ 
-          position: "absolute", 
-          bottom: "10%", 
-          display: "flex", 
-          gap: "40px",
-          zIndex: 10 
-        }}
-      >
-        {/* Item A Data Card */}
-        <div style={{
-          background: "linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)",
-          backdropFilter: "blur(40px) saturate(150%) brightness(1.2)",
-          WebkitBackdropFilter: "blur(24px) saturate(120%)",
-          border: `1px solid ${itemA.color}40`,
-          borderRadius: "20px",
-          padding: "30px 40px",
-          boxShadow: `0 25px 50px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)`,
-          opacity: opacityA,
-          transform: `translateY(${interpolate(opacityA, [0, 1], [30, 0])}px)`,
-          fontFamily: '"Geist", "Inter", system-ui, sans-serif',
-          minWidth: "320px",
-          flexShrink: 0
-        }}>
-          <p style={{ color: "rgba(255,255,255,0.5)", margin: 0, fontSize: "12px", letterSpacing: "3px", textTransform: "uppercase", fontWeight: 600 }}>{itemA.subtitle}</p>
-          <h2 style={{ color: "white", margin: "8px 0 20px 0", fontSize: "24px", fontWeight: "700", letterSpacing: "-0.5px" }}>{itemA.title}</h2>
-
-          {itemA.imageUrl && (
-            <div style={{ width: "100%", height: "140px", borderRadius: "12px", overflow: "hidden", marginBottom: "20px", border: `1px solid ${itemA.color}40`, position: "relative" }}>
-               <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, rgba(10,10,12,0.9), transparent)`, zIndex: 1 }} />
-               <Img src={itemA.imageUrl ? staticFile(itemA.imageUrl) : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            </div>
-          )}
-
-          <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-            <span style={{ color: itemA.color, fontSize: "56px", fontWeight: "800", fontVariantNumeric: "tabular-nums", textShadow: `0 0 30px ${itemA.color}60`, lineHeight: 1 }}>
-              {Math.floor(displayValueA).toLocaleString()}
-            </span>
-            <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "20px", fontWeight: "600" }}>{unit}</span>
-          </div>
-        </div>
-
-        {/* Item B Data Card */}
-        <div style={{
-          background: "linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)",
-          backdropFilter: "blur(40px) saturate(150%) brightness(1.2)",
-          WebkitBackdropFilter: "blur(24px) saturate(120%)",
-          border: `1px solid ${itemB.color}40`,
-          borderRadius: "20px",
-          padding: "30px 40px",
-          boxShadow: `0 25px 50px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)`,
-          opacity: opacityB,
-          transform: `translateY(${interpolate(opacityB, [0, 1], [30, 0])}px)`,
-          fontFamily: '"Geist", "Inter", system-ui, sans-serif',
-          minWidth: "320px",
-          flexShrink: 0
-        }}>
-          <p style={{ color: "rgba(255,255,255,0.5)", margin: 0, fontSize: "12px", letterSpacing: "3px", textTransform: "uppercase", fontWeight: 600 }}>{itemB.subtitle}</p>
-          <h2 style={{ color: "white", margin: "8px 0 20px 0", fontSize: "24px", fontWeight: "700", letterSpacing: "-0.5px" }}>{itemB.title}</h2>
-
-          {itemB.imageUrl && (
-            <div style={{ width: "100%", height: "140px", borderRadius: "12px", overflow: "hidden", marginBottom: "20px", border: `1px solid ${itemB.color}40`, position: "relative" }}>
-               <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, rgba(10,10,12,0.9), transparent)`, zIndex: 1 }} />
-               <Img src={itemB.imageUrl ? staticFile(itemB.imageUrl) : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            </div>
-          )}
-
-          <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
-            <span style={{ color: itemB.color, fontSize: "56px", fontWeight: "800", fontVariantNumeric: "tabular-nums", textShadow: `0 0 30px ${itemB.color}60`, lineHeight: 1 }}>
-              {Math.floor(displayValueB).toLocaleString()}
-            </span>
-            <span style={{ color: "rgba(255,255,255,0.7)", fontSize: "20px", fontWeight: "600" }}>{unit}</span>
-          </div>
-        </div>
-      </div>
-
+      {/* GLOBAL VIGNETTE & COLOR GRADING TO TIE IT ALL TOGETHER */}
+      <AbsoluteFill style={{
+        boxShadow: "inset 0 0 300px rgba(0,0,0,0.9)",
+        pointerEvents: "none",
+        zIndex: 20
+      }} />
     </AbsoluteFill>
-  );
-};
-
-// ============================================================================
-// 4. THE TEST WRAPPER 
-// ============================================================================
-
-export const Scene = () => {
-  return (
-    <Dynamic3DComparison 
-      unit="HP"
-      itemA={{
-        subtitle: "Challenger",
-        title: "BMW E30 M3",
-        value: 192,
-        color: "#ff1a40",
-        start: 15,
-        end: 150
-      }}
-      itemB={{
-        subtitle: "Competitor",
-        title: "MERCEDES 190E",
-        value: 232,
-        color: "#00e6b8",
-        start: 60,
-        end: 150
-      }}
-    />
   );
 };
