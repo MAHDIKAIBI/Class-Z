@@ -204,7 +204,7 @@ jobs:
           NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
         run: |
           python -m pip install requests selenium undetected-chromedriver
-          python -m pip install -U g4f curl_cffi aiohttp nest_asyncio duckduckgo-search
+          python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs
           
             # Export GITHUB_OUTPUT explicitly to xvfb-run just in case it strips it
             xvfb-run -a --server-args="-screen 0 1920x1080x24" env GITHUB_OUTPUT="$GITHUB_OUTPUT" python -u .github/scripts/orchestrator.py
@@ -338,7 +338,7 @@ jobs:
       - name: Install Python Dependencies
         run: |
           if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; fi
-          python -m pip install -U g4f curl_cffi aiohttp nest_asyncio duckduckgo-search
+          python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs
 
       - name: Cache HuggingFace Models
         uses: actions/cache@v4
@@ -448,7 +448,7 @@ jobs:
       - name: Install Python Dependencies
         run: |
           if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; fi
-          python -m pip install -U g4f curl_cffi aiohttp nest_asyncio duckduckgo-search
+          python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs
           
           python -m pip install -U seleniumbase python-dotenv requests
           python -m playwright install --with-deps chromium firefox
@@ -562,7 +562,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          python -m pip install nodriver seleniumbase requests g4f curl_cffi aiohttp nest_asyncio duckduckgo-search google-generativeai
+          python -m pip install nodriver seleniumbase requests g4f curl_cffi aiohttp nest_asyncio ddgs google-generativeai
 
       - name: Run Master Hunter (Google Images)
         env:
@@ -669,7 +669,7 @@ jobs:
       - name: Install Python Dependencies
         run: |
           if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
-          python -m pip install -U g4f curl_cffi aiohttp nest_asyncio duckduckgo-search duckduckgo-search
+          python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs ddgs
           
           python -m pip install -U seleniumbase python-dotenv requests
           python -m playwright install --with-deps chromium firefox
@@ -842,7 +842,7 @@ jobs:
       - name: Install Python Dependencies
         run: |
           if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; fi
-          python -m pip install -U g4f curl_cffi aiohttp nest_asyncio duckduckgo-search
+          python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs
           
           python -m pip install -U seleniumbase python-dotenv requests
           python -m playwright install --with-deps chromium firefox
