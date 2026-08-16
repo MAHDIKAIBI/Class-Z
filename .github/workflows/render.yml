@@ -716,14 +716,7 @@ jobs:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
         run: |
-          echo "[*] Waiting for overlay_hunter_job to finish (Fast-Track Sync)..."
-          while true; do
-            STATUS=$(gh api repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs --jq '.jobs[] | select(.name == "overlay_hunter_job") | .status' || echo "unknown")
-            if [ "$STATUS" == "completed" ]; then break; fi
-            if [ "$STATUS" == "unknown" ]; then echo "API error, retrying..."; fi
-            sleep 15
-          done
-          echo "[+] Fast-Track ready! Booting Overlay Worker..."
+          echo "[+] Fast-Track Sync Removed. Booting Overlay Worker immediately..."
           echo "Fetching google_image_candidates.json from Drive..."
           rm -f "public/channels/${{ inputs.channel_name }}/$VAULT/google_image_candidates.json"
           rclone copy --tpslimit 10 --retries 10 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "google_image_candidates.json" -v || true

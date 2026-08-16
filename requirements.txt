@@ -1,5 +1,6 @@
 google-genai
 faster-whisper
+ddgs
 librosa
 numpy
 requests
