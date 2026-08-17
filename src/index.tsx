@@ -21,6 +21,7 @@ import { MonolithEngine } from './components/MonolithEngine';
 import { DioramaCanvas } from './components/Diorama';
 import { GlobalFinisher } from './components/GlobalFinisher';
 import { CinematicChapterReveal } from './components/CinematicChapterReveal';
+import { MagnatesStage } from './components/MagnatesStage';
 import { ZAxisCrashTransition } from './components/transition1';
 import { SpatialWhipTransition } from './components/transition2';
 import { ThermalFlareTransition } from './components/transition3';
@@ -250,6 +251,8 @@ const SceneContent = ({ scene, index }: any) => {
                 }} />
             ) : (scene.scene_type === 'chapter_reveal') ? (
                 <CinematicChapterReveal chapterNumber={scene.chapter_payload?.chapterNumber || 1} subtitle={scene.chapter_payload?.subtitle || ""} bgImgUrl={scene.visual?.assets?.find((a:any) => a.role === 'bg_chapter')?.local_path || ""} leftAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'left_chapter')?.local_path || ""} rightAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'right_chapter')?.local_path || ""} />
+            ) : (scene.scene_type === 'magnates_2.5d' || scene.visual?.scene_type === 'magnates_2.5d') ? (
+                <MagnatesStage payload={scene.visual || {}} durationInFrames={Math.max(1, scene.visualDurFrames || 1)} />
             ) : (scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') ? (
                 <DynamicLiquidGrid bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''} assets={(scene.visual?.assets || scene.assets || []).filter((a: any) => a.layer !== 'background' && a.type !== 'video').map((a: any, idx: number) => ({url: a.local_path || a.downloaded_path || '', title: a.title || '', subtitle: a.subtitle || '', trigger_frame: a.trigger_start_ms ? Math.round(((a.trigger_start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps) : (a.trigger_frame ?? (idx === 0 ? 0 : 9999))}))} />
             ) : (
@@ -277,7 +280,7 @@ const SceneContent = ({ scene, index }: any) => {
                     <CinematicOverlay src={scene.overlay_image} durationInFrames={Math.max(1, scene.visualDurFrames - Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps))} />
                 </Sequence>
             )}
-            {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'monolith' && (!scene.diorama_payload || Object.keys(scene.diorama_payload).length === 0) && (!scene.monolith_payload || Object.keys(scene.monolith_payload).length === 0) && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (
+            {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'monolith' && scene.scene_type !== 'magnates_2.5d' && (!scene.diorama_payload || Object.keys(scene.diorama_payload).length === 0) && (!scene.monolith_payload || Object.keys(scene.monolith_payload).length === 0) && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (
                 <CaptionDirector scene={scene} />
             )}
         </AbsoluteFill>
