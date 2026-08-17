@@ -71,8 +71,8 @@ jobs:
           sudo snap remove firefox || true
           sudo add-apt-repository ppa:mozillateam/ppa -y
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
-          sudo apt-get update
-          sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y
+          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update
+          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y
 
 
 
