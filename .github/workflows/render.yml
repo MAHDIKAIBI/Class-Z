@@ -589,7 +589,7 @@ jobs:
           fi
 
   start_sam2_nodes:
-    needs: [creation_job]
+    needs: [creation_job, brain_prep_job, tts_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
     strategy:
@@ -630,7 +630,10 @@ jobs:
           wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
           sudo dpkg -i cloudflared-linux-amd64.deb
       - name: Install Dependencies
-        run: pip install fastapi uvicorn python-multipart pillow numpy torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && pip install git+https://github.com/facebookresearch/segment-anything-2.git
+        run: |
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install fastapi uvicorn python-multipart pillow numpy
+          pip install git+https://github.com/facebookresearch/segment-anything-2.git
       - name: Run Server and Tunnel
         run: |
           uvicorn sam2_server:app --host 0.0.0.0 --port 8000 &
@@ -646,7 +649,7 @@ jobs:
         run: sleep 1800
 
   download_matrix:
-    needs: [creation_job, brain_prep_job, tts_matrix, start_sam2_nodes]
+    needs: [creation_job, brain_prep_job, tts_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
     strategy:
