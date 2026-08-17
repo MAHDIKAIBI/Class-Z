@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Img, staticFile as remotionStaticFile } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Img, staticFile as remotionStaticFile, Sequence, Audio } from 'remotion';
 import { ProceduralBackground } from './ProceduralBackground';
 import { ThemePreset } from './ThemeRegistry';
 
@@ -23,6 +23,46 @@ const Tape = ({ style }: { style: React.CSSProperties }) => (
     ...style
   }} />
 );
+
+const RedStamp = ({ style }: { style: React.CSSProperties }) => (
+  <div style={{
+    position: 'absolute',
+    color: '#ff003c',
+    fontSize: '48px',
+    fontWeight: 900,
+    fontFamily: '"Courier New", monospace',
+    textTransform: 'uppercase',
+    border: '6px solid #ff003c',
+    padding: '10px 20px',
+    opacity: 0.9,
+    transform: 'rotate(-15deg)',
+    filter: 'url(#rough-edge)',
+    zIndex: 10,
+    ...style
+  }}>
+    CLASSIFIED
+  </div>
+);
+
+const Paperclip = ({ style }: { style: React.CSSProperties }) => (
+  <div style={{
+    position: 'absolute',
+    width: '30px',
+    height: '100px',
+    border: '6px solid silver',
+    borderRadius: '15px',
+    boxShadow: '2px 5px 10px rgba(0,0,0,0.5)',
+    zIndex: 10,
+    ...style
+  }} />
+);
+
+const RenderOverlay = ({ type, style }: { type: string, style?: React.CSSProperties }) => {
+  if (type === 'green_masking_tape') return <Tape style={style || {}} />;
+  if (type === 'classified_red_stamp') return <RedStamp style={style || {}} />;
+  if (type === 'paperclip') return <Paperclip style={style || {}} />;
+  return null;
+};
 
 export interface MagnatesStageProps {
   payload: any;
@@ -56,6 +96,8 @@ export const MagnatesStage: React.FC<MagnatesStageProps> = ({ payload, durationI
   const typoLayer = payload.layers?.find((l: any) => l.plane === 'typography');
   const propsLayer = payload.layers?.find((l: any) => l.plane === 'secondary_props');
   const particleLayer = payload.layers?.find((l: any) => l.plane === 'foreground_particles');
+  
+  const msToFrames = (ms: number) => Math.floor((ms / 1000) * fps);
 
   return (
     <AbsoluteFill style={{ backgroundColor: '#1a1a1a', overflow: 'hidden' }}>
@@ -130,44 +172,47 @@ export const MagnatesStage: React.FC<MagnatesStageProps> = ({ payload, durationI
           {/* PLANE 2: TYPOGRAPHY & GREEN TAPE (Z: -350px)                 */}
           {/* ------------------------------------------------------------ */}
           {typoLayer && (
-            <div style={{
-              position: 'absolute',
-              top: '15%',
-              left: '8%',
-              right: '8%',
-              transform: 'translateZ(-350px) scale(1.45)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              pointerEvents: 'none'
-            }}>
-              <Tape style={{ top: '-15px', transform: 'rotate(-5deg)' }} />
-              <h2 style={{
-                fontSize: '130px',
-                fontFamily: '"Impact", sans-serif',
-                color: '#f4f4f0',
-                letterSpacing: '8px',
-                textTransform: 'uppercase',
-                margin: 0,
-                padding: '20px 40px',
-                backgroundColor: 'rgba(0,0,0,0.85)',
-                boxShadow: '0 20px 50px rgba(0,0,0,0.9)'
-              }}>
-                {typoLayer.headline || ''}
-              </h2>
+            <Sequence from={msToFrames(typoLayer.entrance_ms || 0)} style={{ position: 'absolute', inset: 0 }}>
               <div style={{
-                fontSize: '48px',
-                fontFamily: '"Courier New", monospace',
-                fontWeight: 900,
-                color: '#00FF41',
-                backgroundColor: 'rgba(0,0,0,0.8)',
-                padding: '10px 20px',
-                marginTop: '15px'
+                position: 'absolute',
+                top: '15%',
+                left: '8%',
+                right: '8%',
+                transform: 'translateZ(-350px) scale(1.45)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                pointerEvents: 'none'
               }}>
-                {typoLayer.sub_headline || ''}
+                <Tape style={{ top: '-15px', transform: 'rotate(-5deg)' }} />
+                <h2 style={{
+                  fontSize: '130px',
+                  fontFamily: '"Impact", sans-serif',
+                  color: '#f4f4f0',
+                  letterSpacing: '8px',
+                  textTransform: 'uppercase',
+                  margin: 0,
+                  padding: '20px 40px',
+                  backgroundColor: 'rgba(0,0,0,0.85)',
+                  boxShadow: '0 20px 50px rgba(0,0,0,0.9)'
+                }}>
+                  {typoLayer.headline || ''}
+                </h2>
+                <div style={{
+                  fontSize: '48px',
+                  fontFamily: '"Courier New", monospace',
+                  fontWeight: 900,
+                  color: '#00FF41',
+                  backgroundColor: 'rgba(0,0,0,0.8)',
+                  padding: '10px 20px',
+                  marginTop: '15px'
+                }}>
+                  {typoLayer.sub_headline || ''}
+                </div>
               </div>
-            </div>
+              {typoLayer.local_sfx_path && <Audio src={staticFile(typoLayer.local_sfx_path)} volume={typoLayer.sfx_volume || 1.0} />}
+            </Sequence>
           )}
 
           {/* ------------------------------------------------------------ */}
@@ -177,21 +222,24 @@ export const MagnatesStage: React.FC<MagnatesStageProps> = ({ payload, durationI
             <div style={{ position: 'absolute', inset: 0, transform: 'translateZ(-50px)', transformStyle: 'preserve-3d' }}>
               {propsLayer.items.map((item: any, idx: number) => {
                 if (!item.local_path) return null;
-                const offsetX = idx === 0 ? -400 : 400;
-                const offsetY = idx === 0 ? 100 : -50;
-                const rot = idx === 0 ? -12 : 8;
-
+                
+                const pos = item.position || { x: 0, y: 0, z: -50, rotation: 0, scale: 1.0 };
+                const e_frame = msToFrames(item.entrance_ms || (idx * 300 + 400));
+                
                 return (
-                  <div key={idx} style={{
-                    position: 'absolute',
-                    left: '50%',
-                    top: '50%',
-                    transform: `translate3d(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px), 0px) scale(${propSpring}) rotate(${rot}deg)`,
-                    filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.8))'
-                  }}>
-                    <Tape style={{ top: '-10px', left: '40%', transform: `rotate(${rot * -2}deg)` }} />
-                    <Img src={staticFile(item.local_path)} style={{ maxWidth: '350px', maxHeight: '350px', objectFit: 'contain', filter: 'url(#dossier-paper)' }} />
-                  </div>
+                  <Sequence key={idx} from={e_frame} style={{ position: 'absolute', inset: 0 }}>
+                    <div style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: '50%',
+                      transform: `translate3d(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px), ${pos.z}px) scale(${pos.scale || 1.0}) rotate(${pos.rotation || 0}deg)`,
+                      filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.8))'
+                    }}>
+                      <RenderOverlay type={item.tactile_overlay} style={{ top: '-20px', left: '20%' }} />
+                      <Img src={staticFile(item.local_path)} style={{ maxWidth: '400px', maxHeight: '400px', objectFit: 'contain', filter: 'url(#dossier-paper)' }} />
+                    </div>
+                    {item.local_sfx_path && <Audio src={staticFile(item.local_sfx_path)} volume={item.sfx_volume || 0.8} />}
+                  </Sequence>
                 );
               })}
             </div>
@@ -201,30 +249,33 @@ export const MagnatesStage: React.FC<MagnatesStageProps> = ({ payload, durationI
           {/* PLANE 4: PRIMARY HERO PAPER CUTOUT (Z: +120px)              */}
           {/* ------------------------------------------------------------ */}
           {heroLayer?.local_cutout_path && (
-            <div style={{
-              position: 'absolute',
-              left: '50%',
-              top: '55%',
-              transform: `translate3d(-50%, -50%, 120px) scale(${heroScale}) rotate(${heroRot}deg)`,
-              transformStyle: 'preserve-3d',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-              <div style={{ position: 'relative' }}>
-                <Tape style={{ top: '20px', left: '-30px', transform: 'rotate(-25deg)' }} />
-                <Tape style={{ bottom: '40px', right: '-20px', transform: 'rotate(15deg)' }} />
-                <Img
-                  src={staticFile(heroLayer.local_cutout_path)}
-                  style={{
-                    maxHeight: '650px',
-                    maxWidth: '800px',
-                    objectFit: 'contain',
-                    filter: 'url(#dossier-paper) drop-shadow(0 40px 60px rgba(0,0,0,0.95))'
-                  }}
-                />
+            <Sequence from={msToFrames(heroLayer.entrance_ms || 0)} style={{ position: 'absolute', inset: 0 }}>
+              <div style={{
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: `translate3d(calc(-50% + ${heroLayer.position?.x || 0}px), calc(-50% + ${heroLayer.position?.y || 20}px), ${heroLayer.position?.z || 120}px) scale(${heroLayer.position?.scale || 1.15}) rotate(${heroLayer.position?.rotation || 0}deg)`,
+                transformStyle: 'preserve-3d',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <div style={{ position: 'relative' }}>
+                  <Tape style={{ top: '20px', left: '-30px', transform: 'rotate(-25deg)' }} />
+                  <Tape style={{ bottom: '40px', right: '-20px', transform: 'rotate(15deg)' }} />
+                  <Img
+                    src={staticFile(heroLayer.local_cutout_path)}
+                    style={{
+                      maxHeight: '750px',
+                      maxWidth: '900px',
+                      objectFit: 'contain',
+                      filter: 'url(#dossier-paper) drop-shadow(0 40px 60px rgba(0,0,0,0.95))'
+                    }}
+                  />
+                </div>
               </div>
-            </div>
+              {heroLayer.local_sfx_path && <Audio src={staticFile(heroLayer.local_sfx_path)} volume={heroLayer.sfx_volume || 1.0} />}
+            </Sequence>
           )}
 
           {/* ------------------------------------------------------------ */}
