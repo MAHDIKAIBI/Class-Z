@@ -592,8 +592,65 @@ jobs:
             rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s google_cookies.json "engine:Colab_AutoVideoCreator/google_cookies.json" -v || true
           fi
 
+  start_sam2_nodes:
+    needs: [creation_job]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y rclone jq
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          EOF
+      - name: Download Engine
+        run: rclone copy --tpslimit 10 "engine:Colab_AutoVideoCreator" . --include "sam2_server.py" --include "requirements.txt" --include "checkpoints/**"
+      - name: Install Cloudflared
+        run: |
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+      - name: Install Dependencies
+        run: pip install fastapi uvicorn python-multipart pillow numpy torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && pip install git+https://github.com/facebookresearch/segment-anything-2.git
+      - name: Run Server and Tunnel
+        run: |
+          uvicorn sam2_server:app --host 0.0.0.0 --port 8000 &
+          cloudflared tunnel --url http://localhost:8000 > cloudflared.log 2>&1 &
+          sleep 10
+          cat cloudflared.log | grep -o 'https://.*\.trycloudflare.com' | head -n 1 > sam2-url-${{ matrix.node }}.txt
+      - name: Upload URL Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sam2-url-${{ matrix.node }}
+          path: sam2-url-${{ matrix.node }}.txt
+      - name: Keep Server Alive
+        run: sleep 1800
+
   download_matrix:
-    needs: [creation_job, brain_prep_job, tts_matrix]
+    needs: [creation_job, brain_prep_job, tts_matrix, start_sam2_nodes]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
     strategy:
@@ -1068,9 +1125,22 @@ jobs:
 
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      - name: Install dependencies
+      - name: Install System Dependencies
         run: |
-          sudo apt-get update && sudo apt-get install rclone jq -y
+          sudo apt-get update || true
+          sudo apt-get install rclone jq -y
+
+      - name: Download SAM2 URLs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sam2-url-*
+          merge-multiple: true
+
+      - name: Set SAM2 URLS Env
+        run: |
+          URLS=$(cat sam2-url-*.txt | paste -sd "," -)
+          echo "SAM2_API_URLS=$URLS" >> $GITHUB_ENV
+          echo "Discovered SAM 2 Nodes: $URLS"
           
 
       - name: Configure rclone Silently
