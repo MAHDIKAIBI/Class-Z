@@ -202,6 +202,7 @@ jobs:
           CLOUD_TTS_PARALLEL: "1"
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
           python -m pip install requests selenium undetected-chromedriver
           python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs
