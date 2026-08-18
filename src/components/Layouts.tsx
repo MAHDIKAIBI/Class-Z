@@ -1334,11 +1334,11 @@ export const TextTitleScene: React.FC<{ scene: any, duration: number, isEven: bo
              textAlign: 'center',
              transform: `scale(${interpolate(progress, [0, 1], [1, 1.1])})`
           }}>
-             {words.map((word, wIdx) => {
+             {words.map((word: string, wIdx: number) => {
                 const chars = word.split('');
                 return (
                    <div key={wIdx} style={{ display: 'flex', overflow: 'hidden', padding: '20px' }}>
-                      {chars.map((char, cIdx) => {
+                      {chars.map((char: string, cIdx: number) => {
                          const delay = (wIdx * 10) + (cIdx * 2);
                          const charFrame = Math.max(0, activeFrame - delay);
                          const pop = spring({ frame: charFrame, fps, config: { damping: 14, stiffness: 60 } });
@@ -1822,7 +1822,7 @@ export const ParallaxCollageScene: React.FC<{ scene: any, duration: number, isEv
            {(atmos1 === 'Dust' || atmos2 === 'Dust') && <VolumetricDust />}
        </AbsoluteFill>
 
-       {mediaPaths.map((media, idx) => {
+       {mediaPaths.map((media: string, idx: number) => {
            if (idx > 3) return null;
            // Assign plane by idx. If exactly 3 assets, make sure we get BG, Hero, Fore.
            let plane = planes[idx]; 

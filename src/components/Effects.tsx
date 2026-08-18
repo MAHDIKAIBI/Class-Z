@@ -120,4 +120,4 @@ export const WindowLight = () => <LensDirector lighting="soft_glow" />;
 export const EdgeGlow = () => <LensDirector lighting="neon_rim" />;
 export const LightRays = () => <LensDirector lighting="volumetric_rays" />;
 export const GlassReflection = () => <ParticleSystem preset="glass" energy={5} />;
-export const DustBurst = () => <ParticleSystem preset="dust" energy={10} />;
+export const DustBurst = ({ triggerFrame }: { triggerFrame?: number }) => <ParticleSystem preset="dust" energy={10} />;

@@ -13,7 +13,7 @@ import { CinematicTextureWrapper } from './CinematicTextureWrapper';
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
-    const cleanPath = path.replace(/^\/?public\//, '');
+    let cleanPath = path.replace(/^\/?public\//, '');
     if (cleanPath.trim() === '' || cleanPath.endsWith('/')) return TRANSPARENT_PIXEL;
     try { cleanPath = decodeURIComponent(cleanPath); } catch(e) {}
     return remotionStaticFile(cleanPath);

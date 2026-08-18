@@ -47,7 +47,7 @@ const normalisedTimeline = (rawAny.timeline ?? []).map((s: any) => s).filter(Boo
 const transitionPool = ['ZAxisCrash', 'SpatialWhip', 'ThermalFlare', 'RackToBlack'];
 let activePool = [...transitionPool];
 
-const shuffle = (array, seedStr) => {
+const shuffle = (array: any[], seedStr: string) => {
     let currentIndex = array.length, randomIndex;
     let seedOffset = 0;
     while (currentIndex != 0) {
@@ -59,11 +59,11 @@ const shuffle = (array, seedStr) => {
     return array;
 };
 
-const videoSeed = masterJsonRaw?.channel || 'default_video';
+const videoSeed = (masterJsonRaw as any)?.channel || 'default_video';
 activePool = shuffle([...transitionPool], videoSeed);
 let transitionIndex = 0;
 
-normalisedTimeline.forEach((scene, i) => {
+normalisedTimeline.forEach((scene: any, i: number) => {
     const words = scene.words || [];
     const lastWord = words.length > 0 ? words[words.length - 1].word : '';
     const isEndOfPara = lastWord.endsWith('.') || lastWord.endsWith('?') || lastWord.endsWith('!');

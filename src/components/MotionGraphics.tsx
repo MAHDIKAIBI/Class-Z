@@ -10,11 +10,12 @@ import { GlassStatGrid } from './GlassStatGrid';
 // -----------------------------------------------------
 const NumberAnimator = ({ target, style, frame, fps, delay = 0 }: any) => {
     const activeFrame = Math.max(0, frame - delay);
+    const targetNum = Number(target) || 0;
     
     if (style === 'slot_machine') {
         const progress = spring({ frame: activeFrame, fps, config: { damping: 100, stiffness: 20 } });
-        const val = interpolate(progress, [0, 1], [0, target]);
-        const display = progress < 0.95 ? Math.floor(val + (Math.random() * 999)) : target;
+        const val = interpolate(progress, [0, 1], [0, targetNum]);
+        const display = progress < 0.95 ? Math.floor(val + (Math.random() * 999)) : targetNum;
         return <span>{display.toLocaleString()}</span>;
     } 
     
@@ -24,10 +25,10 @@ const NumberAnimator = ({ target, style, frame, fps, delay = 0 }: any) => {
             const gibberish = Array(target.toString().length).fill(0).map(() => Math.floor(Math.random() * 10)).join('');
             return <span>{gibberish}</span>;
         }
-        return <span>{target.toLocaleString()}</span>;
+        return <span>{targetNum.toLocaleString()}</span>;
     }
 
-    const val = Math.floor(interpolate(activeFrame, [0, 45], [0, target], { extrapolateRight: 'clamp' }));
+    const val = Math.floor(interpolate(activeFrame, [0, 45], [0, targetNum], { extrapolateRight: 'clamp' }));
     return <span>{val.toLocaleString()}</span>;
 };
 
@@ -187,14 +188,16 @@ const HolographicBlueprint = ({ dataPoints, frame, fps, color }: any) => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px' }}>
                 {dataPoints.map((dp: any, idx: number) => {
-                    const charsToShow = Math.floor(interpolate(frame - (idx * 10), [0, 20], [0, dp.value.length + dp.label.length], { extrapolateRight: 'clamp', extrapolateLeft: 'clamp' }));
-                    const fullText = `${dp.label}: ${dp.value}`;
+                    const labelStr = String(dp.label || '');
+                    const valStr = String(dp.value || '');
+                    const charsToShow = Math.floor(interpolate(frame - (idx * 10), [0, 20], [0, valStr.length + labelStr.length], { extrapolateRight: 'clamp', extrapolateLeft: 'clamp' }));
+                    const fullText = `${labelStr}: ${valStr}`;
                     const visibleText = fullText.substring(0, charsToShow);
                     return (
                         <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <span style={{ color: 'rgba(255,255,255,0.5)', fontFamily: '"Inter", sans-serif', fontSize: '16px', letterSpacing: '3px', textTransform: 'uppercase' }}>{dp.label}</span>
+                            <span style={{ color: 'rgba(255,255,255,0.5)', fontFamily: '"Inter", sans-serif', fontSize: '16px', letterSpacing: '3px', textTransform: 'uppercase' }}>{labelStr}</span>
                             <span style={{ color: '#FFF', fontFamily: '"JetBrains Mono", "Courier New", monospace', fontSize: '28px', fontWeight: 600, textShadow: `0 0 20px ${color}80` }}>
-                                {dp.value.substring(0, Math.floor(interpolate(frame - (idx*10), [0, 20], [0, dp.value.length], {extrapolateRight: 'clamp'})))}
+                                {valStr.substring(0, Math.floor(interpolate(frame - (idx*10), [0, 20], [0, valStr.length], {extrapolateRight: 'clamp'})))}
                                 {charsToShow < fullText.length && charsToShow > 0 && <span style={{ backgroundColor: color, color: '#000' }}>_</span>}
                             </span>
                         </div>

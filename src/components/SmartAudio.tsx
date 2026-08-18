@@ -1,27 +1,33 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Audio, useCurrentFrame, interpolate, staticFile } from 'remotion';
 
 interface Props {
     src: string;
     durationFrames: number;
+    baseVolume?: number;
+    playbackRate?: number;
 }
 
-export const SmartAudio: React.FC<Props> = ({ src, durationFrames }) => {
+export const SmartAudio: React.FC<Props> = ({ src, durationFrames, baseVolume = 0.35, playbackRate = 1.0 }) => {
     const frame = useCurrentFrame();
 
-    // 1. Trim to duration: The parent <Sequence> inherently trims the audio to durationFrames.
-    // 2. Fade in (2 frames), Fade out (4 frames)
+    // 1. Hollywood Fade-Out: We NEVER fade in, because we need the hard transient 
+    // punch of the sound effect (the 'slap'). We only fade out over the last 15 frames 
+    // so it smoothly exits before the scene cuts, avoiding harsh digital clicks.
     const volume = interpolate(
         frame,
-        [0, 2, durationFrames - 4, durationFrames],
-        [0, 1, 1, 0],
+        [durationFrames - 15, durationFrames],
+        [baseVolume, 0],
         { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
     );
 
-    // 3. Randomize start point slightly (0 to 15 frames) to reduce repetition
-    const startFrom = useMemo(() => {
-        return Math.floor(Math.random() * 15);
-    }, []);
-
-    return <Audio src={staticFile(src)} volume={volume} startFrom={startFrom} onError={(e) => console.log("Media playback error caught on Audio:", e)} />;
+    // 2. We remove the random startFrom. SFX needs to start exactly at 0s to hit the transient.
+    return (
+        <Audio 
+            src={staticFile(src)} 
+            volume={volume} 
+            playbackRate={playbackRate}
+            onError={(e) => console.log("Media playback error caught on Audio:", e)} 
+        />
+    );
 };

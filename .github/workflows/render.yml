@@ -71,8 +71,8 @@ jobs:
           sudo snap remove firefox || true
           sudo add-apt-repository ppa:mozillateam/ppa -y
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y
+          sudo apt-get update
+          sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y
 
 
 
@@ -271,8 +271,8 @@ jobs:
           # Remove broken Microsoft repos that cause apt-get update to fail on ubuntu-latest
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update -o Acquire::AllowInsecureRepositories=false || sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update --allow-unauthenticated || true
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install rclone jq sox libsox-fmt-all -y
+          sudo apt-get update -o Acquire::AllowInsecureRepositories=false || sudo apt-get update --allow-unauthenticated || true
+          sudo apt-get install rclone jq sox libsox-fmt-all -y
 
       - name: Configure rclone Silently
         env:
@@ -387,14 +387,15 @@ jobs:
           restore-keys: apt-brain-prep-${{ runner.os }}-
 
       - name: Install FFmpeg
-        run: sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update && sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install -y ffmpeg
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
           sudo add-apt-repository ppa:mozillateam/ppa -y
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw -y
+          sudo apt-get update
+          sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw -y
 
       - name: Configure rclone Silently
         env:
@@ -516,8 +517,8 @@ jobs:
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update || true
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install rclone jq xvfb -y
+          sudo apt-get update || true
+          sudo apt-get install rclone jq xvfb -y
 
       - name: Configure rclone Silently
         env:
@@ -603,7 +604,8 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install System Dependencies
-        run: sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update && sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install -y rclone jq
+        run: |
+          sudo apt-get update && sudo apt-get install -y rclone jq
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
@@ -665,13 +667,14 @@ jobs:
           python-version: '3.11'
 
       - name: Install FFmpeg
-        run: sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update && sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install -y ffmpeg
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update || true
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install rclone jq sox libsox-fmt-all xvfb -y
+          sudo apt-get update || true
+          sudo apt-get install rclone jq sox libsox-fmt-all xvfb -y
 
       - name: Configure rclone Silently
         env:
@@ -745,8 +748,21 @@ jobs:
           OLLAMA_HOST="127.0.0.1" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
 
+      - name: Fetch SAM2 URLs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Waiting for SAM 2 nodes to boot and publish URLs..."
+          mkdir -p sam2_urls
+          for i in {1..15}; do
+            gh run download ${{ github.run_id }} --pattern "sam2-url-*" --dir sam2_urls 2>/dev/null && break || sleep 10
+          done
+          URLS=$(find sam2_urls -type f -name "sam2-url-*.txt" -exec cat {} + | paste -sd "," - || echo "http://localhost:8000")
+          echo "SAM2_API_URLS=$URLS" >> $GITHUB_ENV
+
       - name: Run Download Worker
         env:
+          SAM2_API_URLS: ${{ env.SAM2_API_URLS }}
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
           DOWNLOAD_TOTAL_WORKERS: "17"
           CHANNEL_NAME: ${{ inputs.channel_name }}
@@ -824,14 +840,15 @@ jobs:
           python-version: '3.11'
 
       - name: Install FFmpeg
-        run: sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update && sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install -y ffmpeg
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
           sudo add-apt-repository ppa:mozillateam/ppa -y
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd -y
+          sudo apt-get update
+          sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd -y
 
       - name: Configure rclone Silently
         env:
@@ -979,7 +996,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install rclone
-        run: sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update && sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install rclone jq -y
+        run: |
+          sudo apt-get update && sudo apt-get install rclone jq -y
 
       - name: Configure rclone Silently
         env:
@@ -1123,11 +1141,12 @@ jobs:
           python-version: '3.11'
 
       - name: Install FFmpeg
-        run: sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update && sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install -y ffmpeg
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" update || true
-          sudo apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout="15" install rclone jq -y
+          sudo apt-get update || true
+          sudo apt-get install rclone jq -y
 
       - name: Download SAM2 URLs
         uses: actions/download-artifact@v4
