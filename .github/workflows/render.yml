@@ -666,7 +666,14 @@ jobs:
           name: sam2-url-${{ matrix.node }}
           path: sam2-url-${{ matrix.node }}.txt
       - name: Keep Server Alive
-        run: sleep 3600
+        run: |
+          for i in {1..360}; do
+            if rclone lsf "engine:Colab_AutoVideoCreator/sam2_shutdown_${{ github.run_id }}.txt" >/dev/null 2>&1; then
+              echo "Shutdown signal received."
+              break
+            fi
+            sleep 10
+          done
 
   download_matrix:
     needs: [creation_job, brain_prep_job, tts_matrix]
@@ -922,6 +929,11 @@ jobs:
           git config --global user.email "pipeline@github-actions.com"
           git config --global user.name "Pipeline Bot"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+
+      - name: Signal SAM 2 Nodes to Shutdown
+        run: |
+          echo "shutdown" > sam2_shutdown.txt
+          rclone copyto --update sam2_shutdown.txt "engine:Colab_AutoVideoCreator/sam2_shutdown_${{ github.run_id }}.txt" || true
 
       - name: Nuke Global Assets Residue
         run: |
@@ -1284,6 +1296,7 @@ jobs:
               rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
             done
             rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
+            rclone delete --drive-use-trash=false "engine:Colab_AutoVideoCreator/sam2_shutdown_${{ github.run_id }}.txt" || true
 
       - name: Sync Final Video to Google Drive
         run: |
@@ -1312,3 +1325,10 @@ jobs:
           
           echo "Running YouTube Uploader..."
           python youtube_uploader.py
+
+
+
+
+
+
+
