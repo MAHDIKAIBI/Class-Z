@@ -648,7 +648,7 @@ jobs:
           name: sam2-url-${{ matrix.node }}
           path: sam2-url-${{ matrix.node }}.txt
       - name: Keep Server Alive
-        run: sleep 1800
+        run: sleep 3600
 
   download_matrix:
     needs: [creation_job, brain_prep_job, tts_matrix]
