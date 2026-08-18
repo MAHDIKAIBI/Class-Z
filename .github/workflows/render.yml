@@ -71,6 +71,8 @@ jobs:
           sudo snap remove firefox || true
           sudo add-apt-repository ppa:mozillateam/ppa -y
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update
           sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y
 
@@ -271,6 +273,8 @@ jobs:
           # Remove broken Microsoft repos that cause apt-get update to fail on ubuntu-latest
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update -o Acquire::AllowInsecureRepositories=false || sudo apt-get update --allow-unauthenticated || true
           sudo apt-get install rclone jq sox libsox-fmt-all -y
 
@@ -388,12 +392,16 @@ jobs:
 
       - name: Install FFmpeg
         run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
           sudo add-apt-repository ppa:mozillateam/ppa -y
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update
           sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw -y
 
@@ -517,6 +525,8 @@ jobs:
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update || true
           sudo apt-get install rclone jq xvfb -y
 
@@ -605,6 +615,8 @@ jobs:
           python-version: '3.11'
       - name: Install System Dependencies
         run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update && sudo apt-get install -y rclone jq
       - name: Configure rclone Silently
         env:
@@ -668,11 +680,15 @@ jobs:
 
       - name: Install FFmpeg
         run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update || true
           sudo apt-get install rclone jq sox libsox-fmt-all xvfb -y
 
@@ -841,12 +857,16 @@ jobs:
 
       - name: Install FFmpeg
         run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
           sudo add-apt-repository ppa:mozillateam/ppa -y
           echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update
           sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd -y
 
@@ -997,6 +1017,8 @@ jobs:
 
       - name: Install rclone
         run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update && sudo apt-get install rclone jq -y
 
       - name: Configure rclone Silently
@@ -1142,9 +1164,13 @@ jobs:
 
       - name: Install FFmpeg
         run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Install System Dependencies
         run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           sudo apt-get update || true
           sudo apt-get install rclone jq -y
 
