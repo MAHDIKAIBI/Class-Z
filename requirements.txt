@@ -37,3 +37,6 @@ curl_cffi
 git+https://github.com/m-bain/whisperx.git
 seleniumbase
 python-dotenv
+
+rembg
+onnxruntime
