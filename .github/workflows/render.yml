@@ -132,18 +132,18 @@ jobs:
           
           # Check public/channels workspace first (modern RESUME path)
           if [ -n "$VAULT" ]; then
-            if rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
+            if rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
               echo "Found master_timeline.json in public/channels workspace."
               TIMELINE_JSON="master_timeline.json"
             # Fall back to legacy to upload path
-            elif rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
+            elif rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
               echo "Found master_timeline.json in to upload workspace."
               TIMELINE_JSON="master_timeline.json"
             fi
             
             # Probe for completed voiceover if timeline isn't found yet
             if [ -z "$TIMELINE_JSON" ]; then
-              if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 30s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT/voiceover.wav" >/dev/null 2>&1 || rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 30s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT/voiceover.wav" >/dev/null 2>&1; then
+              if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT/voiceover.wav" >/dev/null 2>&1 || rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:Colab_AutoVideoCreator/channels/$CHANNEL/to upload/$VAULT/voiceover.wav" >/dev/null 2>&1; then
                 echo "[+] Detected complete voiceover.wav on Drive! Bypassing 15 parallel TTS workers."
                 echo "skip_tts=true" >> $GITHUB_OUTPUT
               fi
@@ -178,7 +178,7 @@ jobs:
           
           # If not completely ready, check if we can at least skip Playwright
           if [ "$READY_TO_RENDER" != "true" ] && [ -n "$VAULT" ]; then
-             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/script.txt" >/dev/null 2>&1 || rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT/script.txt" >/dev/null 2>&1; then
+             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/script.txt" >/dev/null 2>&1 || rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT/script.txt" >/dev/null 2>&1; then
                  echo "Detected script.txt. ChatGPT phase is done. Bypassing Playwright profile."
                  echo "SKIP_PROFILE=true" >> $GITHUB_ENV
              fi
@@ -1325,6 +1325,7 @@ jobs:
           
           echo "Running YouTube Uploader..."
           python youtube_uploader.py
+
 
 
 
