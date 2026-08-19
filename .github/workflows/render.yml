@@ -774,7 +774,7 @@ jobs:
           sudo swapon /swapfile2 || true
           
           echo "[*] Installing Ollama directly into the worker..."
-          curl -fsSL https://ollama.com/install.sh | sh
+          for i in 1 2 3 4 5; do curl -fsSL https://ollama.com/install.sh | sh && break || { echo "Ollama install failed (attempt $i), retrying in 10s..."; sleep 10; }; done
           sudo systemctl stop ollama || true
           OLLAMA_HOST="127.0.0.1" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
