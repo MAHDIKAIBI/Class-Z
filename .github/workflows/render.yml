@@ -667,7 +667,7 @@ jobs:
           path: sam2-url-${{ matrix.node }}.txt
       - name: Keep Server Alive
         run: |
-          for i in {1..360}; do
+          for i in {1..2100}; do
             if rclone lsf "engine:Colab_AutoVideoCreator/sam2_shutdown_${{ github.run_id }}.txt" >/dev/null 2>&1; then
               echo "Shutdown signal received."
               break
