@@ -162,23 +162,28 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
   const camPanY = interpolate(frame, [0, durationInFrames], [10, -10], { extrapolateRight: "clamp" });
 
   const MAX_3D_HEIGHT = 24; 
-  const maxValue = Math.max(itemA.value, itemB.value);
-  const targetHeightA = (itemA.value / maxValue) * MAX_3D_HEIGHT;
-  const targetHeightB = (itemB.value / maxValue) * MAX_3D_HEIGHT;
+  // Safety: ensure both values are finite positive numbers before any math
+  const safeA = (typeof itemA.value === 'number' && isFinite(itemA.value) && itemA.value > 0) ? itemA.value : 1;
+  const safeB = (typeof itemB.value === 'number' && isFinite(itemB.value) && itemB.value > 0) ? itemB.value : 1;
+  const maxValue = Math.max(safeA, safeB, 1); // never 0
+  const targetHeightA = (safeA / maxValue) * MAX_3D_HEIGHT;
+  const targetHeightB = (safeB / maxValue) * MAX_3D_HEIGHT;
 
   // ================= ITEM A LOGIC =================
   const isActiveA = frame >= itemA.start && frame < itemA.end;
   const springA = spring({ frame: isActiveA ? frame - itemA.start : 0, fps, config: { damping: 16, stiffness: 100 } });
   const heightA = interpolate(springA, [0, 1], [0.1, targetHeightA]);
   const opacityA = isActiveA ? interpolate(springA, [0, 0.3], [0, 1]) : 0;
-  const displayValueA = interpolate(frame - itemA.start, [10, Math.max(11, (itemA.end - itemA.start) - 30)], [0, itemA.value], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+  const durationA = Math.max(2, (itemA.end - itemA.start) - 30);
+  const displayValueA = interpolate(frame - itemA.start, [10, Math.max(11, durationA)], [0, safeA], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
 
   // ================= ITEM B LOGIC =================
   const isActiveB = frame >= itemB.start && frame < itemB.end;
   const springB = spring({ frame: isActiveB ? frame - itemB.start : 0, fps, config: { damping: 16, stiffness: 100 } });
   const heightB = interpolate(springB, [0, 1], [0.1, targetHeightB]);
   const opacityB = isActiveB ? interpolate(springB, [0, 0.3], [0, 1]) : 0;
-  const displayValueB = interpolate(frame - itemB.start, [10, Math.max(11, (itemB.end - itemB.start) - 30)], [0, itemB.value], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+  const durationB = Math.max(2, (itemB.end - itemB.start) - 30);
+  const displayValueB = interpolate(frame - itemB.start, [10, Math.max(11, durationB)], [0, safeB], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
 
   return (
     <AbsoluteFill style={{ background: "transparent", justifyContent: "center", alignItems: "center", overflow: "hidden" }}>

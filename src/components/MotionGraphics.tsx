@@ -274,9 +274,48 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrame
   }
 
   if (type === 'dynamic3dcomparison' || type === 'dynamic_3d_comparison') {
-      // itemA and itemB carry their own start/end/title/subtitle/value/color
-      const patchedItemA = graphics.itemA ? { ...graphics.itemA, start: graphics.itemA.start ?? startFrame, end: graphics.itemA.end ?? durationInFrames } : { title: '', subtitle: '', value: 0, color: '#ff1a40', start: startFrame, end: durationInFrames };
-      const patchedItemB = graphics.itemB ? { ...graphics.itemB, start: graphics.itemB.start ?? (startFrame + 15), end: graphics.itemB.end ?? durationInFrames } : { title: '', subtitle: '', value: 0, color: '#00e6b8', start: startFrame + 15, end: durationInFrames };
+      // -----------------------------------------------------------------------
+      // ROBUST SCHEMA NORMALIZER
+      // The AI may produce several incompatible item shapes. We handle all of them:
+      //   Schema A (correct): { title, subtitle, value (number), color, start, end }
+      //   Schema B (AI v1):   { label, value (string like "675K MILES") }
+      //   Schema C (AI v2):   { name, stat (string like "ORIGINAL" / "800K") }
+      // We also guard against NaN / non-finite values that crash interpolate().
+      // -----------------------------------------------------------------------
+      const extractNumericValue = (raw: any): number => {
+          if (typeof raw === 'number' && isFinite(raw) && raw > 0) return raw;
+          if (typeof raw !== 'string') return 1;
+          // Remove commas, spaces, and trailing text — grab the first number-like token
+          const stripped = raw.replace(/,/g, '').replace(/k/gi, '000');
+          const match = stripped.match(/(\d+\.?\d*)/);
+          if (match) {
+              const n = parseFloat(match[1]);
+              if (isFinite(n) && n > 0) return n;
+          }
+          return 1; // non-parseable strings (e.g. "ORIGINAL") get value=1 so bars render
+      };
+
+      const normalizeItem = (raw: any, defaultColor: string, startOffset: number): any => {
+          if (!raw) return { title: '', subtitle: '', value: 1, color: defaultColor, start: startFrame + startOffset, end: durationInFrames };
+          // Determine the display title and subtitle from whichever fields exist
+          const title    = raw.title    ?? raw.label ?? raw.name   ?? '';
+          const subtitle = raw.subtitle ?? raw.stat  ?? raw.value  ?? '';
+          // Numeric value: prefer raw.value if numeric, otherwise parse stat or label
+          const numericValue = extractNumericValue(raw.value ?? raw.stat ?? raw.label ?? 1);
+          return {
+              title,
+              subtitle: typeof subtitle === 'string' ? subtitle : String(subtitle),
+              value:     numericValue,
+              color:     raw.color       ?? defaultColor,
+              imageUrl:  raw.imageUrl    ?? raw.local_path ?? undefined,
+              start:     raw.start       ?? startFrame + startOffset,
+              end:       raw.end         ?? durationInFrames,
+          };
+      };
+
+      const patchedItemA = normalizeItem(graphics.itemA, '#ff1a40', 0);
+      const patchedItemB = normalizeItem(graphics.itemB, '#00e6b8', 15);
+
       return (
           <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
               <Dynamic3DComparison 
