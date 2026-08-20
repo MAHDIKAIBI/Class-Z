@@ -1,5 +1,9 @@
 name: "Render a video & YouTube Upload"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
     inputs:
@@ -216,7 +220,7 @@ jobs:
             fi
             
             if [ -f "timeline.json" ]; then
-                TOTAL_FRAMES=$(jq '((.meta // .metadata // {}).total_duration_ms // 0) | if . > 0 then ((. / 1000) * 30 | round) + 60 else 0 end' timeline.json 2>/dev/null || echo "0")
+                TOTAL_FRAMES=$(jq '([(.meta // .metadata // {}).total_duration_ms // 0, ([.timeline[]? | (.timing.start_ms // 0) + (.timing.duration_ms // 0)] | max // 0)] | max) | if . > 0 then ((. / 1000) * 30 | round) + 60 else 0 end' timeline.json 2>/dev/null || echo "0")
             else
                 TOTAL_FRAMES="0"
             fi
