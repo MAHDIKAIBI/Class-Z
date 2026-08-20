@@ -130,9 +130,10 @@ export const MagnatesStage: React.FC<{ payload: any; durationInFrames: number }>
             }
 
             // HERO
-            if (evt.type === 'hero_reveal' && evt.local_path) {
+            if (evt.type === 'hero_reveal' && (evt.local_cutout_path || evt.local_path)) {
               const heroSpring = spring({ frame: relativeFrame, fps, config: { damping: 14, stiffness: 90 } });
               const yPos = interpolate(heroSpring, [0, 1], [200, 0]);
+              const assetSrc = evt.local_cutout_path || evt.local_path;
               return (
                 <Sequence key={`hero-${idx}`} from={startFrame} style={{ position: 'absolute', inset: 0 }}>
                   <div style={{
@@ -140,7 +141,64 @@ export const MagnatesStage: React.FC<{ payload: any; durationInFrames: number }>
                     transform: `translate3d(-50%, calc(-50% + ${yPos}px), -300px)`,
                     zIndex: 20
                   }}>
-                    <Img src={getAsset(evt.local_path)} style={{ maxHeight: '1100px', objectFit: 'contain', filter: 'drop-shadow(0 50px 80px rgba(0,0,0,0.9))' }} />
+                    <Img src={getAsset(assetSrc)} style={{ maxHeight: '1100px', objectFit: 'contain', filter: 'drop-shadow(0 50px 80px rgba(0,0,0,0.9))' }} />
+                  </div>
+                </Sequence>
+              );
+            }
+
+            // PROP SLAM (Supporting evidence slaps onto screen)
+            if (evt.type === 'prop_slam' && evt.local_path) {
+              const slamSpring = spring({ frame: relativeFrame, fps, config: { damping: 12, stiffness: 180 } });
+              const scale = interpolate(slamSpring, [0, 1], [4, 1]);
+              const opacity = interpolate(slamSpring, [0, 0.5, 1], [0, 1, 1]);
+              const rotation = interpolate(random(`rot-${idx}`), [0, 1], [-15, 15]);
+              const xOffset = interpolate(random(`x-${idx}`), [0, 1], [-300, 300]);
+              const yOffset = interpolate(random(`y-${idx}`), [0, 1], [-200, 200]);
+              
+              return (
+                <Sequence key={`prop-${idx}`} from={startFrame} style={{ position: 'absolute', inset: 0 }}>
+                  <div style={{
+                    position: 'absolute', left: '50%', top: '50%',
+                    transform: `translate3d(calc(-50% + ${xOffset}px), calc(-50% + ${yOffset}px), 200px) scale(${scale}) rotate(${rotation}deg)`,
+                    opacity,
+                    zIndex: 30 + idx
+                  }}>
+                    <Img src={getAsset(evt.local_path)} style={{ maxHeight: '600px', objectFit: 'contain', filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.8))' }} />
+                  </div>
+                </Sequence>
+              );
+            }
+
+            // DATA CARD (Glassmorphic stat card)
+            if (evt.type === 'data_card') {
+              const cardSpring = spring({ frame: relativeFrame, fps, config: { damping: 15, stiffness: 120 } });
+              const scale = interpolate(cardSpring, [0, 1], [0.5, 1]);
+              const opacity = interpolate(cardSpring, [0, 0.5, 1], [0, 1, 1]);
+              const yOffset = interpolate(cardSpring, [0, 1], [100, 0]);
+              
+              return (
+                <Sequence key={`data-${idx}`} from={startFrame} style={{ position: 'absolute', inset: 0 }}>
+                  <div style={{
+                    position: 'absolute', left: '50%', top: '50%',
+                    transform: `translate3d(-50%, calc(-50% + ${yOffset}px), 400px) scale(${scale})`,
+                    opacity,
+                    zIndex: 50 + idx
+                  }}>
+                    <div style={{
+                      padding: '40px 60px',
+                      background: 'rgba(20, 20, 20, 0.8)',
+                      border: `2px solid ${theme.accentColor}`,
+                      borderRadius: '20px',
+                      backdropFilter: 'blur(20px)',
+                      boxShadow: `0 30px 60px rgba(0,0,0,0.8), 0 0 40px ${theme.accentColor}40`,
+                      textAlign: 'center',
+                      minWidth: '600px'
+                    }}>
+                      {evt.headline && <h2 style={{ margin: '0 0 10px 0', fontSize: '100px', color: theme.accentColor, fontFamily: 'Courier New, monospace' }}>{evt.headline}</h2>}
+                      {evt.sub_headline && <p style={{ margin: 0, fontSize: '40px', color: '#FFF', fontFamily: theme.fontFamily, textTransform: 'uppercase', letterSpacing: '4px' }}>{evt.sub_headline}</p>}
+                      {evt.text && <p style={{ margin: 0, fontSize: '40px', color: '#FFF', fontFamily: theme.fontFamily, textTransform: 'uppercase', letterSpacing: '4px' }}>{evt.text}</p>}
+                    </div>
                   </div>
                 </Sequence>
               );
