@@ -1,8 +1,6 @@
 name: Scheduled Social Media Worker
 
 on:
-  schedule:
-    - cron: '0 */2 * * *' # Runs once every 2 hours
   workflow_dispatch: # Allows manual trigger
 
 jobs:
