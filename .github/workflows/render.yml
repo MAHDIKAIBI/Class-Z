@@ -924,7 +924,7 @@ jobs:
       - name: Download Scripts & Workspace from Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --retries 5 "engine:Colab_AutoVideoCreator" . --include "youtube_worker.py" --include "requirements.txt" --include "youtube_cookies.txt" --include "po_token.txt"
+          rclone copy --tpslimit 10 --retries 5 "engine:Colab_AutoVideoCreator" . --include "youtube_worker.py" --include "yt_downloader.py" --include "requirements.txt" --include "youtube_cookies.txt" --include "po_token.txt"
           
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
           rclone copy --tpslimit 10 --retries 5 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" || true
