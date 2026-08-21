@@ -859,11 +859,112 @@ jobs:
               --transfers 1 -v || true
           fi
 
+  youtube_download_job:
+    needs: [creation_job, brain_prep_job, tts_matrix]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js (For yt-dlp JS Runtime)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install FFmpeg
+        run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install System Dependencies
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list
+          sudo apt-get update || true
+          sudo apt-get install rclone jq xvfb -y
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Download Scripts & Workspace from Drive
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          rclone copy --tpslimit 10 --retries 5 "engine:Colab_AutoVideoCreator" . --include "youtube_worker.py" --include "requirements.txt" --include "youtube_cookies.txt" --include "po_token.txt"
+          
+          mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
+          rclone copy --tpslimit 10 --retries 5 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" || true
+
+      - name: Install Python Dependencies
+        run: |
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          python -m pip install -U yt-dlp requests python-dotenv
+
+      - name: Run YouTube Download Worker
+        env:
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+          YOUTUBE_PO_TOKEN: ${{ secrets.YOUTUBE_PO_TOKEN }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
+          CHANNEL_NAME: ${{ inputs.channel_name }}
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+        run: |
+          xvfb-run -a python -u youtube_worker.py
+
+      - name: Batch Upload YouTube Assets and Partial Timeline to Drive
+        if: always()
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          echo "Batch uploading downloaded YouTube assets..."
+          rclone copy --tpslimit 10 --retries 5 "public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
+            "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" -v || true
+            
+          if [ -f "partial_youtube.json" ]; then
+            rclone copy --tpslimit 10 --retries 5 "partial_youtube.json" \
+              "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" -v || true
+            echo "[+] Uploaded partial_youtube.json to Drive."
+          fi
+
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # PHASE 2d: brain_finish_job â€” Merge partials, overlay, audio master, git push
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   brain_finish_job:
-    needs: [creation_job, brain_prep_job, download_matrix]
+    needs: [creation_job, brain_prep_job, download_matrix, youtube_download_job]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY'
     runs-on: ubuntu-latest
     steps:
