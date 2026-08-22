@@ -1271,9 +1271,9 @@ jobs:
       - name: Render Video Chunk
         run: |
           npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --muted --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --concurrency=1 --timeout=300000 --crf=14 --pixel-format=yuv444p --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
-        - name: Upload Chunk to G Drive
-          run: |
-            rclone copy chunk_${{ matrix.chunk }}.mp4 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks" --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s
+      - name: Upload Chunk to G Drive
+        run: |
+          rclone copy chunk_${{ matrix.chunk }}.mp4 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks" --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s
 
   stitch_and_upload:
     needs: [creation_job, brain_finish_job, render_matrix]
