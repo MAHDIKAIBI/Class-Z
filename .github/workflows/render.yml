@@ -683,7 +683,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
     steps:
       - uses: actions/checkout@v4
 
@@ -796,8 +796,8 @@ jobs:
         env:
           SAM2_API_URLS: ${{ env.SAM2_API_URLS }}
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
-          DOWNLOAD_TOTAL_WORKERS: "15"
-          YOUTUBE_TOTAL_WORKERS: "3"
+          DOWNLOAD_TOTAL_WORKERS: "14"
+          YOUTUBE_TOTAL_WORKERS: "4"
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -814,8 +814,8 @@ jobs:
       - name: Run Overlay Worker
         env:
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
-          DOWNLOAD_TOTAL_WORKERS: "15"
-          YOUTUBE_TOTAL_WORKERS: "3"
+          DOWNLOAD_TOTAL_WORKERS: "14"
+          YOUTUBE_TOTAL_WORKERS: "4"
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -941,7 +941,7 @@ jobs:
       - name: Run YouTube Download Worker
         env:
           YOUTUBE_WORKER_ID: ${{ matrix.worker }}
-          YOUTUBE_TOTAL_WORKERS: 3
+          YOUTUBE_TOTAL_WORKERS: 4
           YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
           YOUTUBE_PO_TOKEN: ${{ secrets.YOUTUBE_PO_TOKEN }}
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
@@ -1079,8 +1079,8 @@ jobs:
         env:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
-          DOWNLOAD_TOTAL_WORKERS: "15"
-          YOUTUBE_TOTAL_WORKERS: "3"
+          DOWNLOAD_TOTAL_WORKERS: "14"
+          YOUTUBE_TOTAL_WORKERS: "4"
           GITHUB_RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
