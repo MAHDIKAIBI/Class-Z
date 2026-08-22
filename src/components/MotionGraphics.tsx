@@ -4,6 +4,7 @@ import { useCamera } from '../index';
 import { BiometricScanRing } from './BiometricScanRing';
 import { Dynamic3DComparison } from './Dynamic3DComparison';
 import { GlassStatGrid } from './GlassStatGrid';
+import { AnimatedNumber } from './AnimatedNumber';
 
 // -----------------------------------------------------
 // 1. DATA TICK ENGINE (Advanced Number Animators)
