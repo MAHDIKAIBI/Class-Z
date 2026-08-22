@@ -1366,10 +1366,10 @@ jobs:
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
             rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
-        - name: Download all chunks from G Drive
-          run: |
-            mkdir -p chunks
-            rclone copy "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks" chunks/ --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s
+      - name: Download all chunks from G Drive
+        run: |
+          mkdir -p chunks
+          rclone copy "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks" chunks/ --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s
 
       - name: Concatenate and Mix Audio
         run: |
