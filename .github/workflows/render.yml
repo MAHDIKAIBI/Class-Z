@@ -686,7 +686,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
     steps:
       - uses: actions/checkout@v4
 
@@ -799,7 +799,7 @@ jobs:
         env:
           SAM2_API_URLS: ${{ env.SAM2_API_URLS }}
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
-          DOWNLOAD_TOTAL_WORKERS: "17"
+          DOWNLOAD_TOTAL_WORKERS: "15"
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -816,7 +816,7 @@ jobs:
       - name: Run Overlay Worker
         env:
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
-          DOWNLOAD_TOTAL_WORKERS: "17"
+          DOWNLOAD_TOTAL_WORKERS: "15"
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -859,10 +859,14 @@ jobs:
               --transfers 1 -v || true
           fi
 
-  youtube_download_job:
+  youtube_download_matrix:
     needs: [creation_job, brain_prep_job, tts_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: [0, 1]
     steps:
       - uses: actions/checkout@v4
 
@@ -937,6 +941,8 @@ jobs:
 
       - name: Run YouTube Download Worker
         env:
+          YOUTUBE_WORKER_ID: ${{ matrix.worker }}
+          YOUTUBE_TOTAL_WORKERS: 2
           YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
           YOUTUBE_PO_TOKEN: ${{ secrets.YOUTUBE_PO_TOKEN }}
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
@@ -955,17 +961,17 @@ jobs:
           rclone copy --tpslimit 10 --retries 5 "public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
             "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" -v || true
             
-          if [ -f "partial_youtube.json" ]; then
-            rclone copy --tpslimit 10 --retries 5 "partial_youtube.json" \
+          if [ -f "partial_youtube_${{ matrix.worker }}.json" ]; then
+            rclone copy --tpslimit 10 --retries 5 "partial_youtube_${{ matrix.worker }}.json" \
               "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" -v || true
-            echo "[+] Uploaded partial_youtube.json to Drive."
+            echo "[+] Uploaded partial_youtube_${{ matrix.worker }}.json to Drive."
           fi
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # PHASE 2d: brain_finish_job â€” Merge partials, overlay, audio master, git push
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   brain_finish_job:
-    needs: [creation_job, brain_prep_job, download_matrix, youtube_download_job]
+    needs: [creation_job, brain_prep_job, download_matrix, youtube_download_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY'
     runs-on: ubuntu-latest
     steps:
@@ -1074,7 +1080,7 @@ jobs:
         env:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
-          DOWNLOAD_TOTAL_WORKERS: "17"
+          DOWNLOAD_TOTAL_WORKERS: "15"
           GITHUB_RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
