@@ -85,8 +85,8 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN_ENGINE }}
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -286,8 +286,8 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN_ENGINE }}
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -415,8 +415,8 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN_ENGINE }}
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -541,8 +541,8 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN_ENGINE }}
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -630,7 +630,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y rclone jq
       - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -713,8 +713,8 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN_ENGINE }}
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -892,8 +892,8 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN_ENGINE }}
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -924,7 +924,7 @@ jobs:
       - name: Download Scripts & Workspace from Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --retries 5 "engine:Colab_AutoVideoCreator" . --include "youtube_worker.py" --include "yt_downloader.py" --include "requirements.txt" --include "youtube_cookies.txt" --include "po_token.txt"
+          rclone copy --tpslimit 10 --retries 5 "engine:Colab_AutoVideoCreator" . --include "youtube_worker.py" --include "yt_downloader.py" --include "requirements.txt" --include "youtube_cookies.txt" --include "po_token.txt" --include "motionarray_downloader.py" --include "distributed_lock.py" --include "utils.py" --include "motionarray_cookies.json"
           
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
           rclone copy --tpslimit 10 --retries 5 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" || true
@@ -933,6 +933,7 @@ jobs:
         run: |
           if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
           python -m pip install -U yt-dlp requests python-dotenv
+            python -m playwright install --with-deps chromium
 
       - name: Run YouTube Download Worker
         env:
@@ -994,8 +995,8 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN_ENGINE }}
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -1151,8 +1152,8 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN_ENGINE }}
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -1270,13 +1271,9 @@ jobs:
       - name: Render Video Chunk
         run: |
           npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --muted --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --concurrency=1 --timeout=300000 --crf=14 --pixel-format=yuv444p --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
-
-      - name: Upload Chunk Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: chunk-${{ matrix.chunk }}
-          path: chunk_${{ matrix.chunk }}.mp4
-          retention-days: 1
+        - name: Upload Chunk to G Drive
+          run: |
+            rclone copy chunk_${{ matrix.chunk }}.mp4 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks" --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s
 
   stitch_and_upload:
     needs: [creation_job, brain_finish_job, render_matrix]
@@ -1319,8 +1316,8 @@ jobs:
 
       - name: Configure rclone Silently
         env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN_ENGINE }}
-          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN_ENGINE }}
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
         run: |
@@ -1369,11 +1366,10 @@ jobs:
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
             rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
-
-      - name: Download all chunks
-        uses: actions/download-artifact@v4
-        with:
-          path: chunks/
+        - name: Download all chunks from G Drive
+          run: |
+            mkdir -p chunks
+            rclone copy "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks" chunks/ --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s
 
       - name: Concatenate and Mix Audio
         run: |
