@@ -113,14 +113,14 @@ export const MagnatesStage: React.FC<{ payload: any; durationInFrames: number }>
               return (
                 <Sequence key={`typo-${idx}`} from={startFrame} style={{ position: 'absolute', inset: 0 }}>
                   <div style={{
-                    position: 'absolute', top: '25%', width: '100%', textAlign: 'center',
-                    transform: `translateZ(-500px) scale(${scale})`,
+                    position: 'absolute', left: '50%', top: '50%', width: '90%', textAlign: 'center',
+                    transform: `translate3d(-50%, -50%, -500px) scale(${scale})`,
                     zIndex: 10
                   }}>
                     <h1 style={{
                       fontFamily: theme.fontFamily, fontSize: '180px', color: '#FFF',
                       textTransform: 'uppercase', letterSpacing: '12px', margin: 0,
-                      textShadow: `0 20px 60px rgba(0,0,0,0.9)`
+                      textShadow: `0 30px 80px rgba(0,0,0,0.9), 0 0 40px rgba(255,255,255,0.2)`
                     }}>
                       {evt.text}
                     </h1>
@@ -149,12 +149,12 @@ export const MagnatesStage: React.FC<{ payload: any; durationInFrames: number }>
 
             // PROP SLAM (Supporting evidence slaps onto screen)
             if (evt.type === 'prop_slam' && evt.local_path) {
-              const slamSpring = spring({ frame: relativeFrame, fps, config: { damping: 12, stiffness: 180 } });
-              const scale = interpolate(slamSpring, [0, 1], [4, 1]);
+              const slamSpring = spring({ frame: relativeFrame, fps, config: { damping: 14, stiffness: 140 } });
+              const scale = interpolate(slamSpring, [0, 1], [2, 1]);
               const opacity = interpolate(slamSpring, [0, 0.5, 1], [0, 1, 1]);
-              const rotation = interpolate(random(`rot-${idx}`), [0, 1], [-15, 15]);
-              const xOffset = interpolate(random(`x-${idx}`), [0, 1], [-300, 300]);
-              const yOffset = interpolate(random(`y-${idx}`), [0, 1], [-200, 200]);
+              const rotation = interpolate(random(`rot-${idx}`), [0, 1], [-10, 10]);
+              const xOffset = interpolate(random(`x-${idx}`), [0, 1], [-400, 400]);
+              const yOffset = interpolate(random(`y-${idx}`), [0, 1], [-150, 150]);
               
               return (
                 <Sequence key={`prop-${idx}`} from={startFrame} style={{ position: 'absolute', inset: 0 }}>
@@ -164,7 +164,16 @@ export const MagnatesStage: React.FC<{ payload: any; durationInFrames: number }>
                     opacity,
                     zIndex: 30 + idx
                   }}>
-                    <Img src={getAsset(evt.local_path)} style={{ maxHeight: '600px', objectFit: 'contain', filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.8))' }} />
+                    <div style={{
+                      backgroundColor: '#FAFAFA',
+                      padding: '25px',
+                      paddingBottom: '80px',
+                      borderRadius: '8px',
+                      boxShadow: '0 50px 100px rgba(0,0,0,0.9), 0 0 60px rgba(255,255,255,0.1)',
+                      border: '1px solid rgba(255,255,255,0.4)',
+                    }}>
+                      <Img src={getAsset(evt.local_path)} style={{ maxHeight: '550px', maxWidth: '800px', objectFit: 'contain' }} />
+                    </div>
                   </div>
                 </Sequence>
               );
