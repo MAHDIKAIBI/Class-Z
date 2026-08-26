@@ -5,7 +5,12 @@ import { CinematicParticles } from './CinematicParticles';
 import { THEME_REGISTRY, ThemePreset } from './ThemeRegistry';
 import { SmartAudio } from './SmartAudio';
 
-const getAsset = (path: string) => path ? staticFile(path.replace(/^\/?public\//, '')) : '';
+const getAsset = (path: string) => {
+  if (!path) return '';
+  const cleaned = path.replace(/^\/?public\//, '');
+  const encoded = cleaned.split('/').map((seg) => encodeURIComponent(seg)).join('/');
+  return staticFile(encoded);
+};
 
 export const MagnatesStage: React.FC<{ payload: any; durationInFrames: number }> = ({ payload, durationInFrames }) => {
   const frame = useCurrentFrame();
