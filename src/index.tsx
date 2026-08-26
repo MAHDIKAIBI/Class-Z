@@ -4,8 +4,7 @@ const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
     const cleanPath = path.replace(/^\/?public\//, '');
     if (cleanPath.trim() === '' || cleanPath.endsWith('/')) return TRANSPARENT_PIXEL;
-    const encoded = cleanPath.split('/').map((seg) => encodeURIComponent(seg)).join('/');
-    return remotionStaticFile(encoded);
+    return remotionStaticFile(cleanPath);
 };
 import { noise2D } from '@remotion/noise';
 import React, { createContext, useContext, useMemo } from 'react';
