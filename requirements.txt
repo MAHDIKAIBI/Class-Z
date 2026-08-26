@@ -40,3 +40,4 @@ python-dotenv
 
 rembg
 onnxruntime
+beautifulsoup4
