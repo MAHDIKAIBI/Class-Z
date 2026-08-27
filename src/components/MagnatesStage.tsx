@@ -4,10 +4,16 @@ import { ProceduralBackground } from './ProceduralBackground';
 import { CinematicParticles } from './CinematicParticles';
 import { THEME_REGISTRY, ThemePreset } from './ThemeRegistry';
 import { SmartAudio } from './SmartAudio';
+import { MagnatesStage_TwoPart } from './MagnatesStage_TwoPart';
 
 const getAsset = (path: string) => path ? staticFile(path.replace(/^\/?public\//, '')) : '';
 
 export const MagnatesStage: React.FC<{ payload: any; durationInFrames: number }> = ({ payload, durationInFrames }) => {
+  // Route two_part_whip to its dedicated renderer
+  if ((payload || {}).scene_type === 'two_part_whip') {
+    return <MagnatesStage_TwoPart payload={payload} durationInFrames={durationInFrames} />;
+  }
+
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 

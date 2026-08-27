@@ -6,28 +6,39 @@ interface Props {
     durationFrames: number;
     baseVolume?: number;
     playbackRate?: number;
+    fadeInFrames?: number; // optional: ramp up from 0 → baseVolume over N frames
 }
 
-export const SmartAudio: React.FC<Props> = ({ src, durationFrames, baseVolume = 0.35, playbackRate = 1.0 }) => {
+export const SmartAudio: React.FC<Props> = ({
+    src,
+    durationFrames,
+    baseVolume = 0.35,
+    playbackRate = 1.0,
+    fadeInFrames = 0,
+}) => {
     const frame = useCurrentFrame();
 
-    // 1. Hollywood Fade-Out: We NEVER fade in, because we need the hard transient 
-    // punch of the sound effect (the 'slap'). We only fade out over the last 15 frames 
-    // so it smoothly exits before the scene cuts, avoiding harsh digital clicks.
-    const volume = interpolate(
-        frame,
-        [durationFrames - 15, durationFrames],
-        [baseVolume, 0],
-        { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-    );
+    const volume = fadeInFrames > 0
+        ? interpolate(
+            frame,
+            [0, fadeInFrames, durationFrames - 15, durationFrames],
+            [0, baseVolume, baseVolume, 0],
+            { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+          )
+        : interpolate(
+            frame,
+            [durationFrames - 15, durationFrames],
+            [baseVolume, 0],
+            { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+          );
 
-    // 2. We remove the random startFrom. SFX needs to start exactly at 0s to hit the transient.
     return (
-        <Audio 
-            src={staticFile(src)} 
-            volume={volume} 
+        <Audio
+            src={staticFile(src)}
+            volume={volume}
             playbackRate={playbackRate}
-            onError={(e) => console.log("Media playback error caught on Audio:", e)} 
+            onError={(e) => console.log('Media playback error caught on Audio:', e)}
         />
     );
 };
+
