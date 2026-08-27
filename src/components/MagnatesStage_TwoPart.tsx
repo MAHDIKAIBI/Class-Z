@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import {
   AbsoluteFill, useCurrentFrame, useVideoConfig,
-  interpolate, spring, Img, staticFile, Sequence, Audio, Easing
+  interpolate, spring, Img, staticFile, Sequence, Audio, Easing, Video
 } from 'remotion';
 import { THEME_REGISTRY, ThemePreset } from './ThemeRegistry';
 
@@ -55,25 +55,37 @@ const EnvelopedSFX: React.FC<{
 };
 
 // ─────────────────────────────────────────────────────────────
-// Rain Particle — one falling out-of-focus prop
+// Rain Particle — Procedural depth-layered blur (Foreground, Midground, Background)
 // ─────────────────────────────────────────────────────────────
 const RainParticle: React.FC<{
-  src: string; seed: number; durationFrames: number;
-}> = ({ src, seed, durationFrames }) => {
+  src: string; seed: number; durationFrames: number; fps: number;
+}> = ({ src, seed, durationFrames, fps }) => {
   const frame = useCurrentFrame();
   const rng = (offset: number) => ((Math.sin(seed * 127.1 + offset * 311.7) * 43758.5453) % 1 + 1) % 1;
 
-  const isClose   = rng(0) > 0.65;
-  const xPos      = interpolate(rng(1), [0, 1], [-800, 800]);
+  // 3 depth layers
+  const layerRand = rng(0);
+  let layer = 'mid'; // 50% chance
+  if (layerRand < 0.25) layer = 'back';
+  else if (layerRand > 0.75) layer = 'front';
+
+  const blur = layer === 'front' ? 12 : layer === 'back' ? 5 : 0;
+  const scale = layer === 'front' ? 0.35 : layer === 'back' ? 0.08 : 0.15;
+  const speed = layer === 'front' ? interpolate(rng(3), [0, 1], [1.2, 1.8])
+              : layer === 'back' ? interpolate(rng(3), [0, 1], [0.2, 0.4])
+              : interpolate(rng(3), [0, 1], [0.5, 0.9]);
+              
   const startFrac = rng(2);
-  const speed     = interpolate(rng(3), [0, 1], [0.3, 0.9]);
-  const yStart    = -600;
-  const yEnd      = 1200;
-  const yPos      = yStart + ((frame / durationFrames + startFrac) % 1) * (yEnd - yStart) * speed;
-  const blur      = isClose ? 4 : 15;
-  const scale     = isClose ? 0.18 : 0.08;
-  const opacity   = interpolate(rng(4), [0, 1], [0.35, 0.75]);
-  const rotation  = frame * interpolate(rng(5), [0, 1], [-0.3, 0.3]);
+  const xPos = interpolate(rng(1), [0, 1], [-900, 900]);
+  
+  const yStart = -600;
+  const yEnd = 1200;
+  // Loop properly based on fps/duration
+  const cycle = ((frame / fps) * speed + startFrac) % 1;
+  const yPos = yStart + cycle * (yEnd - yStart);
+
+  const opacity = layer === 'front' ? 0.4 : layer === 'back' ? 0.7 : 0.9;
+  const rotation = frame * interpolate(rng(5), [0, 1], [-0.5, 0.5]);
 
   if (!src) return null;
   return (
@@ -81,12 +93,12 @@ const RainParticle: React.FC<{
       position: 'absolute',
       left: `calc(50% + ${xPos}px)`,
       top: yPos,
-      transform: `translate(-50%, 0) scale(${scale}) rotate(${rotation}deg)`,
+      transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotation}deg)`,
       filter: `blur(${blur}px)`,
       opacity,
-      pointerEvents: 'none',
+      zIndex: layer === 'front' ? 30 : layer === 'back' ? 5 : 15,
     }}>
-      <Img src={getAsset(src)} style={{ width: 400, height: 400, objectFit: 'contain' }} />
+      <Img src={getAsset(src)} style={{ width: 100, height: 100, objectFit: 'contain' }} />
     </div>
   );
 };
@@ -138,6 +150,7 @@ export const MagnatesStage_TwoPart: React.FC<{
   const tr      = payload.transition  || {};
 
   const bgVibe      = p1.background?.vibe        || 'dark_smoke';
+  const bgPath      = p1.background?.local_path  || null;
   const gridColor   = GRID_COLOR_MAP[p2.background?.grid_color || 'neon_green'] || '#00FF88';
   const rain        = p1.raining_particles        || {};
   const hero        = p1.hero                     || {};
@@ -208,19 +221,23 @@ export const MagnatesStage_TwoPart: React.FC<{
       {/* ── PART 1: Environment (always visible until whip) ─── */}
       {!whipDone && (
         <AbsoluteFill style={{ filter: `blur(${whipBlur}px)`, transform: `translateX(${whipX}px)` }}>
-          {/* Dark gradient BG */}
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: bgVibe === 'sparks_fire'
-              ? 'radial-gradient(ellipse at 50% 60%, #3a0800 0%, #080000 70%)'
-              : bgVibe === 'cyber_matrix'
-              ? 'radial-gradient(ellipse at 50% 50%, #001a00 0%, #000800 70%)'
-              : 'radial-gradient(ellipse at 50% 60%, #0a0a0f 0%, #020202 80%)',
-          }} />
+          {/* Dynamic Video BG or Fallback Gradient */}
+          {bgPath ? (
+            <Video src={getAsset(bgPath)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} loop muted />
+          ) : (
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: bgVibe === 'sparks_fire'
+                ? 'radial-gradient(ellipse at 50% 60%, #3a0800 0%, #080000 70%)'
+                : bgVibe === 'cyber_matrix'
+                ? 'radial-gradient(ellipse at 50% 50%, #001a00 0%, #000800 70%)'
+                : 'radial-gradient(ellipse at 50% 60%, #0a0a0f 0%, #020202 80%)',
+            }} />
+          )}
 
-          {/* Raining particles — always from frame 0 */}
-          {rain.local_path && Array.from({ length: RAIN_COUNT }).map((_, i) => (
-            <RainParticle key={i} src={rain.local_path} seed={i * 37 + 11} durationFrames={durationInFrames} />
+          {/* Raining particles — procedural depth parallax */}
+          {rain.local_path && Array.from({ length: 45 }).map((_, i) => (
+            <RainParticle key={i} src={rain.local_path} seed={i * 37 + 11} durationFrames={durationInFrames} fps={fps} />
           ))}
 
           {/* Hero — triggered on trigger_word */}
@@ -237,9 +254,9 @@ export const MagnatesStage_TwoPart: React.FC<{
             </div>
           )}
 
-          {/* Orbit helpers — triggered on trigger_word, staggered */}
+          {/* Orbit helpers — triggered on trigger_word, staggered by index */}
           {orbit.local_path && orbitPositions.map((pos, idx) => {
-            const orbitItemFrame = orbitFrame + idx * Math.round(fps * 0.15);
+            const orbitItemFrame = orbitFrame + Math.round(fps * 0.15 * idx);
             if (frame < orbitItemFrame) return null;
             const oRel   = Math.max(0, frame - orbitItemFrame);
             const oSprg  = spring({ frame: oRel, fps, config: { damping: 13, stiffness: 160 } });
