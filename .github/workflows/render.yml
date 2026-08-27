@@ -575,17 +575,17 @@ jobs:
         run: |
           for _retry in 1 2 3 4 5; do python -m pip install nodriver seleniumbase requests g4f curl_cffi aiohttp nest_asyncio ddgs google-generativeai && break || { echo "Command failed, retrying..."; sleep 15; }; done
 
-      - $n$a$m$e$:$ $R$u$n$ $M$a$s$t$e$r$ $H$u$n$t$e$r$ $($G$o$o$g$l$e$ $I$m$a$g$e$s$)$
-$ $ $ $ $ $ $ $ $e$n$v$:$
-$ $ $ $ $ $ $ $ $ $ $C$H$A$N$N$E$L$_$N$A$M$E$:$ $$${${$ $i$n$p$u$t$s$.$c$h$a$n$n$e$l$_$n$a$m$e$ $}$}$
-$ $ $ $ $ $ $ $ $ $ $V$A$U$L$T$_$N$A$M$E$:$ $$${${$ $n$e$e$d$s$.$c$r$e$a$t$i$o$n$_$j$o$b$.$o$u$t$p$u$t$s$.$v$a$u$l$t$_$n$a$m$e$ $}$}$
-$ $ $ $ $ $ $ $ $ $ $G$I$T$H$U$B$_$R$U$N$_$I$D$:$ $$${${$ $g$i$t$h$u$b$.$r$u$n$_$i$d$ $}$}$
-$ $ $ $ $ $ $ $ $ $ $G$H$_$T$O$K$E$N$:$ $$${${$ $g$i$t$h$u$b$.$t$o$k$e$n$ $}$}$
-$ $ $ $ $ $ $ $ $ $ $N$V$I$D$I$A$_$A$P$I$_$K$E$Y$:$ $$${${$ $s$e$c$r$e$t$s$.$N$V$I$D$I$A$_$A$P$I$_$K$E$Y$ $}$}$
-$ $ $ $ $ $ $ $ $ $ $N$V$I$D$I$A$_$A$P$I$_$K$E$Y$_$2$:$ $$${${$ $s$e$c$r$e$t$s$.$N$V$I$D$I$A$_$A$P$I$_$K$E$Y$_$2$ $}$}$
-$ $ $ $ $ $ $ $ $ $ $G$E$M$I$N$I$_$A$P$I$_$K$E$Y$S$:$ $$${${$ $s$e$c$r$e$t$s$.$G$E$M$I$N$I$_$A$P$I$_$K$E$Y$S$ $}$}$
-$ $ $ $ $ $ $ $ $ $ $G$E$M$I$N$I$_$A$P$I$_$K$E$Y$:$ $$${${$ $s$e$c$r$e$t$s$.$G$E$M$I$N$I$_$A$P$I$_$K$E$Y$ $}$}$
-$        run: |
+      - name: Run Master Hunter (Google Images)
+        env:
+          CHANNEL_NAME: ${{ inputs.channel_name }}
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GH_TOKEN: ${{ github.token }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
           xvfb-run -a python -u overlay_hunter.py
 
       - name: Upload Candidates Map to Drive
