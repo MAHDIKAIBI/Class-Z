@@ -456,7 +456,10 @@ jobs:
           python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs faster-whisper whisperx
           
           python -m pip install -U seleniumbase python-dotenv requests
-          python -m playwright install --with-deps chromium firefox
+          # Robust Playwright Install
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
+          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium firefox && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
 
 
       - name: Run The_Brain PREP phase (audio + timeline, no clip downloads)
@@ -758,7 +761,10 @@ jobs:
           python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs faster-whisper whisperx ddgs
           
           python -m pip install -U seleniumbase python-dotenv requests
-          python -m playwright install --with-deps chromium firefox
+          # Robust Playwright Install
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
+          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium firefox && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
 
       - name: Setup Local Ollama Brain & 4GB Swap Space
         run: |
@@ -934,7 +940,10 @@ jobs:
         run: |
           if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
           python -m pip install -U yt-dlp requests python-dotenv
-            python -m playwright install --with-deps chromium
+            # Robust Playwright Install
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
+          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
 
       - name: Run YouTube Download Worker
         env:
@@ -1072,7 +1081,10 @@ jobs:
           python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs faster-whisper whisperx
           
           python -m pip install -U seleniumbase python-dotenv requests
-          python -m playwright install --with-deps chromium firefox
+          # Robust Playwright Install
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
+          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium firefox && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
 
       - name: Merge Partial Timelines
         if: needs.creation_job.outputs.skip_downloads != 'true'
@@ -1427,7 +1439,10 @@ jobs:
           echo "Installing Google API requirements..."
           python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib tweepy requests playwright
           python -m pip install -U seleniumbase python-dotenv requests
-          python -m playwright install chromium
+          # Robust Playwright Install
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
+          for _retry in 1 2 3 4 5; do python -m playwright install chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
           
           echo "Running YouTube Uploader..."
           python youtube_uploader.py
