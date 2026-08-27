@@ -390,7 +390,7 @@ jobs:
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -691,7 +691,7 @@ jobs:
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
       - name: Install System Dependencies
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
@@ -882,7 +882,7 @@ jobs:
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
 
       - name: Install System Dependencies
         run: |
@@ -984,7 +984,7 @@ jobs:
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
       - name: Install System Dependencies
         run: |
           sudo snap remove firefox || true
@@ -1154,7 +1154,7 @@ jobs:
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          sudo apt-get update && sudo apt-get install rclone jq -y
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install rclone jq -y && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
 
       - name: Configure rclone Silently
         env:
@@ -1298,14 +1298,13 @@ jobs:
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
       - name: Install System Dependencies
         run: |
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
           echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          sudo apt-get update || true
-          sudo apt-get install rclone jq -y
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install rclone jq -y && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
 
       - name: Download SAM2 URLs
         uses: actions/download-artifact@v4
