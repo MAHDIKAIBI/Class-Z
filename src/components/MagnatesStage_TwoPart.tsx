@@ -205,9 +205,9 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
 
           {bgPath1 ? (
             isVideo(bgPath1) ? (
-              <Video src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} loop muted />
+              <Video src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8, filter: 'blur(15px)', transform: 'scale(1.1)' }} loop muted />
             ) : (
-              <Img src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
+              <Img src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8, filter: 'blur(15px)', transform: 'scale(1.1)' }} />
             )
           ) : (
             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, #1a1a24 0%, #020202 100%)' }} />
@@ -270,9 +270,9 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
 
           {bgPath2 && (
             isVideo(bgPath2) ? (
-              <Video src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25 }} loop muted />
+              <Video src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25, filter: 'blur(15px)', transform: 'scale(1.1)' }} loop muted />
             ) : (
-              <Img src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25 }} />
+              <Img src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25, filter: 'blur(15px)', transform: 'scale(1.1)' }} />
             )
           )}
           <GridBackground color={gridColor} />
