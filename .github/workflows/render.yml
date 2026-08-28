@@ -811,7 +811,7 @@ jobs:
           for i in {1..5}; do ollama pull deepseek-r1:8b && break || sleep 5; done
             echo "[*] Pulling qwen2.5vl for vision processing..."
             for i in {1..5}; do ollama pull qwen2.5vl && break || sleep 5; done
-          xvfb-run -a python -u download_worker.py
+          for r in {1..3}; do xvfb-run -a python -u download_worker.py && break || { echo "Crash (Attempt $r), retrying..."; sleep 5; }; done || true
           echo "[*] Removing deepseek-r1:8b to free SSD space..."
           ollama rm deepseek-r1:8b || true
             echo "[*] Removing qwen2.5vl to free SSD space..."
@@ -835,7 +835,7 @@ jobs:
           rclone copy --tpslimit 10 --retries 10 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "google_image_candidates.json" -v || true
           echo "[*] Pulling qwen2.5vl for vision processing..."
           for i in {1..5}; do ollama pull qwen2.5vl && break || sleep 5; done
-          xvfb-run -a python -u overlay_worker.py
+          for r in {1..3}; do xvfb-run -a python -u overlay_worker.py && break || { echo "Crash (Attempt $r), retrying..."; sleep 5; }; done || true
           echo "[*] Removing qwen2.5vl to free SSD space..."
           ollama rm qwen2.5vl || true
 
@@ -959,7 +959,7 @@ jobs:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
         run: |
-          xvfb-run -a python -u youtube_worker.py
+          for r in {1..3}; do xvfb-run -a python -u youtube_worker.py && break || { echo "Crash (Attempt $r), retrying..."; sleep 5; }; done || true
 
       - name: Batch Upload YouTube Assets and Partial Timeline to Drive
         if: always()
