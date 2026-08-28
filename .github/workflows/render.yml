@@ -240,8 +240,8 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           for _retry in 1 2 3 4 5; do python -m pip install -U huggingface_hub && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          hf auth login --token $HF_TOKEN
-          hf download Qwen/Qwen3-TTS-12Hz-1.7B-Base
+          if [ -n "" ]; then huggingface-cli login --token "" || true; else echo "No HF_TOKEN provided, proceeding without auth..."; fi$HF_TOKEN
+          huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-Base
 
       # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
       # finishes, because The_Brain.py needs Ollama for footage/image search queries.
