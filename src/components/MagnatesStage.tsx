@@ -147,7 +147,7 @@ export const MagnatesStage: React.FC<{ payload: any; durationInFrames: number }>
                     transform: `translate3d(-50%, calc(-50% + ${yPos}px), -300px)`,
                     zIndex: 20
                   }}>
-                    <Img src={getAsset(assetSrc)} style={{ maxHeight: '1100px', objectFit: 'contain', filter: 'drop-shadow(0 50px 80px rgba(0,0,0,0.9))' }} />
+                    {assetSrc && <Img src={getAsset(assetSrc)} style={{ maxHeight: '1100px', objectFit: 'contain', filter: 'drop-shadow(0 50px 80px rgba(0,0,0,0.9))' }} />}
                   </div>
                 </Sequence>
               );
@@ -178,7 +178,7 @@ export const MagnatesStage: React.FC<{ payload: any; durationInFrames: number }>
                       boxShadow: '0 50px 100px rgba(0,0,0,0.9), 0 0 60px rgba(255,255,255,0.1)',
                       border: '1px solid rgba(255,255,255,0.4)',
                     }}>
-                      <Img src={getAsset(evt.local_path)} style={{ maxHeight: '550px', maxWidth: '800px', objectFit: 'contain' }} />
+                      {evt.local_path && <Img src={getAsset(evt.local_path)} style={{ maxHeight: '550px', maxWidth: '800px', objectFit: 'contain' }} />}
                     </div>
                   </div>
                 </Sequence>
@@ -254,7 +254,7 @@ export const MagnatesStage: React.FC<{ payload: any; durationInFrames: number }>
                         backgroundColor: '#fff', padding: '10px',
                         boxShadow: '0 20px 40px rgba(0,0,0,0.6)'
                       }}>
-                        <Img src={getAsset(evt.local_path)} style={{ maxHeight: '350px', objectFit: 'cover' }} />
+                        {evt.local_path && <Img src={getAsset(evt.local_path)} style={{ maxHeight: '350px', objectFit: 'cover' }} />}
                       </div>
                     </div>
                   </Sequence>

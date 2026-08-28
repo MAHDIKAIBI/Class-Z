@@ -260,7 +260,7 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
                     zIndex: 10,
                     transformStyle: 'preserve-3d',
                   }}>
-                    <Img src={getAsset(orb.local_path || '')} style={{ width: 350, height: 350, objectFit: 'contain' }} />
+                    {orb.local_path && <Img src={getAsset(orb.local_path)} style={{ width: 350, height: 350, objectFit: 'contain' }} />}
                   </div>
                 </React.Fragment>
               );
