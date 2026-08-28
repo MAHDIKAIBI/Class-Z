@@ -52,7 +52,7 @@ const RainParticle: React.FC<{
   if (layerRand < 0.3) layer = 'back';
   else if (layerRand > 0.7) layer = 'front';
 
-  const blur = layer === 'front' ? 18 : layer === 'back' ? 8 : 2;
+  const blur = layer === 'front' ? 24 : layer === 'back' ? 12 : 5;
   const scale = layer === 'front' ? interpolate(rng(1), [0, 1], [0.6, 0.9])
               : layer === 'back'  ? interpolate(rng(1), [0, 1], [0.1, 0.15])
               :                     interpolate(rng(1), [0, 1], [0.2, 0.35]);
