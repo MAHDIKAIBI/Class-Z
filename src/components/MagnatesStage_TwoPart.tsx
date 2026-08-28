@@ -129,6 +129,8 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
   const bgPath2   = p2.background?.local_path || bgPath1;
   const gridColor = GRID_COLOR_MAP[p2.background?.grid_color || 'gold'] || '#FFD700';
 
+  const isVideo = (path: string) => path?.toLowerCase().endsWith('.mp4') || path?.toLowerCase().endsWith('.webm');
+
   const rain     = p1.raining_particles || {};
   const hero     = p1.hero || {};
   const orbits   = Array.isArray(p1.orbit_helpers) ? p1.orbit_helpers : (p1.orbit_helpers ? [p1.orbit_helpers] : []);
@@ -202,7 +204,11 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
         <AbsoluteFill style={{ filter: `blur(${whipBlur}px)`, transform: `translateX(${whipX}px)`, perspective: '1200px' }}>
 
           {bgPath1 ? (
-            <Video src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} loop muted />
+            isVideo(bgPath1) ? (
+              <Video src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} loop muted />
+            ) : (
+              <Img src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
+            )
           ) : (
             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, #1a1a24 0%, #020202 100%)' }} />
           )}
@@ -263,7 +269,11 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
         <AbsoluteFill style={{ perspective: '1500px' }}>
 
           {bgPath2 && (
-            <Video src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25 }} loop muted />
+            isVideo(bgPath2) ? (
+              <Video src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25 }} loop muted />
+            ) : (
+              <Img src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25 }} />
+            )
           )}
           <GridBackground color={gridColor} />
 
