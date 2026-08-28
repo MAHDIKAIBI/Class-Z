@@ -239,7 +239,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          for _retry in 1 2 3 4 5; do python -m pip install -U huggingface_hub && break || { echo "Command failed, retrying..."; sleep 15; }; done
+          for _retry in 1 2 3 4 5; do python -m pip install "huggingface_hub<1.0" && break || { echo "Command failed, retrying..."; sleep 15; }; done
           if [ -n "$HF_TOKEN" ]; then huggingface-cli login --token "$HF_TOKEN" || true; else echo "No HF_TOKEN provided..."; fi
           huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-Base
 
