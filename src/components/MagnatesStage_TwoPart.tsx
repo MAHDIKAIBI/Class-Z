@@ -219,29 +219,52 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
           ))}
 
           {orbits.map((orb: any, idx: number) => {
-            const orbStart = msTof(orb.trigger_start_ms || 2000 + idx * 200);
-            if (frame < orbStart) return null;
-            const oRel  = frame - orbStart;
-            const oSprg = spring({ frame: oRel, fps, config: { damping: 10, stiffness: 140 } });
-            const oScale = interpolate(oSprg, [0, 1], [0, (orbitPos[idx] || orbitPos[0]).s]);
-            const oBlur  = interpolate(oSprg, [0, 0.5, 1], [40, 15, 0]);
-            const pos    = orbitPos[idx] || orbitPos[0];
-            return (
-              <React.Fragment key={`orb-${idx}`}>
-                <EnvelopedSFX src={orb.local_sfx_path} startFrame={orbStart} peakVolume={0.6} />
-                <div style={{
-                  position: 'absolute',
-                  left: `calc(50% + ${pos.x}px)`,
-                  top: `calc(50% + ${pos.y}px)`,
-                  transform: `translate(-50%, -50%) translateZ(${pos.z}px) scale(${oScale})`,
-                  filter: `blur(${oBlur}px) drop-shadow(0 20px 30px rgba(0,0,0,0.8))`,
-                  zIndex: 10,
-                }}>
-                  <Img src={getAsset(orb.local_path || '')} style={{ width: 300, height: 300, objectFit: 'contain' }} />
-                </div>
-              </React.Fragment>
-            );
-          })}
+              const orbStart = msTof(orb.trigger_start_ms || 2000 + idx * 200);
+              if (frame < orbStart) return null;
+              const oRel  = frame - orbStart;
+              
+              // Smoother, slightly heavier entrance spring for a premium feel
+              const oSprg = spring({ frame: oRel, fps, config: { damping: 12, stiffness: 110 } });
+              const pos   = orbitPos[idx % orbitPos.length] || orbitPos[0];
+              const oScale = interpolate(oSprg, [0, 1], [0, pos.s]);
+              
+              // Extended blur curve for a cinematic "rack focus" reveal
+              const oBlur  = interpolate(oSprg, [0, 0.7, 1], [50, 10, 0]);
+              
+              // Continuous organic anti-gravity floating
+              const floatY = Math.sin((frame + idx * 45) * 0.015) * 25;
+              const floatX = Math.sin((frame + idx * 30) * 0.01) * 15;
+              const floatRot = Math.cos((frame + idx * 60) * 0.012) * 12;
+
+              return (
+                <React.Fragment key={`orb-${idx}`}>
+                  <EnvelopedSFX src={orb.local_sfx_path} startFrame={orbStart} peakVolume={0.5} />
+                  <div style={{
+                    position: 'absolute',
+                    left: `calc(50% + ${pos.x}px)`,
+                    top: `calc(50% + ${pos.y}px)`,
+                    transform: `
+                      translate(-50%, -50%) 
+                      translateZ(${pos.z}px) 
+                      scale(${oScale}) 
+                      translate3d(${floatX}px, ${floatY}px, 0) 
+                      rotate(${floatRot}deg)
+                    `,
+                    filter: `
+                      blur(${oBlur}px)
+                      brightness(1.15)
+                      contrast(1.2)
+                      drop-shadow(0px 40px 50px rgba(0,0,0,0.95))
+                      drop-shadow(0px 10px 20px rgba(0,0,0,0.7))
+                    `,
+                    zIndex: 10,
+                    transformStyle: 'preserve-3d',
+                  }}>
+                    <Img src={getAsset(orb.local_path || '')} style={{ width: 350, height: 350, objectFit: 'contain' }} />
+                  </div>
+                </React.Fragment>
+              );
+            })}
 
           {hero.local_path && frame >= heroFrame && (
             <div style={{
