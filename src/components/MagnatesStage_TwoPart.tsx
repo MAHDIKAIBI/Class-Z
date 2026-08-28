@@ -283,6 +283,15 @@ export const MagnatesStage_TwoPart: React.FC<{
       {/* ── PART 2: Grid + Subject + Typewriter (post-whip) ── */}
       {whipDone && (
         <AbsoluteFill>
+          {/* Part 2 bg video behind grid for cinematic depth */}
+          {bgPath && (
+            <Video
+              src={getAsset(bgPath)}
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.18 }}
+              loop
+              muted
+            />
+          )}
           <GridBackground color={gridColor} />
 
           {/* Vignette */}
