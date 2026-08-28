@@ -133,7 +133,8 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
 
   const rain     = p1.raining_particles || {};
   const hero     = p1.hero || {};
-  const orbits   = Array.isArray(p1.orbit_helpers) ? p1.orbit_helpers : (p1.orbit_helpers ? [p1.orbit_helpers] : []);
+  const orbitsRaw = Array.isArray(p1.orbit_helpers) ? p1.orbit_helpers : (p1.orbit_helpers ? [p1.orbit_helpers] : []);
+    const orbits = orbitsRaw.flatMap((orb: any) => Array.from({ length: orb.count || 4 }).map(() => orb));
   const subject  = p2.subject || {};
   const typography = p2.typography || {};
 
