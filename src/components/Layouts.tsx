@@ -1,4 +1,4 @@
-import { AbsoluteFill, useCurrentFrame, staticFile as remotionStaticFile, Img as RemotionImg, Video, interpolate, spring, useVideoConfig, Audio, Sequence } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, staticFile as remotionStaticFile, Img as RemotionImg, OffthreadVideo, interpolate, spring, useVideoConfig, Audio, Sequence } from 'remotion';
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
@@ -21,7 +21,7 @@ export const SmartMedia: React.FC<{ src: string, style?: any, className?: string
   // don't freeze on their last frame if shorter than the scene window.
   const endAtProp = isVideo && durationFrames ? { endAt: durationFrames } : {};
   const media = isVideo 
-    ? <Video src={src} style={style} className={className} muted {...endAtProp} {...props} onError={(e) => console.log("Media playback error caught on Video:", e)} /> 
+    ? <OffthreadVideo src={src} style={style} className={className} muted {...endAtProp} {...props} onError={(e) => console.log("Media playback error caught on Video:", e)} /> 
     : <RemotionImg src={src} style={style} className={className} {...props} />;
     
   if (durationFrames) {
@@ -43,7 +43,7 @@ export const KenBurnsMedia: React.FC<{ src: string, type: 'video' | 'image', dur
   const endAtFrame = startFromFrame + duration;
 
   const media = type === 'video' 
-    ? <Video src={src} style={finalStyle} startFrom={startFromFrame} endAt={endAtFrame} muted onError={(e) => console.log("Media playback error caught on Video:", e)} />
+    ? <OffthreadVideo src={src} style={finalStyle} startFrom={startFromFrame} endAt={endAtFrame} muted onError={(e) => console.log("Media playback error caught on Video:", e)} />
     : <SmartMedia src={src} style={finalStyle} />;
 
   // Seed with explicit sceneId if available, fallback to the file path
@@ -232,7 +232,7 @@ export const MapScene: React.FC<{ scene: any, duration: number, isEven: boolean 
 
         {/* Animated Map Route */}
         <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center' }}>
-          <svg width="1920" height="1080" viewBox="0 0 1920 1080" style={{ position: 'absolute' }}>
+          <svg width="2560" height="1333" viewBox="0 0 2560 1333" style={{ position: 'absolute' }}>
             <path 
               d={`M ${coords.o[0]} ${coords.o[1]} Q ${coords.ctrl[0]} ${coords.ctrl[1]} ${coords.d[0]} ${coords.d[1]}`} 
               fill="transparent" 
@@ -378,7 +378,7 @@ export const FullscreenScene: React.FC<{ scene: any, duration: number, isEven: b
           filter: lut.css + (isVideo ? '' : ' blur(1px)')
         }}>
           {isVideo ? (
-            <Video src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted onError={(e) => console.log("Media playback error caught on Video:", e)} />
+            <OffthreadVideo src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted onError={(e) => console.log("Media playback error caught on Video:", e)} />
           ) : (
             <SmartMedia durationFrames={duration} sceneId={src} src={src} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           )}
@@ -390,7 +390,7 @@ export const FullscreenScene: React.FC<{ scene: any, duration: number, isEven: b
       {lighting === 'Window Light' && <WindowLight />}
       {lighting === 'Edge Glow' && <EdgeGlow />}
       {lighting === 'Light Sweep' && (
-        <AbsoluteFill style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)', transform: `translateX(${interpolate(progress, [0, 1], [-1920, 1920])}px)` }} />
+        <AbsoluteFill style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)', transform: `translateX(${interpolate(progress, [0, 1], [-2560, 2560])}px)` }} />
       )}
 
       {/* Atmosphere Effects */}
@@ -794,7 +794,7 @@ export const HeroCompositionScene: React.FC<{ scene: any, duration: number, isEv
                    filter: `blur(${heroBlur}px)`
                 }}>
                    <SmartMedia durationFrames={duration} sceneId={heroPath} src={heroPath} style={{ 
-                      maxHeight: hLayout.align === 'flex-end' ? '1080px' : '900px', 
+                      maxHeight: hLayout.align === 'flex-end' ? '1333px' : '1100px', 
                       maxWidth: hLayout.align === 'flex-end' ? '1200px' : '1000px', 
                       objectFit: 'contain',
                       filter: 'drop-shadow(0 50px 80px rgba(0,0,0,0.95))'

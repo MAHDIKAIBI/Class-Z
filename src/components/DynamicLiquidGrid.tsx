@@ -5,7 +5,7 @@ import {
   spring, 
   interpolate, 
   Img, 
-  Video,
+  OffthreadVideo,
   staticFile as remotionStaticFile
 } from "remotion";
 import React from "react";
@@ -79,7 +79,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
           {/* BACKGROUND LAYER (Clean, hardware-accelerated, no animating filters) */}
           <AbsoluteFill style={{ transform: "scale(1.1) translateZ(0)", zIndex: 0 }}>
             {bgIsVideo ? (
-              <Video src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => console.log("Media playback error caught on Video:", e)} />
+              <OffthreadVideo src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => console.log("Media playback error caught on Video:", e)} />
             ) : (
               <>
                 {bgVideoUrl ? <Img src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", backgroundColor: "#0a0a0a" }} />}

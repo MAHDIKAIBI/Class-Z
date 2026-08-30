@@ -239,14 +239,14 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
           {leftAssetUrl && (
             <div style={{ 
               position: "absolute", 
-              transform: `translateX(${interpolate(flankSpring, [0, 1], [-900, -550])}px) translateY(${Math.sin(frame / 20) * 30}px) scale(${perpetualScale})`, 
+              transform: `translateX(${interpolate(flankSpring, [0, 1], [-1300, -750])}px) translateY(${Math.sin(frame / 20) * 30}px) scale(${perpetualScale})`, 
               zIndex: 1, 
               opacity: interpolate(flankSpring, [0, 0.5], [0, 0.75]),
               mixBlendMode: "overlay"
             }}>
               <Img src={leftAssetUrl ? staticFile(leftAssetUrl) : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"} 
                 style={{ 
-                  width: "750px", 
+                  width: "1000px", 
                   height: "auto", 
                   WebkitMaskImage: "radial-gradient(circle at center, black 10%, transparent 65%)",
                   filter: "grayscale(100%) sepia(80%) hue-rotate(320deg) contrast(150%) brightness(0.8)" 
@@ -257,14 +257,14 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
           {rightAssetUrl && (
             <div style={{ 
               position: "absolute", 
-              transform: `translateX(${interpolate(flankSpring, [0, 1], [900, 550])}px) translateY(${Math.cos(frame / 25) * 30}px) scale(${perpetualScale})`, 
+              transform: `translateX(${interpolate(flankSpring, [0, 1], [1300, 750])}px) translateY(${Math.cos(frame / 25) * 30}px) scale(${perpetualScale})`, 
               zIndex: 1, 
               opacity: interpolate(flankSpring, [0, 0.5], [0, 0.75]),
               mixBlendMode: "overlay"
             }}>
               <Img src={rightAssetUrl ? staticFile(rightAssetUrl) : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"} 
                 style={{ 
-                  width: "750px", 
+                  width: "1000px", 
                   height: "auto", 
                   WebkitMaskImage: "radial-gradient(circle at center, black 10%, transparent 65%)",
                   filter: "grayscale(100%) sepia(80%) hue-rotate(320deg) contrast(150%) brightness(0.8)" 
@@ -323,7 +323,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
             transform: `translateY(${interpolate(frame, [60, 90], [30, 0], { easing: Easing.out(Easing.cubic), extrapolateRight: "clamp" })}px)`,
             zIndex: 10,
             textAlign: "center",
-            maxWidth: "1200px"
+            maxWidth: "1600px"
           }}>
             <h2 style={{
               color: "rgba(255,255,255,0.9)",

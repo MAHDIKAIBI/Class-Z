@@ -126,10 +126,10 @@ const DynamicElement = ({ src, duration, motion, continuousMotion, delay, treatm
   const springProgress = spring({ frame: activeFrame, fps, config: { damping: 14, stiffness: 80, mass: 1.5 } });
 
   let enterX = 0, enterY = 0, enterScale = 1;
-  if (motion?.enter === 'left') enterX = interpolate(springProgress, [0, 1], [-1920, 0]);
-  if (motion?.enter === 'right') enterX = interpolate(springProgress, [0, 1], [1920, 0]);
-  if (motion?.enter === 'bottom') enterY = interpolate(springProgress, [0, 1], [1080, 0]);
-  if (motion?.enter === 'top') enterY = interpolate(springProgress, [0, 1], [-1080, 0]);
+  if (motion?.enter === 'left') enterX = interpolate(springProgress, [0, 1], [-2560, 0]);
+  if (motion?.enter === 'right') enterX = interpolate(springProgress, [0, 1], [2560, 0]);
+  if (motion?.enter === 'bottom') enterY = interpolate(springProgress, [0, 1], [1333, 0]);
+  if (motion?.enter === 'top') enterY = interpolate(springProgress, [0, 1], [-1333, 0]);
   if (motion?.enter === 'pop' || (!motion?.enter)) enterScale = interpolate(springProgress, [0, 1], [0, 1]);
 
   let driftX = continuousMotion?.type === 'drift_left' ? -activeFrame * (continuousMotion?.speed === 'slow' ? 0.5 : 2) : 0;
@@ -422,7 +422,7 @@ const RemotionRoot = () => {
     : 0;
   const totalDurationMs = Math.max(metaDurationMs, lastSceneEndMs, 10000);
   const totalFrames = Math.max(1, Math.round((totalDurationMs / 1000) * 30)) + 60;
-  return <Composition id="AutomatedDocumentary" component={AutomatedDocumentary} durationInFrames={totalFrames} fps={30} width={1920} height={1080} />;
+  return <Composition id="AutomatedDocumentary" component={AutomatedDocumentary} durationInFrames={totalFrames} fps={30} width={2560} height={1333} />;
 };
 
 registerRoot(RemotionRoot);

@@ -5,7 +5,7 @@ import {
   spring, 
   interpolate, 
   Easing, 
-  Video, 
+  OffthreadVideo, 
   Img, 
   staticFile as remotionStaticFile 
 } from "remotion";
@@ -105,7 +105,7 @@ export const DioramaCanvas: React.FC<{ payload: DioramaPayload }> = ({ payload }
             transformOrigin: "center"
           }}>
             {payload.bgVideoSrc && (
-              <Video 
+              <OffthreadVideo 
                 src={payload.bgVideoSrc.startsWith('http') ? payload.bgVideoSrc : staticFile(payload.bgVideoSrc)} 
                 style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.3, filter: "grayscale(80%) contrast(120%)" }} 
                 muted 

@@ -6,7 +6,7 @@ import {
   spring, 
   interpolate, 
   Img, staticFile as remotionStaticFile,
-  Video
+  OffthreadVideo
 } from "remotion";
 import React from "react";
 import { CinematicTextureWrapper } from './CinematicTextureWrapper';
@@ -59,7 +59,7 @@ export const MonolithEngine: React.FC<{ payload: MonolithPayload }> = ({ payload
       backgroundLayer={
         <AbsoluteFill style={{ zIndex: 0, opacity: payload.bgVideoSrc ? 0.4 : 0.15, transform: cameraTransform }}>
           {payload.bgVideoSrc ? (
-              <Video 
+              <OffthreadVideo 
                   src={payload.bgVideoSrc ? staticFile(payload.bgVideoSrc) : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"} 
                   style={{ width: "100%", height: "100%", objectFit: "cover" }} 
                   muted 

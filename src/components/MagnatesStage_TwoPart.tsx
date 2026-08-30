@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Img, staticFile, Sequence, Easing, random, Video } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Img, staticFile, Sequence, Easing, random, OffthreadVideo } from 'remotion';
 
 
 import { Audio } from 'remotion';
@@ -204,7 +204,7 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
         }}>
           {bgPath1 ? (
             isVideo(bgPath1) ? (
-              <Video src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8, filter: 'blur(10px)', transform: 'scale(1.1)' }} loop muted />
+              <OffthreadVideo src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8, filter: 'blur(10px)', transform: 'scale(1.1)' }} loop muted />
             ) : (
               <Img src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8, filter: 'blur(10px)', transform: 'scale(1.1)' }} />
             )
@@ -302,7 +302,7 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
           }}>
             {bgPath2 && (
               isVideo(bgPath2) ? (
-                <Video src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7, filter: 'blur(8px)', transform: 'scale(1.5) translateZ(-500px)' }} loop muted />
+                <OffthreadVideo src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7, filter: 'blur(8px)', transform: 'scale(1.5) translateZ(-500px)' }} loop muted />
               ) : (
                 <Img src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7, filter: 'blur(8px)', transform: 'scale(1.5) translateZ(-500px)' }} />
               )

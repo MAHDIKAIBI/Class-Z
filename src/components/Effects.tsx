@@ -14,21 +14,21 @@ const ParticleSystem = ({ preset, energy }: { preset: string, energy: number }) 
                 const driftX = Math.sin(frame * 0.02 + i) * 30 + (i * 120);
 
                 if (preset === 'ash') {
-                    return <div key={i} style={{ position: 'absolute', width: '4px', height: '4px', backgroundColor: '#333', top: `${1080 - driftY}px`, left: `${driftX}px`, filter: 'blur(1px)' }} />;
+                    return <div key={i} style={{ position: 'absolute', width: '4px', height: '4px', backgroundColor: '#333', top: `${1333 - driftY}px`, left: `${driftX}px`, filter: 'blur(1px)' }} />;
                 }
                 if (preset === 'money') {
-                    return <div key={i} style={{ position: 'absolute', width: '30px', height: '15px', backgroundColor: '#2E8B57', border: '1px solid #00FF00', top: `${1080 - driftY}px`, left: `${driftX}px`, transform: `rotate(${frame + i * 20}deg)`, opacity: 0.8 }} />;
+                    return <div key={i} style={{ position: 'absolute', width: '30px', height: '15px', backgroundColor: '#2E8B57', border: '1px solid #00FF00', top: `${1333 - driftY}px`, left: `${driftX}px`, transform: `rotate(${frame + i * 20}deg)`, opacity: 0.8 }} />;
                 }
                 if (preset === 'digital_rain') {
                     const y = (frame * (5 + i%5) + i * 50) % 1100;
-                    return <div key={i} style={{ position: 'absolute', width: '2px', height: '20px', backgroundColor: '#0F0', top: `${y}px`, left: `${(i * 40) % 1920}px`, opacity: 0.5 }} />;
+                    return <div key={i} style={{ position: 'absolute', width: '2px', height: '20px', backgroundColor: '#0F0', top: `${y}px`, left: `${(i * 40) % 2560}px`, opacity: 0.5 }} />;
                 }
                 if (preset === 'glass') {
-                    return <div key={i} style={{ position: 'absolute', width: '10px', height: '10px', borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderBottom: '15px solid rgba(255,255,255,0.6)', top: `${1080 - driftY}px`, left: `${driftX}px`, transform: `rotate(${frame * 2 + i * 10}deg)` }} />;
+                    return <div key={i} style={{ position: 'absolute', width: '10px', height: '10px', borderLeft: '10px solid transparent', borderRight: '10px solid transparent', borderBottom: '15px solid rgba(255,255,255,0.6)', top: `${1333 - driftY}px`, left: `${driftX}px`, transform: `rotate(${frame * 2 + i * 10}deg)` }} />;
                 }
                 
                 // Default Dust
-                return <div key={i} style={{ position: 'absolute', width: i % 2 === 0 ? '6px' : '4px', height: i % 2 === 0 ? '6px' : '4px', backgroundColor: '#D4AF37', borderRadius: '50%', top: `${1080 - driftY}px`, left: `${driftX}px`, boxShadow: '0 0 8px #D4AF37', mixBlendMode: 'screen' }} />;
+                return <div key={i} style={{ position: 'absolute', width: i % 2 === 0 ? '6px' : '4px', height: i % 2 === 0 ? '6px' : '4px', backgroundColor: '#D4AF37', borderRadius: '50%', top: `${1333 - driftY}px`, left: `${driftX}px`, boxShadow: '0 0 8px #D4AF37', mixBlendMode: 'screen' }} />;
             })}
         </div>
     );
@@ -71,7 +71,7 @@ const EventDirector = ({ events, frame, fps }: { events: any[], frame: number, f
                 const opacity = interpolate(p, [0, 15, 30], [0, 0.8, 0]);
                 
                 if (evt.type === 'light_sweep') {
-                    const sweepX = interpolate(p, [0, 30], [-1920, 1920]);
+                    const sweepX = interpolate(p, [0, 30], [-2560, 2560]);
                     return <AbsoluteFill key={idx} style={{ zIndex: 90, pointerEvents: 'none', mixBlendMode: 'overlay', background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)`, transform: `translateX(${sweepX}px)`, opacity }} />;
                 }
                 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Video, useCurrentFrame, staticFile as remotionStaticFile } from 'remotion';
+import { AbsoluteFill, OffthreadVideo, useCurrentFrame, staticFile as remotionStaticFile } from 'remotion';
 
 /**
  * The Elite Cinematic Texture Stack (Depth-Sorted Compositing Wrapper)
@@ -131,7 +131,7 @@ export const CinematicTextureWrapper: React.FC<CinematicTextureWrapperProps> = (
             pointerEvents: 'none',
           }}
         >
-          <Video src={particleSrc} muted loop style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <OffthreadVideo src={particleSrc} muted loop style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </AbsoluteFill>
       )}
 
