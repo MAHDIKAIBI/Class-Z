@@ -80,7 +80,7 @@ export const DualClipBackground: React.FC<{
     
     return (
       <CinematicTextureWrapper
-        particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? staticFile('assets/particles_dust.mp4') : undefined}
+        particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? getAsset('assets/particles_dust.mp4') : undefined}
         backgroundLayer={
           <>
             {mediaPaths.map((path, idx) => {
@@ -98,7 +98,7 @@ export const DualClipBackground: React.FC<{
               
               return (
                 <Sequence key={idx} from={currentStart} durationInFrames={playDurationFrames}>
-                  <KenBurnsMedia src={staticFile(path)} type={path.endsWith('.mp4') ? 'video' : 'image'} duration={playDurationFrames} isEven={idx % 2 === 0 ? isEven : !isEven} style={style} startFromFrame={startFrameOffset} />
+                  <KenBurnsMedia src={getAsset(path)} type={path.endsWith('.mp4') ? 'video' : 'image'} duration={playDurationFrames} isEven={idx % 2 === 0 ? isEven : !isEven} style={style} startFromFrame={startFrameOffset} />
                 </Sequence>
               );
             })}
@@ -110,13 +110,13 @@ export const DualClipBackground: React.FC<{
 
   // Legacy fallback (before non-destructive update)
   const clip_cut_ms: number  = scene.clip_cut_ms || 0;
-  const path1 = mediaPaths[0] ? staticFile(mediaPaths[0]) : '';
-  const path2 = mediaPaths[1] ? staticFile(mediaPaths[1]) : '';
+  const path1 = mediaPaths[0] ? getAsset(mediaPaths[0]) : '';
+  const path2 = mediaPaths[1] ? getAsset(mediaPaths[1]) : '';
 
   if (!path2 || clip_cut_ms <= 0) {
     return path1 ? (
       <CinematicTextureWrapper
-        particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? staticFile('assets/particles_dust.mp4') : undefined}
+        particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? getAsset('assets/particles_dust.mp4') : undefined}
         backgroundLayer={<KenBurnsMedia src={path1} type="video" duration={duration} isEven={isEven} style={style} />}
       />
     ) : null;
@@ -126,7 +126,7 @@ export const DualClipBackground: React.FC<{
 
   return (
     <CinematicTextureWrapper
-      particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? staticFile('assets/particles_dust.mp4') : undefined}
+      particleSrc={scene.effects_theme === 'dust' || scene.effects_theme === 'embers' ? getAsset('assets/particles_dust.mp4') : undefined}
       backgroundLayer={
         <>
           <Sequence from={0} durationInFrames={Math.max(1, cutFrame)}>
@@ -146,8 +146,8 @@ export const MapScene: React.FC<{ scene: any, duration: number, isEven: boolean 
   const { fps } = useVideoConfig();
   const mediaPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
   
-  const mapPath = mediaPaths[0] ? staticFile(mediaPaths[0]) : '';
-  const heroPath = mediaPaths[1] ? staticFile(mediaPaths[1]) : '';
+  const mapPath = mediaPaths[0] ? getAsset(mediaPaths[0]) : '';
+  const heroPath = mediaPaths[1] ? getAsset(mediaPaths[1]) : '';
   
   // 1. Variant Engine
   const variant = (scene.scene_index || 0) % 3; // 0, 1, 2
@@ -310,7 +310,7 @@ export const FullscreenScene: React.FC<{ scene: any, duration: number, isEven: b
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const mediaPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
-  const src = mediaPaths[0] ? staticFile(mediaPaths[0]) : '';
+  const src = mediaPaths[0] ? getAsset(mediaPaths[0]) : '';
   const isVideo = src.endsWith('.mp4');
 
   const seed = scene.scene_index || 0;
@@ -424,8 +424,8 @@ export const HeroPNGScene: React.FC<{ scene: any, duration: number, isEven: bool
   const { fps } = useVideoConfig();
   const mediaPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
   
-  const bgPath = mediaPaths[0] ? staticFile(mediaPaths[0]) : '';
-  const heroPath = mediaPaths[1] ? staticFile(mediaPaths[1]) : '';
+  const bgPath = mediaPaths[0] ? getAsset(mediaPaths[0]) : '';
+  const heroPath = mediaPaths[1] ? getAsset(mediaPaths[1]) : '';
   
   const seed = scene.scene_index || 0;
   const choice = (arr: any[]) => arr[Math.floor(seededRandom(seed + arr.length) * arr.length)];
@@ -617,8 +617,8 @@ export const HeroCompositionScene: React.FC<{ scene: any, duration: number, isEv
   const { fps } = useVideoConfig();
   const mediaPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
   
-  const bgPath = mediaPaths[0] ? staticFile(mediaPaths[0]) : '';
-  const heroPath = mediaPaths[1] ? staticFile(mediaPaths[1]) : '';
+  const bgPath = mediaPaths[0] ? getAsset(mediaPaths[0]) : '';
+  const heroPath = mediaPaths[1] ? getAsset(mediaPaths[1]) : '';
   const propPaths = [mediaPaths[2], mediaPaths[3], mediaPaths[4]].filter(Boolean).map(p => staticFile(p));
 
   const seed = scene.scene_index || 0;
@@ -868,10 +868,10 @@ export const TripleCompositionScene: React.FC<{ scene: any, duration: number, is
   const { fps } = useVideoConfig();
   const mediaPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
   
-  const bgPath = mediaPaths[0] ? staticFile(mediaPaths[0]) : '';
-  const png1 = mediaPaths[1] ? staticFile(mediaPaths[1]) : '';
-  const png2 = mediaPaths[2] ? staticFile(mediaPaths[2]) : '';
-  const png3 = mediaPaths[3] ? staticFile(mediaPaths[3]) : '';
+  const bgPath = mediaPaths[0] ? getAsset(mediaPaths[0]) : '';
+  const png1 = mediaPaths[1] ? getAsset(mediaPaths[1]) : '';
+  const png2 = mediaPaths[2] ? getAsset(mediaPaths[2]) : '';
+  const png3 = mediaPaths[3] ? getAsset(mediaPaths[3]) : '';
   const pPaths = [png1, png2, png3].filter(Boolean);
 
   const seed = scene.scene_index || 0;
@@ -1075,7 +1075,7 @@ export const DocumentaryBoardScene: React.FC<{ scene: any, duration: number, isE
   const { fps } = useVideoConfig();
   const mediaPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
   
-  const bgPath = mediaPaths[0] ? staticFile(mediaPaths[0]) : '';
+  const bgPath = mediaPaths[0] ? getAsset(mediaPaths[0]) : '';
   const docs = [mediaPaths[1], mediaPaths[2], mediaPaths[3]].filter(Boolean).map(p => staticFile(p));
 
   const seed = scene.scene_index || 0;
@@ -1290,7 +1290,7 @@ export const TextTitleScene: React.FC<{ scene: any, duration: number, isEven: bo
   const mediaPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
   const textTitle = scene.text || (scene.words ? scene.words.map((w: any) => w.word).join(' ') : "MAIN TITLE");
   
-  const bgPath = mediaPaths[0] ? staticFile(mediaPaths[0]) : '';
+  const bgPath = mediaPaths[0] ? getAsset(mediaPaths[0]) : '';
 
   const seed = scene.scene_index || 0;
   const choice = (arr: any[]) => arr[Math.floor(seededRandom(seed + arr.length) * arr.length)];
@@ -1386,9 +1386,9 @@ export const SplitScreenScene: React.FC<{ scene: any, duration: number, isEven: 
   const { fps } = useVideoConfig();
   const mediaPaths = scene.media_paths || (scene.media_path ? [scene.media_path] : []);
   
-  const vid1 = mediaPaths[0] ? staticFile(mediaPaths[0]) : '';
-  const vid2 = mediaPaths[1] ? staticFile(mediaPaths[1]) : '';
-  const vid3 = mediaPaths[2] ? staticFile(mediaPaths[2]) : ''; // For triple split
+  const vid1 = mediaPaths[0] ? getAsset(mediaPaths[0]) : '';
+  const vid2 = mediaPaths[1] ? getAsset(mediaPaths[1]) : '';
+  const vid3 = mediaPaths[2] ? getAsset(mediaPaths[2]) : ''; // For triple split
 
   const seed = scene.scene_index || 0;
   const choice = (arr: any[]) => arr[Math.floor(seededRandom(seed + arr.length) * arr.length)];
@@ -1728,7 +1728,7 @@ export const DynamicMosaicScene: React.FC<{ scene: any, duration: number, isEven
                 return (
                    <div key={i} style={cellStyle}>
                       <AbsoluteFill style={{ transform: getCamTransform(cam, false, progress), transformOrigin: 'center center' }}>
-                         <KenBurnsMedia src={staticFile(mediaPath)} type={mediaPath.endsWith('.mp4') ? 'video' : 'image'} duration={duration} isEven={isEven ? i%2===0 : i%2!==0} />
+                         <KenBurnsMedia src={getAsset(mediaPath)} type={mediaPath.endsWith('.mp4') ? 'video' : 'image'} duration={duration} isEven={isEven ? i%2===0 : i%2!==0} />
                       </AbsoluteFill>
                    </div>
                 );
@@ -1885,7 +1885,7 @@ export const ParallaxCollageScene: React.FC<{ scene: any, duration: number, isEv
                        filter: `blur(${tBlur + focusBlur}px)`,
                        overflow: 'hidden'
                     }}>
-                       <KenBurnsMedia src={staticFile(media)} type={media.endsWith('.mp4') ? 'video' : 'image'} duration={duration} isEven={isEven ? idx%2===0 : idx%2!==0} />
+                       <KenBurnsMedia src={getAsset(media)} type={media.endsWith('.mp4') ? 'video' : 'image'} duration={duration} isEven={isEven ? idx%2===0 : idx%2!==0} />
                     </div>
                  )}
               </AbsoluteFill>
@@ -2070,7 +2070,7 @@ export const Style10Scene: React.FC<{ scene: any, duration: number, isEven: bool
 
                    {media && (
                       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                         <KenBurnsMedia src={staticFile(media)} type={media.endsWith('.mp4') ? 'video' : 'image'} duration={duration} isEven={isEven ? i%2===0 : i%2!==0} />
+                         <KenBurnsMedia src={getAsset(media)} type={media.endsWith('.mp4') ? 'video' : 'image'} duration={duration} isEven={isEven ? i%2===0 : i%2!==0} />
                       </div>
                    )}
                    <div style={{ height: '80px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', color: '#111', fontFamily: 'serif' }}>
@@ -2319,11 +2319,11 @@ export const LayoutRouter = ({ scene, duration, isEven }: any) => {
       if (!bg && !fg) return <AbsoluteFill style={{ backgroundColor: '#0A0A0A' }} />;
       return (
          <AbsoluteFill>
-             {bg && <KenBurnsMedia src={staticFile(bg)} type={isVideo(bg) ? 'video' : 'image'} duration={duration} isEven={isEven} />}
+             {bg && <KenBurnsMedia src={getAsset(bg)} type={isVideo(bg) ? 'video' : 'image'} duration={duration} isEven={isEven} />}
              {fg && (
                 <AbsoluteFill style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                    <div style={{ width: '75%', height: '75%', borderRadius: '15px', overflow: 'hidden', boxShadow: '0 20px 50px rgba(0,0,0,0.6)', border: '2px solid rgba(255,255,255,0.1)' }}>
-                      <KenBurnsMedia src={staticFile(fg)} type={isVideo(fg) ? 'video' : 'image'} duration={duration} isEven={!isEven} style={{ transform: 'scale(1.1)' }} />
+                      <KenBurnsMedia src={getAsset(fg)} type={isVideo(fg) ? 'video' : 'image'} duration={duration} isEven={!isEven} style={{ transform: 'scale(1.1)' }} />
                    </div>
                 </AbsoluteFill>
              )}
