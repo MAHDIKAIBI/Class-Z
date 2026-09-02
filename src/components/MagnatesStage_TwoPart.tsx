@@ -23,44 +23,33 @@ const getAsset = (path: string) => path ? staticFile(path.replace(/^\/?public\//
 const msToFrames = (ms: number, fps: number) => Math.floor((ms / 1000) * fps);
 
 const GRID_COLOR_MAP: Record<string, string> = {
-  neon_green: '#00FF88',
-  electric_blue: '#00D4FF',
-  crimson: '#FF0033',
-  gold: '#FFD700',
-  purple: '#B000FF',
+  neon_green: '#D4AF37', // Old Money Gold
+  electric_blue: '#E2B714',
+  crimson: '#D4AF37',
+  gold: '#D4AF37',
+  purple: '#D4AF37',
   white: '#FFFFFF',
 };
 
 const GridBackground: React.FC<{ color: string }> = ({ color }) => {
-  const frame = useCurrentFrame();
-  const gridY = (frame * 3) % 100;
   return (
     <div style={{
       position: 'absolute', inset: 0,
-      background: `radial-gradient(ellipse at 50% 50%, ${color}11 0%, #050505 85%)`,
+      background: `radial-gradient(ellipse at 50% 40%, ${color}15 0%, #05070A 80%, #000000 100%)`,
       overflow: 'hidden',
     }}>
-      <svg width="100%" height="100%" style={{
-        position: 'absolute', inset: 0, opacity: 0.8,
-        transform: 'perspective(800px) rotateX(70deg) scale(2.5)',
-        transformOrigin: 'bottom'
-      }}>
-        <defs>
-          <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse" x="0" y={gridY}>
-            <path d="M 100 0 L 0 0 0 100" fill="none" stroke={color} strokeWidth="2" strokeOpacity="0.4" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" />
-      </svg>
-      {/* Glowing horizon line for 3D depth */}
       <div style={{
-        position: 'absolute', top: '50%', left: 0, right: 0, height: '2px',
-        background: `linear-gradient(90deg, transparent, ${color}AA, transparent)`,
-        filter: 'blur(3px)'
+        position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%',
+        background: `linear-gradient(to top, ${color}15, transparent)`,
+        borderTop: `1px solid ${color}44`,
+        transform: 'perspective(1000px) rotateX(80deg)',
+        transformOrigin: 'bottom',
+        boxShadow: `0 -50px 150px ${color}44`,
+        mixBlendMode: 'screen'
       }} />
       <div style={{
         position: 'absolute', top: '20%', bottom: '50%', left: 0, right: 0,
-        background: 'linear-gradient(to top, #00000000, #000000FF)'
+        background: 'linear-gradient(to top, transparent, #000000)'
       }} />
     </div>
   );
@@ -69,11 +58,11 @@ const GridBackground: React.FC<{ color: string }> = ({ color }) => {
 const RainParticle: React.FC<{ src: string; seed: number; durationFrames: number; fps: number }> = ({ src, seed, fps }) => {
   const frame = useCurrentFrame();
   const startDelay = Math.floor(random(seed) * fps * 2);
-  const fallDuration = fps * 4 + Math.floor(random(seed + 1) * fps * 2);
+  const fallDuration = fps * 15 + Math.floor(random(seed + 1) * fps * 5);
   const relFrame = (frame + startDelay) % fallDuration;
   
   const x = random(seed + 2) * 100;
-  const y = interpolate(relFrame, [0, fallDuration], [-20, 120]);
+  const y = interpolate(relFrame, [0, fallDuration], [120, -20]); // float up like embers/dust
   const s = interpolate(random(seed + 3), [0, 1], [0.3, 1.2]);
   
   const zDepth = random(seed + 4);
@@ -129,7 +118,7 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
 
   // Cinematic Slower Whip Transition
   const whipRel  = Math.max(0, frame - whipFrame);
-  const whipSprg = spring({ frame: whipRel, fps, config: { damping: 22, stiffness: 60 } });
+  const whipSprg = spring({ frame: whipRel, fps, config: { damping: 200, stiffness: 40 } });
   
   const shiftAmount = tr.direction === 'right' ? -3500 : 3500;
   const whipX1 = interpolate(whipSprg, [0, 1], [0, shiftAmount]);
@@ -144,11 +133,11 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
   const hoverRotY = Math.cos(frame * 0.025) * 8;
 
   const heroRel   = Math.max(0, frame - heroFrame);
-  const heroSprg  = spring({ frame: heroRel, fps, config: { damping: 14, stiffness: 100 } });
-  const heroY     = interpolate(heroSprg, [0, 1], [400, 0]);
-  const heroScale = interpolate(heroSprg, [0, 1], [0.4, 1]);
-  const heroRotZ  = interpolate(heroSprg, [0, 1], [-15, 0]);
-  const heroAlpha = interpolate(heroRel, [0, 10], [0, 1], { extrapolateRight: 'clamp' });
+  const heroSprg  = spring({ frame: heroRel, fps, config: { damping: 150, stiffness: 30 } });
+  const heroY = 0;
+  const heroScale = interpolate(heroRel, [0, 300], [0.95, 1.05]); // Continuous slow scale
+  const heroRotZ = 0;
+  const heroAlpha = interpolate(heroRel, [0, 60], [0, 1], { extrapolateRight: 'clamp' });
 
 
   const hoverX    = Math.sin(frame * 0.02) * 15;
@@ -161,17 +150,18 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
 
 
   const subjRel   = Math.max(0, frame - subjectFrame);
-  const subjSprg  = spring({ frame: subjRel, fps, config: { damping: 15, stiffness: 120 } });
-  const subjEnter = interpolate(subjSprg, [0, 1], [subject.position === 'left' ? -800 : 800, 0]);
-  const subjBlur  = interpolate(subjSprg, [0, 0.7, 1], [30, 10, 0]);
-  const subjAlpha = interpolate(subjRel, [0, 10], [0, 1], { extrapolateRight: 'clamp' });
+  const subjSprg  = spring({ frame: subjRel, fps, config: { damping: 150, stiffness: 30 } });
+  const subjEnter = 0;
+  const subjBlur = interpolate(subjRel, [0, 60], [20, 0], { extrapolateRight: 'clamp' });
+  const subjAlpha = interpolate(subjRel, [0, 60], [0, 1], { extrapolateRight: 'clamp' });
 
   const typoText      = typography.text || '';
   const typoRel       = Math.max(0, frame - typoFrame);
-  const charsPerFrame = 1.2;
-  const visibleChars  = Math.floor(typoRel * charsPerFrame);
-  const displayText   = typoText.substring(0, visibleChars);
-  const cursorVisible = typoRel < (typoText.length / charsPerFrame) + 20 && Math.floor(frame / 6) % 2 === 0;
+  const displayText   = typoText;
+  const cursorVisible = false;
+  const typoBlur      = interpolate(typoRel, [0, 60], [20, 0], { extrapolateRight: 'clamp' });
+  const typoOpacity   = interpolate(typoRel, [0, 30], [0, 1], { extrapolateRight: 'clamp' });
+  const typoTracking  = interpolate(typoRel, [0, 150], [0, 30]);
 
   const subjIsLeft = subject.position === 'left';
   const subjX      = subjIsLeft ? '25%' : '75%';
@@ -196,6 +186,7 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
       {/* PART 1 */}
       {frame < whipFrame + 60 && (
         <AbsoluteFill style={{ 
+            transform: `translateZ(${interpolate(frame, [0, durationInFrames], [0, 400])}px)`, 
             opacity: crossfadeP1,
             filter: `blur(${whipBlur}px)`, 
             transform: `translateX(${whipX1}px)`, 
@@ -221,7 +212,7 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
               if (frame < orbStart) return null;
               const oRel  = frame - orbStart;
               
-              const oSprg = spring({ frame: oRel, fps, config: { damping: 14, stiffness: 100 } });
+              const oSprg = spring({ frame: oRel, fps, config: { damping: 150, stiffness: 30 } });
               const pos   = orbitPos[idx % orbitPos.length] || orbitPos[0];
               const oScale = interpolate(oSprg, [0, 1], [0, pos.s]);
               
@@ -344,20 +335,21 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
                 transformStyle: 'preserve-3d',
               }}>
                 <h1 style={{
-                  fontFamily: 'Impact, "Arial Black", sans-serif',
-                  fontSize: 220,
-                  fontWeight: 900,
-                  color: '#FFFFFF',
+                  fontFamily: '"Playfair Display", "Cinzel", serif',
+                  fontSize: 140,
+                  fontWeight: 700,
+                  color: '#D4AF37',
                   textTransform: 'uppercase',
-                  lineHeight: 0.85,
+                  lineHeight: 1.1,
                   margin: 0,
-                  letterSpacing: -4,
+                  letterSpacing: `${typoTracking}px`,
                   whiteSpace: 'pre-wrap',
                   wordWrap: 'break-word',
-                  textShadow: `0 0 40px ${gridColor}AA, 0 0 80px ${gridColor}55, 0 20px 50px rgba(0,0,0,0.9)`,
+                  opacity: typoOpacity,
+                  filter: `blur(${typoBlur}px)`,
+                  textShadow: `0 10px 40px rgba(0,0,0,1), 0 0 20px rgba(212,175,55,0.3)`,
                 }}>
                   {displayText}
-                  {cursorVisible && <span style={{ opacity: 1, color: gridColor }}>|</span>}
                 </h1>
               </div>
             )}
