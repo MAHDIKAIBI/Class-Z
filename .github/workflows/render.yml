@@ -329,7 +329,7 @@ jobs:
               rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" --include "script.txt" --include "*.wav" --transfers 16 || true
           fi
           # Download master reference voice if present
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/master_voice.wav" "public/" || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/$CHANNEL/voice/master_voice.wav" "channels/$CHANNEL/voice/" || true
 
       - name: Install Python Dependencies
         run: |
