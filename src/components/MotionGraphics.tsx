@@ -1,4 +1,4 @@
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, spring, interpolate, random as seededRandom } from 'remotion';
+import { AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig, spring, interpolate, random as seededRandom } from 'remotion';
 import React from 'react';
 import { useCamera } from '../index';
 import { BiometricScanRing } from './BiometricScanRing';
@@ -260,6 +260,39 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrame
   const startFrame = graphics.trigger_frame ?? 0;
 
   // NATIVE ROUTES for custom data components
+  if (type === 'animatednumber' || type === 'animated_number') {
+      // -----------------------------------------------------------------------
+      // FIELD-NAME NORMALIZER
+      // Director prompt emits `value` (raw number, occasionally a loose string)
+      // + `number_type`. The component expects `numericValue` + `type`. We also
+      // tolerate a couple of alternate shapes the model occasionally drifts to,
+      // same defensive pattern as the Dynamic3DComparison normalizer below.
+      // -----------------------------------------------------------------------
+      const rawVal = graphics.value ?? graphics.numericValue ?? graphics.amount ?? 0;
+      const numericValue = (typeof rawVal === 'number' && isFinite(rawVal))
+          ? rawVal
+          : (parseFloat(String(rawVal).replace(/[^0-9.\-]/g, '')) || 0);
+      const numberType = (graphics.number_type || graphics.type || graphics.numberType || 'generic').toLowerCase();
+      const safeDuration = Math.max(1, durationInFrames - startFrame);
+
+      // AnimatedNumber has no start/end window of its own (unlike BiometricScanRing/
+      // GlassStatGrid) — it just trusts frame 0 = "appear now". Wrapping it in a
+      // Sequence is what actually makes trigger_frame do anything, and gives it a
+      // clean auto hard-cut when the Sequence's duration runs out.
+      return (
+          <Sequence from={startFrame} durationInFrames={safeDuration} layout="none">
+              <AnimatedNumber
+                  numericValue={numericValue}
+                  type={numberType}
+                  durationFrames={safeDuration}
+                  globalIndex={sceneIndex}
+                  prefix={graphics.prefix}
+                  suffix={graphics.suffix}
+              />
+          </Sequence>
+      );
+  }
+
   if (type === 'biometricscanring' || type === 'biometric_scan_ring') {
       return (
           <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>
@@ -383,4 +416,4 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrame
           />
       </PhysicalIntegrator>
   );
-};
+};
