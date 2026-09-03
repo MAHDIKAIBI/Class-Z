@@ -105,17 +105,6 @@ export const RackToBlackTransition: React.FC<RackToBlackTransitionProps> = ({
         zIndex: 99
       }} />
 
-      {/* OVERLAY 2: NOBLE GOLD HORIZON GLINT (A subtle 1px golden pulse at the midpoint) */}
-      <AbsoluteFill style={{
-        top: "50%",
-        height: "1px",
-        transform: "translateY(-50%)",
-        background: `linear-gradient(90deg, transparent 20%, rgba(212, 175, 55, ${horizonGlint}) 50%, transparent 80%)`,
-        boxShadow: `0 0 15px rgba(212, 175, 55, ${horizonGlint * 0.8})`,
-        pointerEvents: "none",
-        zIndex: 100
-      }} />
-
     </AbsoluteFill>
   );
 };

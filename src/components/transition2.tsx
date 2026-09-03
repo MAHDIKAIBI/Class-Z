@@ -94,17 +94,6 @@ export const SpatialWhipTransition: React.FC<SpatialWhipTransitionProps> = ({
         
       </AbsoluteFill>
 
-      {/* OVERLAY 1: ANAMORPHIC HORIZONTAL LIGHT STREAK */}
-      <AbsoluteFill style={{
-        background: `linear-gradient(${direction === "right" ? "90deg" : "-90deg"}, transparent 10%, rgba(212, 175, 55, ${whipFlash * 0.4}) 35%, rgba(255, 255, 255, ${whipFlash * 0.85}) 50%, rgba(212, 175, 55, ${whipFlash * 0.4}) 65%, transparent 90%)`,
-        height: "8px",
-        top: "50%",
-        transform: "translateY(-50%)",
-        boxShadow: `0 0 ${whipFlash * 60}px rgba(255, 255, 255, ${whipFlash * 0.9})`,
-        mixBlendMode: "screen",
-        pointerEvents: "none",
-        zIndex: 99
-      }} />
 
       {/* OVERLAY 2: CINEMATIC PERIMETER VIGNETTE */}
       <AbsoluteFill style={{

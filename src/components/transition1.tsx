@@ -92,19 +92,7 @@ export const ZAxisCrashTransition: React.FC<ZCrashTransitionProps> = ({
         
       </AbsoluteFill>
 
-      {/* OVERLAY 1: LUXURY GOLD HORIZONTAL ANAMORPHIC STREAK */}
-      <AbsoluteFill style={{
-        background: `linear-gradient(90deg, transparent 10%, rgba(255, 242, 168, ${flareIntensity * 0.95}) 50%, transparent 90%)`,
-        height: "6px",
-        top: "50%",
-        transform: "translateY(-50%)",
-        boxShadow: `0 0 ${flareIntensity * 80}px rgba(212, 175, 55, ${flareIntensity})`,
-        mixBlendMode: "screen",
-        pointerEvents: "none",
-        zIndex: 99
-      }} />
-
-      {/* OVERLAY 2: VOLUMETRIC GOLD IRIS BURST */}
+      {/* OVERLAY 1: VOLUMETRIC GOLD IRIS BURST */}
       <AbsoluteFill style={{
         background: `radial-gradient(ellipse at center, rgba(255, 255, 255, ${flareIntensity * 0.9}) 0%, rgba(255, 223, 115, ${flareIntensity * 0.6}) 25%, rgba(212, 175, 55, ${flareIntensity * 0.25}) 50%, transparent 75%)`,
         mixBlendMode: "screen",
