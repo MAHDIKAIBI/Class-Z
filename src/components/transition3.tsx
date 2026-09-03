@@ -15,46 +15,43 @@ export type ThermalFlareTransitionProps = {
 export const ThermalFlareTransition: React.FC<ThermalFlareTransitionProps> = ({ 
   SceneA, 
   SceneB, 
-  durationInFrames = 20 
+  durationInFrames = 24 
 }) => {
   const frame = useCurrentFrame();
 
-  // 1. THERMAL EXPOSURE (The Volumetric Flash)
-  // Premium exponential easing: Holds low, explodes brilliantly in the center, decays fast.
-  const thermalFlash = interpolate(
+  // 1. 35MM KODAK GOLD FILM BURN EXPOSURE (Organic Bell Curve)
+  const burnIntensity = interpolate(
     frame,
-    [0, durationInFrames / 2, durationInFrames],
+    [0, durationInFrames * 0.48, durationInFrames],
     [0, 1, 0],
     { easing: Easing.inOut(Easing.exp), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
-  // 2. HEAT DISTORTION BLUR
-  // A clean 35px blur creates deep depth-of-field melting
-  const heatBlur = interpolate(
+  // 2. OPTICAL HEAT BLUR (Subtle lens melting)
+  const opticalBlur = interpolate(
     frame,
-    [0, durationInFrames / 2, durationInFrames],
-    [0, 35, 0],
+    [0, durationInFrames * 0.48, durationInFrames],
+    [0, 24, 0],
     { easing: Easing.inOut(Easing.ease), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
-  // 3. CINEMATIC PUSH (Forward momentum)
-  const scaleA = interpolate(frame, [0, durationInFrames], [1, 1.15], { extrapolateRight: "clamp" });
-  const scaleB = interpolate(frame, [0, durationInFrames], [1, 1.15], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // 3. CINEMATIC PUSH-THROUGH (Forward momentum)
+  const scaleA = interpolate(frame, [0, durationInFrames], [1, 1.08], { extrapolateRight: "clamp" });
+  const scaleB = interpolate(frame, [0, durationInFrames], [1.08, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
-  // 4. CROSSFADE ROUTING
-  // Tighter crossfade right at the peak of the flash to mask the cut
-  const opacityA = interpolate(frame, [0, durationInFrames * 0.55], [1, 0], { extrapolateRight: "clamp" });
-  const opacityB = interpolate(frame, [durationInFrames * 0.45, durationInFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  // 4. CROSSFADE ROUTING (Hidden right at the peak of the golden solar bloom)
+  const opacityA = interpolate(frame, [0, durationInFrames * 0.52], [1, 0], { extrapolateRight: "clamp" });
+  const opacityB = interpolate(frame, [durationInFrames * 0.46, durationInFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
+  // 5. ASYMMETRIC LIGHT LEAK TRAVELLING ACROSS FRAME
+  const leakSweepX = interpolate(frame, [0, durationInFrames], [-20, 120]);
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#020202", overflow: "hidden" }}>
+    <AbsoluteFill style={{ backgroundColor: "#020305", overflow: "hidden" }}>
       
-      {/* HIGH-END SFX INTEGRATION */}
-
-
       {/* THE CAMERA RIG */}
       <AbsoluteFill style={{
-        filter: `blur(${heatBlur}px)`,
+        filter: `blur(${opticalBlur}px)`,
         justifyContent: "center",
         alignItems: "center"
       }}>
@@ -79,30 +76,37 @@ export const ThermalFlareTransition: React.FC<ThermalFlareTransitionProps> = ({
         
       </AbsoluteFill>
 
-      {/* OVERLAY 1: FILM BURN LIGHT LEAK (Organic Horizontal Edge Bleed) */}
+      {/* OVERLAY 1: 35MM CELLULOID GOLD LIGHT LEAK (Sweeps across frame) */}
       <AbsoluteFill style={{
-        background: `linear-gradient(90deg, rgba(255, 10, 10, ${thermalFlash * 0.8}) 0%, rgba(255, 80, 0, ${thermalFlash * 0.5}) 20%, transparent 50%, rgba(255, 80, 0, ${thermalFlash * 0.5}) 80%, rgba(255, 10, 10, ${thermalFlash * 0.8}) 100%)`,
+        background: `radial-gradient(ellipse at ${leakSweepX}% 40%, rgba(255, 242, 168, ${burnIntensity * 0.9}) 0%, rgba(226, 183, 20, ${burnIntensity * 0.6}) 30%, rgba(170, 133, 41, ${burnIntensity * 0.25}) 55%, transparent 80%)`,
         mixBlendMode: "screen",
         pointerEvents: "none",
         zIndex: 100
       }} />
 
-      {/* OVERLAY 2: THE HOT CORE (Explosive Yellow/White Center Ignition) */}
+      {/* OVERLAY 2: SOLAR HALATION CORE (Ivory/Champagne Specular Ignition) */}
       <AbsoluteFill style={{
-        background: `radial-gradient(circle at center, rgba(255, 240, 200, ${thermalFlash}) 0%, rgba(255, 100, 0, ${thermalFlash * 0.6}) 40%, transparent 70%)`,
-        mixBlendMode: "color-dodge", // Color dodge creates ultra-premium HDR light mapping
+        background: `radial-gradient(circle at 50% 50%, rgba(255, 255, 255, ${burnIntensity * 0.95}) 0%, rgba(255, 223, 115, ${burnIntensity * 0.5}) 30%, transparent 65%)`,
+        mixBlendMode: "color-dodge",
         pointerEvents: "none",
         zIndex: 101
       }} />
-      
-      {/* OVERLAY 3: CINEMATIC VIGNETTE (Crushes the blacks dynamically) */}
+
+      {/* OVERLAY 3: FILM HALATION EDGE BLEED */}
       <AbsoluteFill style={{
-        boxShadow: `inset 0 0 ${thermalFlash * 600}px rgba(0, 0, 0, ${thermalFlash})`,
+        background: `linear-gradient(135deg, rgba(212, 175, 55, ${burnIntensity * 0.4}) 0%, transparent 40%, transparent 60%, rgba(212, 175, 55, ${burnIntensity * 0.4}) 100%)`,
+        mixBlendMode: "screen",
         pointerEvents: "none",
         zIndex: 102
+      }} />
+      
+      {/* OVERLAY 4: DEEP BLACK CINEMATIC VIGNETTE */}
+      <AbsoluteFill style={{
+        boxShadow: `inset 0 0 ${burnIntensity * 400}px rgba(2, 3, 5, ${burnIntensity * 0.9})`,
+        pointerEvents: "none",
+        zIndex: 103
       }} />
 
     </AbsoluteFill>
   );
 };
-
