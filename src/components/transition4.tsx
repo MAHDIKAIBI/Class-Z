@@ -15,66 +15,58 @@ export type RackToBlackTransitionProps = {
 export const RackToBlackTransition: React.FC<RackToBlackTransitionProps> = ({ 
   SceneA, 
   SceneB, 
-  durationInFrames = 36
+  durationInFrames = 45 // This requires a slightly longer duration to let the silence sit
 }) => {
   const frame = useCurrentFrame();
 
-  const halfDuration = durationInFrames / 2;
-
-  // 1. ANAMORPHIC FOCUS PULL (Heavy optical defocus with physical lens breathing)
+  // 1. THE FOCUS PULL (Heavy Optical Blur)
+  // Scene A blurs heavily into the midpoint, Scene B starts heavily blurred and sharpens
   const opticalBlurA = interpolate(
     frame,
-    [0, halfDuration],
-    [0, 42],
+    [0, durationInFrames / 2],
+    [0, 50], // Extreme 50px blur to mimic a fully defocused cinema lens
     { easing: Easing.in(Easing.cubic), extrapolateRight: "clamp" }
   );
 
   const opticalBlurB = interpolate(
     frame,
-    [halfDuration, durationInFrames],
-    [42, 0], 
+    [durationInFrames / 2, durationInFrames],
+    [50, 0], 
     { easing: Easing.out(Easing.cubic), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
-  // 2. LENS BREATHING (Micro-zoom during focus barrel rotation)
-  const scaleA = interpolate(frame, [0, halfDuration], [1, 1.04], { extrapolateRight: "clamp" });
-  const scaleB = interpolate(frame, [halfDuration, durationInFrames], [1.04, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-
-  // 3. OBSIDIAN SHUTTER CONSTRICTION (S-curve dip into pure black)
+  // 2. THE DIP TO PITCH BLACK
+  // Scene A fades out slightly before the midpoint, leaving a moment of pure darkness
   const opacityA = interpolate(
     frame,
-    [0, halfDuration - 4], 
+    [0, (durationInFrames / 2) - 5], 
     [1, 0], 
     { easing: Easing.in(Easing.quad), extrapolateRight: "clamp" }
   );
 
+  // Scene B waits in the dark, then fades in
   const opacityB = interpolate(
     frame,
-    [halfDuration + 4, durationInFrames], 
+    [(durationInFrames / 2) + 5, durationInFrames], 
     [0, 1], 
     { easing: Easing.out(Easing.quad), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
-  // 4. OBSIDIAN IRIS VIGNETTE (Tightens around the center into the void)
-  const irisTighten = interpolate(
-    frame,
-    [0, halfDuration, durationInFrames],
-    [0, 1, 0],
-    { easing: Easing.inOut(Easing.cubic), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-
-  // 5. NOBLE GOLD HORIZON SPARK (A microscopic glint at the dead center of the narrative void)
-  const horizonGlint = interpolate(
-    frame,
-    [halfDuration - 3, halfDuration, halfDuration + 3],
-    [0, 0.65, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
+  // 3. MICRO-ZOOM (Lens Breathing)
+  // Even though the camera isn't moving, physical lenses slightly scale the image when focus changes
+  const scaleA = interpolate(frame, [0, durationInFrames / 2], [1, 1.05], { extrapolateRight: "clamp" });
+  const scaleB = interpolate(frame, [durationInFrames / 2, durationInFrames], [1.05, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#010203", overflow: "hidden" }}>
+    <AbsoluteFill style={{ backgroundColor: "#000000", overflow: "hidden" }}>
+      
+      {/* 
+        THE SUB-BASS IMPACT
+        Deep, cinematic low-frequency boom.
+      */}
 
-      {/* SCENE A (Fading into the obsidian void) */}
+
+      {/* SCENE A (Fading into the void) */}
       <AbsoluteFill style={{ 
         opacity: opacityA, 
         transform: `scale(${scaleA})`,
@@ -86,7 +78,7 @@ export const RackToBlackTransition: React.FC<RackToBlackTransitionProps> = ({
         {SceneA}
       </AbsoluteFill>
 
-      {/* SCENE B (Emerging from the obsidian void) */}
+      {/* SCENE B (Emerging from the void) */}
       <AbsoluteFill style={{ 
         opacity: opacityB, 
         transform: `scale(${scaleB})`,
@@ -98,11 +90,11 @@ export const RackToBlackTransition: React.FC<RackToBlackTransitionProps> = ({
         {SceneB}
       </AbsoluteFill>
 
-      {/* OVERLAY 1: OBSIDIAN IRIS VIGNETTE */}
+      {/* GLOBAL VIGNETTE (Constricts the edges to force the eye into the center darkness) */}
       <AbsoluteFill style={{
-        background: `radial-gradient(circle at center, transparent ${interpolate(irisTighten, [0, 1], [60, 15])}%, rgba(1, 2, 3, ${irisTighten * 0.95}) 100%)`,
+        boxShadow: `inset 0 0 ${interpolate(frame, [0, durationInFrames / 2, durationInFrames], [0, 400, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}px rgba(0, 0, 0, 1)`,
         pointerEvents: "none",
-        zIndex: 99
+        zIndex: 100
       }} />
 
     </AbsoluteFill>

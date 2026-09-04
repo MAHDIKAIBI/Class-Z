@@ -1,8 +1,10 @@
 import { 
+  AbsoluteFill, 
   useCurrentFrame, 
   useVideoConfig, 
+  spring, 
   interpolate, 
-  Easing 
+  Img 
 } from "remotion";
 import React from "react";
 
@@ -16,155 +18,80 @@ export const LiquidMirrorCaption: React.FC<{ script: WordTiming[] }> = ({ script
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  if (!script || script.length === 0) return null;
-
-  // Find active word index
-  let activeIndex = -1;
-  for (let i = 0; i < script.length; i++) {
-    if (frame >= script[i].start && frame < script[i].end) {
-      activeIndex = i;
-      break;
-    }
-  }
-
-  // Smooth continuous transition between words (0 to script.length - 1)
-  let targetProgress = 0;
-  if (activeIndex !== -1) {
-    const w = script[activeIndex];
-    const wordProgress = interpolate(frame, [w.start, w.end], [0, 1], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1)
-    });
-    targetProgress = activeIndex + wordProgress;
-  } else if (frame >= script[script.length - 1].end) {
-    targetProgress = script.length - 1;
-  }
-
-  // Calculate sliding position as percentage across all words
-  const liquidOffsetPct = script.length > 1
-    ? (targetProgress / (script.length - 1)) * 100
-    : 50;
-
   return (
     <div style={{
       position: "absolute",
-      bottom: "10%",
+      bottom: "12%",
       width: "100%",
       display: "flex",
       justifyContent: "center",
-      alignItems: "center",
-      zIndex: 100,
-      pointerEvents: "none",
-      padding: "0 24px"
+      zIndex: 50
     }}>
-      {/* 8D CURVY LIQUID GLASS CONTAINER - FLUID & NEVER CLIPPED */}
       <div style={{
-        position: "relative",
-        background: "linear-gradient(155deg, rgba(22, 27, 38, 0.65) 0%, rgba(6, 8, 14, 0.9) 100%)",
-        backdropFilter: "blur(50px) saturate(220%) brightness(118%)",
-        WebkitBackdropFilter: "blur(50px) saturate(220%) brightness(118%)",
-        borderRadius: "100px", // Ultra-Curvy Liquid Pill
-        padding: "16px 40px",
-        border: "1px solid rgba(255, 255, 255, 0.22)",
-        borderTop: "2px solid rgba(255, 255, 255, 0.8)", // 8D Specular Top Rim
-        borderBottom: "1.5px solid rgba(212, 175, 55, 0.5)", // Caustic Gold Reflection
-        boxShadow: `
-          0 40px 100px rgba(0, 0, 0, 0.92),
-          0 15px 40px rgba(0, 0, 0, 0.7),
-          inset 0 3px 6px rgba(255, 255, 255, 0.75),
-          inset 0 -3px 12px rgba(0, 0, 0, 0.5),
-          inset 0 0 35px rgba(212, 175, 55, 0.14)
-        `,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "14px",
+        background: "linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)",
+        backdropFilter: "blur(48px) saturate(250%) brightness(110%)",
+        WebkitBackdropFilter: "blur(48px) saturate(250%) brightness(110%)",
+        border: "1px solid rgba(255, 255, 255, 0.2)",
+        boxShadow: "0 40px 80px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255, 255, 255, 0.6), inset 0 -2px 10px rgba(0, 0, 0, 0.2), inset 0 10px 20px rgba(255, 255, 255, 0.05)",
+        borderRadius: "100px",
+        padding: "20px 48px",
+        display: "flex",
+        gap: "24px 18px",
         flexWrap: "nowrap",
-        whiteSpace: "nowrap",
-        maxWidth: "94%",
-        overflow: "hidden",
-        boxSizing: "border-box"
+          whiteSpace: "nowrap",
+        maxWidth: "85%",
+        justifyContent: "center",
+        alignItems: "center",
+        position: "relative",
+        overflow: "hidden"
       }}>
         
-        {/* Top Arc Fresnel Reflection (Curved Glass Sheen) */}
         <div style={{
           position: "absolute",
-          top: "2px",
-          left: "6%",
-          width: "88%",
-          height: "45%",
-          background: "linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.04) 70%, transparent 100%)",
-          borderRadius: "100px",
+          top: 0,
+          left: `${interpolate(frame, [0, 150], [-50, 150])}%`,
+          width: "40%",
+          height: "100%",
+          background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)",
+          transform: "skewX(-20deg)",
           pointerEvents: "none",
           zIndex: 1
         }} />
 
-        {/* Diagonal Light Sweep Passing Periodically */}
-        <div style={{
-          position: "absolute",
-          top: 0,
-          left: `${interpolate(frame % 180, [0, 90], [-40, 140])}%`,
-          width: "30%",
-          height: "100%",
-          background: "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent)",
-          transform: "skewX(-25deg)",
-          pointerEvents: "none",
-          zIndex: 2
-        }} />
-
-        {/* GLIDING 8D LIQUID DROPLET / LENS UNDER ACTIVE WORD */}
-        {activeIndex !== -1 && (
-          <div style={{
-            position: "absolute",
-            top: "50%",
-            left: `calc(40px + (100% - 80px) * ${liquidOffsetPct / 100})`,
-            transform: "translate(-50%, -50%)",
-            width: "110px",
-            height: "50px",
-            background: "radial-gradient(ellipse at center, rgba(255, 235, 150, 0.35) 0%, rgba(212, 175, 55, 0.15) 60%, transparent 100%)",
-            borderRadius: "50px",
-            border: "1px solid rgba(255, 242, 168, 0.45)",
-            boxShadow: "0 0 25px rgba(212, 175, 55, 0.6), inset 0 1px 6px rgba(255, 255, 255, 0.8)",
-            pointerEvents: "none",
-            zIndex: 3,
-            transition: "left 0.12s cubic-bezier(0.2, 0, 0.2, 1)"
-          }} />
-        )}
-
-        {/* WORDS DISPLAY - STRICTLY LOCKED TO BASELINE, ZERO JUMP */}
         {script.map((item, index) => {
           const isActive = frame >= item.start && frame < item.end;
           const hasPassed = frame >= item.end;
-
-          let textColor = "rgba(148, 163, 184, 0.65)"; // Future words: Muted grey
-          let textShadow = "none";
-
-          if (isActive) {
-            textColor = "#FFFFFF"; // Active word: Radiant crisp white on gold lens
-            textShadow = "0 0 25px rgba(255, 223, 115, 0.95), 0 0 10px rgba(212, 175, 55, 0.7)";
-          } else if (hasPassed) {
-            textColor = "#FFFFFF"; // Read words: Solid crisp white
-            textShadow = "0 2px 8px rgba(0, 0, 0, 0.8)";
-          }
+          
+          // DYNAMIC MATH ENGINE
+          const duration = item.end - item.start;
+          const wordSpring = spring({ 
+            frame: isActive ? frame - item.start : 0, 
+            fps, 
+            config: { 
+              damping: 18, 
+              stiffness: duration < 15 ? 200 : (duration < 30 ? 120 : 60), 
+              mass: duration < 15 ? 1 : 1.5 
+            } 
+          });
+          
+          const wordScale = isActive ? interpolate(wordSpring, [0, 1], [1, 1.08]) : 1;
+          const opacity = isActive ? 1 : (hasPassed ? 0.3 : 0.3);
 
           return (
             <span
               key={index}
               style={{
-                color: textColor,
-                fontSize: "36px",
-                fontFamily: '"Inter", -apple-system, sans-serif',
-                fontWeight: isActive ? 700 : 500,
-                letterSpacing: "-0.3px",
-                lineHeight: 1,
+                color: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.7)",
+                opacity: opacity,
+                fontSize: "42px",
+                fontFamily: "system-ui, -apple-system, sans-serif",
+                fontWeight: isActive ? 700 : 400,
+                
+                textShadow: isActive ? "0 0 30px rgba(255,255,255,0.9)" : "none",
+                transition: "color 0.2s ease, opacity 0.2s ease, font-weight 0.2s ease",
                 display: "inline-block",
-                position: "relative",
-                zIndex: 10,
-                textShadow: textShadow,
-                transition: "color 0.15s ease, text-shadow 0.15s ease",
-                transform: "none", // STRICT ZERO JUMP
-                padding: "0 4px"
+                letterSpacing: "-1px",
+                zIndex: 2
               }}
             >
               {item.word}
@@ -173,5 +100,20 @@ export const LiquidMirrorCaption: React.FC<{ script: WordTiming[] }> = ({ script
         })}
       </div>
     </div>
+  );
+};
+
+export const Scene = () => {
+  const dummyJSONPayload: WordTiming[] = [
+    { word: "Water", start: 15, end: 25 },
+    { word: "flows", start: 25, end: 40 },
+    { word: "perfectly.", start: 40, end: 90 },
+  ];
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: "#020202" }}>
+      <Img src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2564&auto=format&fit=crop" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8 }} />
+      <LiquidMirrorCaption script={dummyJSONPayload} />
+    </AbsoluteFill>
   );
 };

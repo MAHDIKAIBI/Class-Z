@@ -10,7 +10,6 @@ import {
 } from "remotion";
 import React from "react";
 import { CinematicTextureWrapper } from './CinematicTextureWrapper';
-
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
@@ -37,6 +36,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
   const { fps } = useVideoConfig();
 
   // DYNAMIC SPRING ENGINE (100% crash-proof)
+  // If an asset doesn't exist, its trigger defaults to frame 9999 (never fires)
   const trigger1 = assets[1]?.trigger_frame ?? 9999;
   const trigger2 = assets[2]?.trigger_frame ?? 9999;
 
@@ -49,18 +49,18 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
   const w2 = interpolate(spring2, [0, 1], [0, 33.33]);
   const widths = [w0, w1, w2];
 
-  // DYNAMIC BACKGROUND BLUR
+  // DYNAMIC BACKGROUND BLUR (Starts sharp, blurs on first trigger)
   const firstTrigger = assets[0]?.trigger_frame ?? 0;
+  // Use opacity instead of blur for hardware acceleration to prevent video tearing
   const blurOpacity = interpolate(frame, [firstTrigger - 10, firstTrigger], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   const liquidGlassStyle: React.CSSProperties = {
-    background: "linear-gradient(155deg, rgba(14, 17, 24, 0.85) 0%, rgba(4, 5, 8, 0.95) 100%)",
-    backdropFilter: "blur(40px) saturate(1.4)",
-    WebkitBackdropFilter: "blur(40px) saturate(1.4)",
-    border: "1px solid rgba(212, 175, 55, 0.25)",
-    borderTop: "2px solid rgba(212, 175, 55, 0.8)",
-    boxShadow: "0 50px 100px rgba(0,0,0,0.9), inset 0 2px 20px rgba(212, 175, 55, 0.1)",
-    borderRadius: "16px",
+    background: "linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.05))",
+    backdropFilter: "blur(40px) saturate(200%) brightness(120%)",
+    WebkitBackdropFilter: "blur(40px) saturate(200%) brightness(120%)",
+    border: "1px solid rgba(255, 255, 255, 0.3)",
+    boxShadow: "0 40px 80px rgba(0,0,0,0.6), inset 0 2px 15px rgba(255,255,255,0.6), inset 0 -2px 10px rgba(0,0,0,0.1)",
+    borderRadius: "32px",
     overflow: "hidden",
     position: "relative",
     display: "flex",
@@ -76,21 +76,22 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
     <CinematicTextureWrapper
       backgroundLayer={
         <AbsoluteFill>
+          {/* BACKGROUND LAYER (Clean, hardware-accelerated, no animating filters) */}
           <AbsoluteFill style={{ transform: "scale(1.1) translateZ(0)", zIndex: 0 }}>
             {bgIsVideo ? (
-              <OffthreadVideo src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <OffthreadVideo src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => console.log("Media playback error caught on Video:", e)} />
             ) : (
               <>
-                {bgVideoUrl ? <Img src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", backgroundColor: "#05070A" }} />}
+                {bgVideoUrl ? <Img src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", backgroundColor: "#0a0a0a" }} />}
               </>
             )}
           </AbsoluteFill>
 
-          {/* Vignetted Darkener */}
+          {/* BLUR OVERLAY (Animates opacity instead of CSS blur radius to save GPU) */}
           <AbsoluteFill style={{ 
-              backgroundColor: `rgba(2, 3, 5, ${blurOpacity * 0.55})`,
-              backdropFilter: "blur(30px) saturate(1.2)",
-              WebkitBackdropFilter: "blur(30px) saturate(1.2)",
+              backgroundColor: `rgba(0,0,0,${blurOpacity * 0.4})`,
+              backdropFilter: "blur(40px) saturate(150%)",
+              WebkitBackdropFilter: "blur(40px) saturate(150%)",
               opacity: blurOpacity,
               zIndex: 1,
               pointerEvents: "none"
@@ -98,135 +99,44 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
         </AbsoluteFill>
       }
     >
-      <AbsoluteFill style={{ backgroundColor: "transparent", fontFamily: '"Inter", "SF Pro Display", sans-serif' }}>
+      <AbsoluteFill style={{ backgroundColor: "transparent", fontFamily: '"Geist", "Inter", system-ui, sans-serif' }}>
+
 
       {/* DYNAMIC GRID CONTAINER */}
       <div style={{
         position: "absolute",
-        top: "12%",
+        top: "10%",
         left: "5%",
         width: "90%",
-        height: "68%",
+        height: "65%",
         display: "flex",
-        gap: "28px",
+        gap: "24px",
         zIndex: 10
       }}>
         {assets.map((asset, i) => {
           const currentWidth = widths[i];
           if (currentWidth < 1) return null;
 
-          const localCardFrame = Math.max(0, frame - asset.trigger_frame);
-          const cardEntrance = spring({ frame: localCardFrame, fps, config: { damping: 200, stiffness: 45, mass: 1.2 } });
-          const cardScale = interpolate(cardEntrance, [0, 1], [0.92, 1]);
-          const cardOpacity = interpolate(localCardFrame, [0, 15], [0, 1], { extrapolateRight: "clamp" });
-          const cardBlur = interpolate(localCardFrame, [0, 15], [14, 0], { extrapolateRight: "clamp" });
-
-          // Gilded light sweep across card
-          const sheenX = interpolate(localCardFrame, [5, 45], [-100, 200], { extrapolateRight: "clamp" });
+          const cardEntrance = spring({ frame: Math.max(0, frame - asset.trigger_frame), fps, config: { damping: 12, stiffness: 100 } });
+          const cardScale = interpolate(cardEntrance, [0, 1], [0.8, 1]);
+          const cardOpacity = interpolate(cardEntrance, [0, 0.5], [0, 1]);
 
           return (
-            <div 
-              key={i} 
-              style={{ 
-                ...liquidGlassStyle, 
-                width: `${currentWidth}%`, 
-                opacity: cardOpacity, 
-                filter: `blur(${cardBlur}px)`,
-                transform: `scale(${cardScale})` 
-              }}
-            >
-              {/* Precision Corner Crosshair Accent */}
-              <div style={{ position: "absolute", top: "10px", left: "10px", width: "10px", height: "10px", borderTop: "2px solid #D4AF37", borderLeft: "2px solid #D4AF37", opacity: 0.8, zIndex: 10 }} />
-              <div style={{ position: "absolute", top: "10px", right: "10px", width: "10px", height: "10px", borderTop: "2px solid #D4AF37", borderRight: "2px solid #D4AF37", opacity: 0.8, zIndex: 10 }} />
-
-              {/* Module Header Pill */}
-              <div style={{
-                position: "absolute",
-                top: "16px",
-                left: "24px",
-                right: "24px",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                zIndex: 10,
-                borderBottom: "1px solid rgba(212, 175, 55, 0.15)",
-                paddingBottom: "8px"
-              }}>
-                <span style={{ fontFamily: '"Inter", monospace', fontSize: "11px", letterSpacing: "3px", color: "#D4AF37", fontWeight: 600 }}>
-                  EXHIBIT [0{i + 1}]
-                </span>
-                <span style={{ fontFamily: '"Inter", sans-serif', fontSize: "10px", letterSpacing: "1px", color: "rgba(255,255,255,0.4)" }}>
-                  CONFIDENTIAL ARCHIVE
-                </span>
-              </div>
-
-              {/* Asset Media Image */}
-              <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden" }}>
-                {asset.url ? (
-                  <Img src={staticFile(asset.url)} style={{ width: "100%", height: "100%", objectFit: "cover", zIndex: 1, filter: "contrast(1.1) saturate(1.1)" }} />
-                ) : (
-                  <div style={{ width: "100%", height: "100%", backgroundColor: "#06080C", zIndex: 1 }} />
-                )}
-
-                {/* Animated Light Sweep Sheen */}
-                <div style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: `linear-gradient(115deg, transparent ${sheenX - 30}%, rgba(255, 223, 115, 0.25) ${sheenX}%, transparent ${sheenX + 30}%)`,
-                  pointerEvents: "none",
-                  zIndex: 2
-                }} />
-
-                {/* Bottom Shadow Gradient */}
-                <div style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "linear-gradient(to top, rgba(3, 4, 6, 0.96) 0%, rgba(3, 4, 6, 0.4) 40%, transparent 70%)",
-                  zIndex: 3
-                }} />
-              </div>
+            <div key={i} style={{ ...liquidGlassStyle, width: `${currentWidth}%`, opacity: cardOpacity, transform: `scale(${cardScale})` }}>
               
-              {/* Luxury Text HUD */}
+              {/* Top Glare */}
+              <div style={{ position: "absolute", top: 0, width: "100%", height: "40%", background: "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 100%)", zIndex: 2, pointerEvents: "none" }} />
+
+              {/* Asset Image */}
+              {asset.url ? <Img src={staticFile(asset.url)} style={{ width: "100%", height: "100%", objectFit: "cover", zIndex: 1 }} /> : <div style={{ width: "100%", height: "100%", backgroundColor: "#111", zIndex: 1 }} />}
+              
+              {/* Text HUD */}
               <div style={{
-                position: "absolute", 
-                bottom: 0, 
-                width: "100%", 
-                padding: "28px 30px 24px 30px",
-                zIndex: 5,
-                boxSizing: "border-box"
+                position: "absolute", bottom: 0, width: "100%", padding: "40px 30px",
+                background: "linear-gradient(to top, rgba(0,0,0,0.95), transparent)", zIndex: 3
               }}>
-                <p style={{ 
-                  color: "#D4AF37", 
-                  fontSize: "12px", 
-                  fontWeight: 600, 
-                  letterSpacing: "4px", 
-                  textTransform: "uppercase", 
-                  margin: "0 0 6px 0",
-                  fontFamily: '"Inter", sans-serif'
-                }}>
-                  {asset.subtitle}
-                </p>
-                <h2 style={{ 
-                  color: "#FFFFFF", 
-                  fontSize: "32px", 
-                  fontWeight: 700, 
-                  margin: 0, 
-                  letterSpacing: "0.5px",
-                  fontFamily: '"Playfair Display", "Cinzel", Georgia, serif',
-                  textShadow: "0 6px 20px rgba(0,0,0,0.9)",
-                  lineHeight: 1.15
-                }}>
-                  {asset.title}
-                </h2>
-                
-                {/* 1px Golden Bottom Accent Line */}
-                <div style={{
-                  width: "100%",
-                  height: "1px",
-                  background: "linear-gradient(90deg, #D4AF37 0%, transparent 70%)",
-                  marginTop: "14px",
-                  opacity: 0.8
-                }} />
+                <h2 style={{ color: "#fff", fontSize: "36px", fontWeight: 800, margin: "0 0 8px 0", letterSpacing: "-1px" }}>{asset.title}</h2>
+                <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "20px", fontWeight: 500, margin: 0 }}>{asset.subtitle}</p>
               </div>
             </div>
           );

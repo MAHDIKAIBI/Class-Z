@@ -1,213 +1,133 @@
 import { 
+  AbsoluteFill, 
   useCurrentFrame, 
   useVideoConfig, 
+  spring, 
   interpolate, 
-  Easing 
+  Img
 } from "remotion";
 import React from "react";
+
+// ============================================================================
+// 1. THE VAULT COMPONENT (Highlight Reel - Silent Edition)
+// ============================================================================
 
 export type HighlightWordTiming = {
   word: string;
   start: number;
   end: number;
-  isHighlight?: boolean;
+  isHighlight?: boolean; // Flags the word for the massive glow effect
 };
 
 export const HighlightReelCaption: React.FC<{ script: HighlightWordTiming[] }> = ({ script }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  if (!script || script.length === 0) return null;
-
-  let activeIndex = -1;
-  for (let i = 0; i < script.length; i++) {
-    if (frame >= script[i].start && frame < script[i].end) {
-      activeIndex = i;
-      break;
-    }
-  }
-
-  let targetProgress = 0;
-  let isCurrentWordHighlight = false;
-  if (activeIndex !== -1) {
-    const w = script[activeIndex];
-    isCurrentWordHighlight = !!w.isHighlight;
-    const wordProgress = interpolate(frame, [w.start, w.end], [0, 1], {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1)
-    });
-    targetProgress = activeIndex + wordProgress;
-  } else if (frame >= script[script.length - 1].end) {
-    targetProgress = script.length - 1;
-  }
-
-  const reticleOffsetPct = script.length > 1
-    ? (targetProgress / (script.length - 1)) * 100
-    : 50;
-
   return (
     <div style={{
       position: "absolute",
-      bottom: "10%",
+      bottom: "15%",
       width: "100%",
       display: "flex",
       justifyContent: "center",
-      alignItems: "center",
-      zIndex: 100,
-      pointerEvents: "none",
-      padding: "0 24px"
+      zIndex: 50
     }}>
-      {/* PRECISION CYBER-LUXURY HUD BANNER (CHAMFERED EDGES - NOT A PILL) */}
+      {/* The Subtle Dark Liquid Glass Container */}
       <div style={{
-        position: "relative",
-        background: "linear-gradient(180deg, rgba(12, 14, 20, 0.92) 0%, rgba(3, 4, 6, 0.98) 100%)",
-        backdropFilter: "blur(30px) saturate(1.4)",
-        WebkitBackdropFilter: "blur(30px) saturate(1.4)",
-        border: "1px solid rgba(212, 175, 55, 0.3)",
-        borderTop: "2px solid #D4AF37",
-        borderRadius: "4px", // Sharp, modern dossier aesthetic
-        padding: "16px 42px 18px 42px",
-        boxShadow: "0 30px 80px rgba(0, 0, 0, 0.95), inset 0 1px 15px rgba(212, 175, 55, 0.08)",
-        display: "inline-flex",
-        flexDirection: "column",
-        alignItems: "center",
+        background: "rgba(5, 5, 8, 0.35)",
+        backdropFilter: "blur(12px) saturate(140%)",
+        WebkitBackdropFilter: "blur(12px) saturate(140%)",
+        border: "1px solid rgba(255, 255, 255, 0.05)",
+        boxShadow: "0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)",
+        borderRadius: "24px",
+        padding: "24px 40px",
+        display: "flex",
+        gap: "24px 16px",
+        flexWrap: "nowrap",
+          whiteSpace: "nowrap",
+        maxWidth: "80%",
         justifyContent: "center",
-        maxWidth: "94%",
-        boxSizing: "border-box"
+        alignItems: "center",
+        transition: "all 0.3s ease"
       }}>
-        
-        {/* Precision HUD Corner Brackets */}
-        <div style={{ position: "absolute", top: "4px", left: "4px", width: "8px", height: "8px", borderTop: "2px solid #D4AF37", borderLeft: "2px solid #D4AF37" }} />
-        <div style={{ position: "absolute", top: "4px", right: "4px", width: "8px", height: "8px", borderTop: "2px solid #D4AF37", borderRight: "2px solid #D4AF37" }} />
-        <div style={{ position: "absolute", bottom: "4px", left: "4px", width: "8px", height: "8px", borderBottom: "2px solid #D4AF37", borderLeft: "2px solid #D4AF37" }} />
-        <div style={{ position: "absolute", bottom: "4px", right: "4px", width: "8px", height: "8px", borderBottom: "2px solid #D4AF37", borderRight: "2px solid #D4AF37" }} />
+        {script.map((item, index) => {
+          const isActive = frame >= item.start && frame < item.end;
+          
+          // Dynamic Speed: Physics adjust based on how long the word is on screen
+          const duration = item.end - item.start;
+          const wordSpring = spring({ 
+            frame: isActive ? frame - item.start : 0, 
+            fps, 
+            config: { 
+              damping: 12, 
+              stiffness: duration < 15 ? 300 : 150 // Faster words snap harder
+            } 
+          });
+          
+          // Normal words scale slightly, highlight words punch harder
+          
+          
 
-        {/* Top Micro Telemetry Ribbon */}
-        <div style={{
-          width: "100%",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "10px",
-          borderBottom: "1px solid rgba(212, 175, 55, 0.15)",
-          paddingBottom: "4px"
-        }}>
-          <span style={{
-            fontFamily: '"Inter", monospace',
-            fontSize: "10px",
-            letterSpacing: "3px",
-            color: "#D4AF37",
-            fontWeight: 600,
-            textTransform: "uppercase"
-          }}>
-            // POWER HIGHLIGHT PROTOCOL
-          </span>
-          <span style={{
-            fontFamily: '"Inter", monospace',
-            fontSize: "9px",
-            letterSpacing: "1px",
-            color: "rgba(255, 255, 255, 0.4)"
-          }}>
-            EMP.REEL // CH.02
-          </span>
-        </div>
+          // Color Routing
+          const baseColor = "rgba(255, 255, 255, 0.5)"; // Dimmed normal state
+          const activeNormalColor = "#FFFFFF";
+          const activeHighlightColor = "#00FF66"; // Premium Neon Green
 
-        {/* WORDS CONTAINER */}
-        <div style={{
-          position: "relative",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "14px",
-          whiteSpace: "nowrap"
-        }}>
-          {/* GLIDING RETICLE TARGETING FRAME (SNAPS OVER ACTIVE WORD) */}
-          {activeIndex !== -1 && (
-            <div style={{
-              position: "absolute",
-              top: "50%",
-              left: `calc(35px + (100% - 70px) * ${reticleOffsetPct / 100})`,
-              transform: "translate(-50%, -50%)",
-              width: isCurrentWordHighlight ? "140px" : "110px",
-              height: "48px",
-              border: isCurrentWordHighlight ? "2px solid #FFD700" : "1px solid rgba(212, 175, 55, 0.6)",
-              borderRadius: "4px",
-              background: isCurrentWordHighlight ? "rgba(212, 175, 55, 0.15)" : "rgba(255, 255, 255, 0.04)",
-              boxShadow: isCurrentWordHighlight ? "0 0 35px rgba(255, 215, 0, 0.7), inset 0 0 15px rgba(255, 215, 0, 0.3)" : "0 0 15px rgba(212, 175, 55, 0.3)",
-              pointerEvents: "none",
-              zIndex: 2,
-              transition: "left 0.12s cubic-bezier(0.2, 0, 0.2, 1), width 0.15s ease, border-color 0.15s ease"
-            }}>
-              {/* Reticle Corner Crosshair Ticks */}
-              <div style={{ position: "absolute", top: "-3px", left: "-3px", width: "5px", height: "5px", borderTop: "2px solid #FFF", borderLeft: "2px solid #FFF" }} />
-              <div style={{ position: "absolute", top: "-3px", right: "-3px", width: "5px", height: "5px", borderTop: "2px solid #FFF", borderRight: "2px solid #FFF" }} />
-              <div style={{ position: "absolute", bottom: "-3px", left: "-3px", width: "5px", height: "5px", borderBottom: "2px solid #FFF", borderLeft: "2px solid #FFF" }} />
-              <div style={{ position: "absolute", bottom: "-3px", right: "-3px", width: "5px", height: "5px", borderBottom: "2px solid #FFF", borderRight: "2px solid #FFF" }} />
-            </div>
-          )}
+          let currentColor = baseColor;
+          if (isActive) {
+            currentColor = item.isHighlight ? activeHighlightColor : activeNormalColor;
+          }
 
-          {/* WORDS DISPLAY - STRICTLY LOCKED TO BASELINE */}
-          {script.map((item, index) => {
-            const isActive = frame >= item.start && frame < item.end;
-            const hasPassed = frame >= item.end;
-
-            let textColor = "rgba(148, 163, 184, 0.65)";
-            let textShadow = "none";
-            let backgroundStyle = "none";
-
-            if (isActive) {
-              if (item.isHighlight) {
-                textColor = "transparent";
-                backgroundStyle = "linear-gradient(180deg, #FFFFFF 15%, #FFD700 70%, #AA8529 100%)";
-                textShadow = "none";
-              } else {
-                textColor = "#FFFFFF";
-                textShadow = "0 0 20px rgba(255, 255, 255, 0.9)";
-              }
-            } else if (hasPassed) {
-              textColor = "#FFFFFF";
-              textShadow = "0 2px 8px rgba(0, 0, 0, 0.9)";
-            }
-
-            return (
-              <span
-                key={index}
-                style={{
-                  color: textColor,
-                  fontSize: "36px",
-                  fontFamily: '"Inter", -apple-system, sans-serif',
-                  fontWeight: item.isHighlight ? 800 : (isActive ? 700 : 500),
-                  letterSpacing: item.isHighlight ? "1px" : "-0.3px",
-                  lineHeight: 1,
-                  display: "inline-block",
-                  position: "relative",
-                  zIndex: 10,
-                  textShadow: textShadow,
-                  background: backgroundStyle,
-                  WebkitBackgroundClip: item.isHighlight && isActive ? "text" : "border-box",
-                  WebkitTextFillColor: item.isHighlight && isActive ? "transparent" : "inherit",
-                  filter: item.isHighlight && isActive ? "drop-shadow(0 0 12px rgba(255,215,0,0.8))" : "none",
-                  transition: "color 0.15s ease",
-                  transform: "none", // NEVER BOUNCE!
-                  padding: "0 4px"
-                }}
-              >
-                {item.isHighlight ? item.word.toUpperCase() : item.word}
-              </span>
-            );
-          })}
-        </div>
-
-        {/* Bottom Hairline Laser Bar with Center Gold Accent */}
-        <div style={{
-          width: "100%",
-          height: "1px",
-          background: "linear-gradient(90deg, transparent, #D4AF37 50%, transparent)",
-          marginTop: "12px",
-          opacity: 0.7
-        }} />
+          return (
+            <span
+              key={index}
+              style={{
+                color: currentColor,
+                fontSize: "48px",
+                fontFamily: '"Geist", system-ui, sans-serif',
+                fontWeight: isActive ? (item.isHighlight ? 800 : 600) : 500,
+                
+                
+                // The Highlight Glow
+                textShadow: isActive && item.isHighlight 
+                  ? "0 0 20px rgba(0,255,102,0.6), 0 0 40px rgba(0,255,102,0.3)" 
+                  : "none",
+                
+                transition: "color 0.15s ease-out, text-shadow 0.15s ease-out",
+                display: "inline-block",
+              }}
+            >
+              {item.word}
+            </span>
+          );
+        })}
       </div>
     </div>
+  );
+};
+
+// ============================================================================
+// 2. THE TEST WRAPPER 
+// ============================================================================
+
+export const Scene = () => {
+  const dummyJSONPayload: HighlightWordTiming[] = [
+    { word: "This", start: 10, end: 20 },
+    { word: "strategy", start: 20, end: 35 },
+    { word: "generates", start: 35, end: 50 },
+    { word: "massive", start: 50, end: 70, isHighlight: true },
+    { word: "returns.", start: 70, end: 100 },
+  ];
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: "#020202" }}>
+      {/* High-end cinematic background to test the dark liquid glass transparency */}
+      <Img 
+        src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2564&auto=format&fit=crop" 
+        style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.7 }}
+      />
+      
+      <HighlightReelCaption script={dummyJSONPayload} />
+    </AbsoluteFill>
   );
 };

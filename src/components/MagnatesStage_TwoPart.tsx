@@ -1,5 +1,7 @@
 import React from 'react';
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Img, staticFile, Sequence, Easing, random, OffthreadVideo } from 'remotion';
+
+
 import { Audio } from 'remotion';
 
 const EnvelopedSFX: React.FC<{src?: string; startFrame: number; peakVolume?: number; sustainFrames?: number}> = ({src, startFrame, peakVolume=1, sustainFrames=30}) => {
@@ -7,6 +9,9 @@ const EnvelopedSFX: React.FC<{src?: string; startFrame: number; peakVolume?: num
   if (!src) return null;
   const rel = frame - startFrame;
   const vol = interpolate(rel, [0, 5, sustainFrames, sustainFrames+15], [0, peakVolume, peakVolume, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' });
+  // Audio handles start internally if wrapped in Sequence, but since we are AbsoluteFill, we need to manually adjust or just rely on the mixer.
+  // Actually, standard Audio plays from frame 0 unless Sequence is used. 
+  // Let's use Sequence to properly start it.
   return (
     <Sequence from={startFrame}>
       <Audio src={getAsset(src)} volume={vol} />
@@ -30,12 +35,12 @@ const GridBackground: React.FC<{ color: string }> = ({ color }) => {
   return (
     <div style={{
       position: 'absolute', inset: 0,
-      background: `radial-gradient(ellipse at 50% 40%, ${color}18 0%, #05070A 75%, #000000 100%)`,
+      background: `radial-gradient(ellipse at 50% 40%, ${color}15 0%, #05070A 80%, #000000 100%)`,
       overflow: 'hidden',
     }}>
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%',
-        background: `linear-gradient(to top, ${color}18, transparent)`,
+        background: `linear-gradient(to top, ${color}15, transparent)`,
         borderTop: `1px solid ${color}44`,
         transform: 'perspective(1000px) rotateX(80deg)',
         transformOrigin: 'bottom',
@@ -97,6 +102,7 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
   const rain     = p1.raining_particles || {};
   const hero     = p1.hero || {};
   const orbitsRaw = Array.isArray(p1.orbit_helpers) ? p1.orbit_helpers : (p1.orbit_helpers ? [p1.orbit_helpers] : []);
+  // Clone to requested count if only one is provided
   const orbitsCount = (p1.orbit_helpers && !Array.isArray(p1.orbit_helpers)) ? (p1.orbit_helpers.count || 4) : orbitsRaw.length;
   const orbits = orbitsRaw.length === 1 && orbitsCount > 1 
     ? Array.from({ length: orbitsCount }).map((_, i) => ({ ...orbitsRaw[0], trigger_start_ms: (orbitsRaw[0].trigger_start_ms || 0) + i * 150 })) 
@@ -127,8 +133,12 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
   const hoverRotY = Math.cos(frame * 0.025) * 8;
 
   const heroRel   = Math.max(0, frame - heroFrame);
-  const heroScale = interpolate(heroRel, [0, 300], [0.95, 1.05]);
+  const heroSprg  = spring({ frame: heroRel, fps, config: { damping: 150, stiffness: 30 } });
+  const heroY = 0;
+  const heroScale = interpolate(heroRel, [0, 300], [0.95, 1.05]); // Continuous slow scale
+  const heroRotZ = 0;
   const heroAlpha = interpolate(heroRel, [0, 60], [0, 1], { extrapolateRight: 'clamp' });
+
 
   const hoverX    = Math.sin(frame * 0.02) * 15;
   const hoverY    = Math.cos(frame * 0.025) * 15;
@@ -138,22 +148,26 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
   const camTiltX = interpolate(p2Rel, [0, 400], [5, -5]);
   const camZoom  = interpolate(p2Rel, [0, 400], [0, 250]);
 
+
   const subjRel   = Math.max(0, frame - subjectFrame);
-  const subjBlur  = interpolate(subjRel, [0, 60], [20, 0], { extrapolateRight: 'clamp' });
+  const subjSprg  = spring({ frame: subjRel, fps, config: { damping: 150, stiffness: 30 } });
+  const subjEnter = 0;
+  const subjBlur = interpolate(subjRel, [0, 60], [20, 0], { extrapolateRight: 'clamp' });
   const subjAlpha = interpolate(subjRel, [0, 60], [0, 1], { extrapolateRight: 'clamp' });
 
   const typoText      = typography.text || '';
   const typoRel       = Math.max(0, frame - typoFrame);
   const displayText   = typoText;
+  const cursorVisible = false;
   const typoBlur      = interpolate(typoRel, [0, 60], [20, 0], { extrapolateRight: 'clamp' });
   const typoOpacity   = interpolate(typoRel, [0, 30], [0, 1], { extrapolateRight: 'clamp' });
-  const typoTracking  = interpolate(typoRel, [0, 150], [0, 24]);
+  const typoTracking  = interpolate(typoRel, [0, 150], [0, 30]);
 
   const subjIsLeft = subject.position === 'left';
   const subjX      = subjIsLeft ? '25%' : '75%';
   const typoX      = subjIsLeft ? '55%' : '5%';
 
-  // Coordinates for orbiting helpers
+  // Widely spread coordinates to prevent stacking
   const orbitPos = [
     { x: -550, y: -250, z: -350, s: 0.65 },
     { x:  550, y: -200, z: -400, s: 0.55 },
@@ -172,15 +186,16 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
       {/* PART 1 */}
       {frame < whipFrame + 60 && (
         <AbsoluteFill style={{ 
-            transform: `translateZ(${interpolate(frame, [0, durationInFrames], [0, 400])}px) translateX(${whipX1}px)`, 
+            transform: `translateZ(${interpolate(frame, [0, durationInFrames], [0, 400])}px)`, 
             opacity: crossfadeP1,
             filter: `blur(${whipBlur}px)`, 
+            transform: `translateX(${whipX1}px)`, 
             perspective: '1200px',
             willChange: 'transform, filter, opacity'
         }}>
           {bgPath1 ? (
             isVideo(bgPath1) ? (
-              <OffthreadVideo src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8, filter: 'blur(10px)', transform: 'scale(1.1)' }} muted />
+              <OffthreadVideo src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8, filter: 'blur(10px)', transform: 'scale(1.1)' }} loop muted />
             ) : (
               <Img src={getAsset(bgPath1)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8, filter: 'blur(10px)', transform: 'scale(1.1)' }} />
             )
@@ -200,8 +215,11 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
               const oSprg = spring({ frame: oRel, fps, config: { damping: 150, stiffness: 30 } });
               const pos   = orbitPos[idx % orbitPos.length] || orbitPos[0];
               const oScale = interpolate(oSprg, [0, 1], [0, pos.s]);
+              
+              // Permanent 6px DoF blur for elements behind the hero
               const oBlur  = interpolate(oSprg, [0, 0.7, 1], [50, 15, 6]);
               
+              // Significantly slower movement for professional anti-gravity drift
               const floatY = Math.sin((frame + idx * 45) * 0.005) * 20;
               const floatX = Math.sin((frame + idx * 30) * 0.003) * 15;
               const floatRot = Math.cos((frame + idx * 60) * 0.004) * 6;
@@ -240,8 +258,9 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
             <div style={{
               position: 'absolute', left: '50%', top: '50%',
               transform: `
-                translate(-50%, -50%)
+                translate(-50%, calc(-50% + ${heroY}px))
                 scale(${heroScale})
+                rotateZ(${heroRotZ}deg)
                 rotateX(${hoverRotX}deg)
                 rotateY(${hoverRotY}deg)
                 translate3d(${hoverX}px, ${hoverY}px, 0)
@@ -274,7 +293,7 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
           }}>
             {bgPath2 && (
               isVideo(bgPath2) ? (
-                <OffthreadVideo src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7, filter: 'blur(8px)', transform: 'scale(1.5) translateZ(-500px)' }} muted />
+                <OffthreadVideo src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7, filter: 'blur(8px)', transform: 'scale(1.5) translateZ(-500px)' }} loop muted />
               ) : (
                 <Img src={getAsset(bgPath2)} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7, filter: 'blur(8px)', transform: 'scale(1.5) translateZ(-500px)' }} />
               )
@@ -289,6 +308,7 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
                 position: 'absolute', left: subjX, top: '50%',
                 transform: `
                   translate(-50%, -50%)
+                  translateX(${subjEnter}px)
                   rotateX(${hoverRotX * 1.5}deg)
                   rotateY(${hoverRotY * 1.5}deg)
                   translate3d(${hoverX}px, ${hoverY}px, 50px)
@@ -304,8 +324,8 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
 
             {frame >= typoFrame && (
               <div style={{
-                position: 'absolute', left: typoX, top: '50%', width: '44%',
-                transform: 'translate(0, -50%) translateZ(160px)',
+                position: 'absolute', left: typoX, top: '50%', width: '40%',
+                transform: 'translate(0, -50%) translateZ(150px)',
                 textAlign: subjIsLeft ? 'left' : 'right',
                 display: 'flex',
                 flexDirection: 'column',
@@ -314,60 +334,23 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
                 zIndex: 30,
                 transformStyle: 'preserve-3d',
               }}>
-                {/* Executive Eyebrow Act Header */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '12px', 
-                  marginBottom: '16px', 
-                  opacity: typoOpacity 
-                }}>
-                  <div style={{ width: '36px', height: '1px', background: 'linear-gradient(90deg, transparent, #D4AF37)' }} />
-                  <span style={{ 
-                    fontFamily: '"Inter", monospace', 
-                    fontSize: '13px', 
-                    letterSpacing: '5px', 
-                    color: '#D4AF37', 
-                    fontWeight: 600,
-                    textTransform: 'uppercase'
-                  }}>
-                    ACT II // CHRONICLE
-                  </span>
-                  <div style={{ width: '36px', height: '1px', background: 'linear-gradient(90deg, #D4AF37, transparent)' }} />
-                </div>
-
-                {/* Gilded Roman Luxury Headline */}
                 <h1 style={{
-                  fontFamily: '"Playfair Display", "Cinzel", Georgia, serif',
-                  fontSize: 120,
+                  fontFamily: '"Playfair Display", "Cinzel", serif',
+                  fontSize: 140,
                   fontWeight: 700,
-                  background: 'linear-gradient(180deg, #FFFFFF 15%, #E2B714 65%, #AA8529 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: '#D4AF37',
                   textTransform: 'uppercase',
-                  lineHeight: 1.08,
+                  lineHeight: 1.1,
                   margin: 0,
                   letterSpacing: `${typoTracking}px`,
                   whiteSpace: 'pre-wrap',
                   wordWrap: 'break-word',
                   opacity: typoOpacity,
-                  filter: `blur(${typoBlur}px) drop-shadow(0 15px 40px rgba(0,0,0,1))`,
+                  filter: `blur(${typoBlur}px)`,
+                  textShadow: `0 10px 40px rgba(0,0,0,1), 0 0 20px rgba(212,175,55,0.3)`,
                 }}>
                   {displayText}
                 </h1>
-
-                {/* Gilded Diamond Divider */}
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '10px', 
-                  marginTop: '20px', 
-                  opacity: typoOpacity * 0.8 
-                }}>
-                  <div style={{ width: '70px', height: '1px', background: 'linear-gradient(90deg, transparent, #D4AF37)' }} />
-                  <span style={{ color: '#D4AF37', fontSize: '10px' }}>◆</span>
-                  <div style={{ width: '70px', height: '1px', background: 'linear-gradient(90deg, #D4AF37, transparent)' }} />
-                </div>
               </div>
             )}
           </AbsoluteFill>
@@ -375,6 +358,7 @@ export const MagnatesStage_TwoPart: React.FC<{ payload: any; durationInFrames: n
       )}
 
       {/* Global Vignette */}
+
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
         background: 'radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.85) 100%)',

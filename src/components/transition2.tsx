@@ -21,18 +21,18 @@ export const SpatialWhipTransition: React.FC<SpatialWhipTransitionProps> = ({
 }) => {
   const frame = useCurrentFrame();
 
-  // 1. HEAVY CINEMATIC BEZIER CURVE (Inertial hold, violent acceleration, smooth settle)
-  const whipEase = Easing.bezier(0.65, 0.0, 0.35, 1.0);
+  // 1. HEAVY BEZIER CURVE (Holds steady, snaps violently, cushions into landing)
+  const whipEase = Easing.bezier(0.5, 0.0, 0.5, 1.0);
   const targetAngle = direction === "right" ? 180 : -180;
 
-  // 2. CAMERA Y-AXIS PAN ROTATION
+  // 2. CAMERA Y-AXIS ROTATION
   const cameraPanY = interpolate(frame, [0, durationInFrames], [0, targetAngle], {
     easing: whipEase,
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  // 3. VELOCITY COMPUTATION
+  // 3. VELOCITY-BASED HORIZONTAL MOTION BLUR
   const prevFrame = Math.max(0, frame - 1);
   const prevCameraPanY = interpolate(prevFrame, [0, durationInFrames], [0, targetAngle], {
     easing: whipEase,
@@ -41,34 +41,35 @@ export const SpatialWhipTransition: React.FC<SpatialWhipTransitionProps> = ({
   });
 
   const rotationalVelocity = Math.abs(cameraPanY - prevCameraPanY);
-  const opticalBlur = Math.min(rotationalVelocity * 2.2, 50);
+  // Maxes out at 55px blur to maintain browser stability at high speed
+  const opticalBlur = Math.min(rotationalVelocity * 2.4, 55);
 
-  // 4. CAMERA PULLBACK (Focal compression during whip swing)
-  const cameraPullbackZ = interpolate(
-    frame,
-    [0, durationInFrames / 2, durationInFrames],
-    [0, -350, 0],
-    { easing: Easing.inOut(Easing.quad), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-
-  // 5. MIDPOINT SCENE FLIP
+  // 4. MIDPOINT ASSET SWAP
+  // At frame midpoint (90 degrees turn), Scene A unmounts and Scene B takes over in 3D space
   const isPastMidpoint = frame >= durationInFrames / 2;
 
-  // 6. ANAMORPHIC LIGHT STREAK AT PEAK VELOCITY
+  // 5. ANAMORPHIC LIGHT STREAK AT PEAK VELOCITY
   const whipFlash = interpolate(
     frame,
-    [durationInFrames * 0.25, durationInFrames * 0.5, durationInFrames * 0.75],
-    [0, 1, 0],
+    [0, durationInFrames / 2, durationInFrames],
+    [0, 0.7, 0],
     { easing: Easing.inOut(Easing.ease), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
+  // 6. AUDIO DYNAMICS
+  // Volume naturally peaks when rotational velocity is highest
+  const sfxVolume = interpolate(rotationalVelocity, [0, 45], [0, 1], { extrapolateRight: "clamp" });
+
   return (
-    <AbsoluteFill style={{ backgroundColor: "#020305", perspective: "1800px", overflow: "hidden" }}>
+    <AbsoluteFill style={{ backgroundColor: "#020202", perspective: "1500px", overflow: "hidden" }}>
       
+      {/* DYNAMIC SFX: Sharp Whip Pan Swish */}
+
+
       {/* THE 3D ROTATION RIG */}
       <AbsoluteFill style={{
         transformStyle: "preserve-3d",
-        transform: `translateZ(${cameraPullbackZ}px) rotateY(${-cameraPanY}deg)`,
+        transform: `rotateY(${-cameraPanY}deg)`,
         filter: `blur(${opticalBlur}px)`,
         justifyContent: "center",
         alignItems: "center"
@@ -94,15 +95,23 @@ export const SpatialWhipTransition: React.FC<SpatialWhipTransitionProps> = ({
         
       </AbsoluteFill>
 
-
-      {/* OVERLAY 2: CINEMATIC PERIMETER VIGNETTE */}
+      {/* OVERLAY: HORIZONTAL ANAMORPHIC STREAK */}
       <AbsoluteFill style={{
-        background: "radial-gradient(circle at center, transparent 35%, rgba(2, 3, 5, 0.8) 100%)",
-        mixBlendMode: "multiply",
+        background: `linear-gradient(${direction === "right" ? "90deg" : "-90deg"}, transparent 20%, rgba(255,255,255,${whipFlash}) 50%, transparent 80%)`,
         pointerEvents: "none",
         zIndex: 100
+      }} />
+
+      {/* CHROMATIC BORDER FLASH DURING PEAK PAN */}
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        boxShadow: `inset 0 0 ${whipFlash * 200}px rgba(0, 255, 204, ${whipFlash * 0.4})`,
+        pointerEvents: "none",
+        zIndex: 101
       }} />
 
     </AbsoluteFill>
   );
 };
+

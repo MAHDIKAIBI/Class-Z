@@ -15,139 +15,99 @@ export type ZCrashTransitionProps = {
 export const ZAxisCrashTransition: React.FC<ZCrashTransitionProps> = ({ 
   SceneA, 
   SceneB, 
-  durationInFrames = 32 
+  durationInFrames = 30 
 }) => {
   const frame = useCurrentFrame();
 
-  // 1. PHYSICAL GLASS INERTIA (Heavy luxury resistance easing)
-  const glassEase = Easing.bezier(0.72, 0.0, 0.28, 1.0);
+  // 1. THE PHYSICS ENGINE
+  const crashEase = Easing.bezier(0.9, 0, 0.1, 1);
 
-  // 2. 3D GLASS SWEEP PROGRESS (-110% to +110% across viewport)
-  const sweepPercent = interpolate(frame, [0, durationInFrames], [-115, 115], {
-    easing: glassEase,
+  const cameraZ = interpolate(frame, [0, durationInFrames], [0, -4000], {
+    easing: crashEase,
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  // 3. PHYSICAL 3D TILT OF THE GLASS PANE
-  const rotateY = interpolate(frame, [0, durationInFrames / 2, durationInFrames], [-16, 0, 16], {
-    easing: Easing.inOut(Easing.quad),
+  // 2. TRUE VELOCITY MOTION BLUR
+  const prevFrame = Math.max(0, frame - 1);
+  const prevCameraZ = interpolate(prevFrame, [0, durationInFrames], [0, -4000], {
+    easing: crashEase,
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  const rotateZ = interpolate(frame, [0, durationInFrames], [-2, 2], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const depthVelocity = Math.abs(cameraZ - prevCameraZ);
+  const opticalBlur = Math.min(depthVelocity * 0.12, 60);
 
-  // 4. LENS REFRACTION SHEEN (Specular light beam sweeping across the glass surface)
-  const sheenOffset = interpolate(frame, [0, durationInFrames], [-100, 200]);
-
-  // 5. SCENE REVEAL MASK (Scene B is revealed as the glass sweeps across)
-  const revealProgress = interpolate(frame, [0, durationInFrames], [0, 100], {
-    easing: glassEase,
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // 6. VOLUMETRIC OPTICAL GLOW AT THE BEVELED GLASS EDGE
-  const edgeIntensity = interpolate(
+  // 3. CINEMATIC LENS BURN
+  const exposureFlash = interpolate(
     frame,
     [0, durationInFrames / 2, durationInFrames],
-    [0.2, 1.0, 0.2],
+    [0, 0.45, 0],
     { easing: Easing.inOut(Easing.ease), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
+  // 4. OPACITY ROUTING
+  const opacityA = interpolate(frame, [0, durationInFrames * 0.45], [1, 0], { extrapolateRight: "clamp" });
+  const opacityB = interpolate(frame, [durationInFrames * 0.35, durationInFrames], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+
+  // 5. SCALE DISTORTION (Warp Effect)
+  const zScaleWarp = interpolate(depthVelocity, [0, 500], [1, 1.4], { extrapolateRight: "clamp" });
+  
+  // 6. AUDIO DYNAMICS
+  const sfxVolume = interpolate(depthVelocity, [0, 500], [0, 1], { extrapolateRight: "clamp" });
+
   return (
-    <AbsoluteFill style={{ backgroundColor: "#020305", perspective: "1800px", overflow: "hidden" }}>
+    <AbsoluteFill style={{ backgroundColor: "#020202", perspective: "1500px", overflow: "hidden" }}>
       
-      {/* BASE LAYER: SCENE A (Preceding scene) */}
-      <AbsoluteFill style={{ zIndex: 1 }}>
-        {SceneA}
-      </AbsoluteFill>
+      {/* LOCAL SFX */}
 
-      {/* REVEAL LAYER: SCENE B (Unveiled behind the moving glass mask) */}
-      <AbsoluteFill style={{ 
-        zIndex: 2,
-        clipPath: `polygon(0% 0%, ${revealProgress}% 0%, ${revealProgress}% 100%, 0% 100%)`
-      }}>
-        {SceneB}
-      </AbsoluteFill>
 
-      {/* =========================================================================
-          THE MONUMENTAL 8D LIQUID OBSIDIAN GLASS PANE (SWEEPS ACROSS THE FRAME)
-          ========================================================================= */}
-      <div style={{
-        position: "absolute",
-        top: "-15%",
-        left: `${sweepPercent}%`,
-        width: "90%",
-        height: "130%",
-        transformStyle: "preserve-3d",
-        transform: `rotateY(${rotateY}deg) rotateZ(${rotateZ}deg) translateZ(50px)`,
-        // High-end frosted obsidian liquid glass optics
-        background: "linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(14, 18, 28, 0.45) 50%, rgba(2, 4, 8, 0.75) 100%)",
-        backdropFilter: "blur(48px) saturate(240%) brightness(125%)",
-        WebkitBackdropFilter: "blur(48px) saturate(240%) brightness(125%)",
-        borderRadius: "28px",
-        // Beveled 3D diamond glass edge
-        border: "1.5px solid rgba(255, 255, 255, 0.35)",
-        borderLeft: "3px solid rgba(255, 255, 255, 0.85)", // Leading specular edge
-        borderRight: "2px solid rgba(212, 175, 55, 0.55)", // Trailing gold reflection
-        boxShadow: `
-          0 50px 140px rgba(0, 0, 0, 0.95),
-          0 20px 60px rgba(0, 0, 0, 0.8),
-          inset 2px 0 10px rgba(255, 255, 255, 0.9),
-          inset -2px 0 15px rgba(212, 175, 55, 0.3),
-          inset 0 0 50px rgba(255, 255, 255, 0.08)
-        `,
-        overflow: "hidden",
-        pointerEvents: "none",
-        zIndex: 10
-      }}>
-
-        {/* DIAGONAL SPECULAR CAUSTIC LIGHT SHEEN */}
-        <div style={{
-          position: "absolute",
-          inset: "-50%",
-          background: `linear-gradient(115deg, transparent 35%, rgba(255, 245, 200, 0.4) 50%, transparent 65%)`,
-          transform: `translateX(${sheenOffset}%)`,
-          pointerEvents: "none",
-          mixBlendMode: "screen",
-          zIndex: 2
-        }} />
-
-        {/* BEVELED PRISMATIC HIGHLIGHT ON THE LEADING EDGE */}
-        <div style={{
-          position: "absolute",
-          top: 0,
-          bottom: 0,
-          left: 0,
-          width: "24px",
-          background: "linear-gradient(90deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 242, 168, 0.4) 50%, transparent 100%)",
-          boxShadow: `0 0 ${edgeIntensity * 40}px rgba(255, 255, 255, 0.8)`,
-          mixBlendMode: "screen",
-          pointerEvents: "none",
-          zIndex: 3
-        }} />
-
-        {/* CORNER CROSSHAIR ACCENTS (EXECUTIVE ARCHITECTURAL GLASS DETAILING) */}
-        <div style={{ position: "absolute", top: "18px", left: "18px", width: "12px", height: "12px", borderTop: "2px solid rgba(255,255,255,0.7)", borderLeft: "2px solid rgba(255,255,255,0.7)" }} />
-        <div style={{ position: "absolute", top: "18px", right: "18px", width: "12px", height: "12px", borderTop: "2px solid rgba(212,175,55,0.7)", borderRight: "2px solid rgba(212,175,55,0.7)" }} />
-        <div style={{ position: "absolute", bottom: "18px", left: "18px", width: "12px", height: "12px", borderBottom: "2px solid rgba(255,255,255,0.7)", borderLeft: "2px solid rgba(255,255,255,0.7)" }} />
-        <div style={{ position: "absolute", bottom: "18px", right: "18px", width: "12px", height: "12px", borderBottom: "2px solid rgba(212,175,55,0.7)", borderRight: "2px solid rgba(212,175,55,0.7)" }} />
-
-      </div>
-
-      {/* AMBIENT SOFT VIGNETTE (NO CENTER CUT LINES) */}
+      {/* THE 3D MOVEMENT RIG */}
       <AbsoluteFill style={{
-        background: "radial-gradient(circle at center, transparent 45%, rgba(2, 3, 5, 0.8) 100%)",
-        mixBlendMode: "multiply",
+        filter: `blur(${opticalBlur}px)`,
+        justifyContent: "center",
+        alignItems: "center"
+      }}>
+        
+        {/* SCENE A (Origin Point) */}
+        <AbsoluteFill style={{ 
+          opacity: opacityA, 
+          transform: `translate3d(0px, 0px, ${-cameraZ}px) scaleZ(${zScaleWarp})`,
+          pointerEvents: opacityA > 0 ? "auto" : "none" 
+        }}>
+          {SceneA}
+        </AbsoluteFill>
+
+        {/* SCENE B (Destination Point) */}
+        <AbsoluteFill style={{ 
+          opacity: opacityB, 
+          transform: `translate3d(0px, 0px, ${-4000 - cameraZ}px) scaleZ(${zScaleWarp})`,
+          pointerEvents: opacityB > 0 ? "auto" : "none" 
+        }}>
+          {SceneB}
+        </AbsoluteFill>
+        
+      </AbsoluteFill>
+
+      {/* OVERLAY: OPTICAL EXPOSURE FLASH */}
+      <AbsoluteFill style={{
+        backgroundColor: "#ffffff",
+        opacity: exposureFlash,
+        mixBlendMode: "overlay",
         pointerEvents: "none",
-        zIndex: 20
+        zIndex: 100
+      }} />
+      
+      {/* OVERLAY: CHROMATIC ABERRATION DIRT */}
+      <div style={{
+        position: "absolute", inset: 0,
+        boxShadow: `inset 0 0 ${exposureFlash * 500}px rgba(255, 40, 80, ${exposureFlash * 0.15})`,
+        pointerEvents: "none",
+        zIndex: 101
       }} />
 
     </AbsoluteFill>
   );
 };
+
