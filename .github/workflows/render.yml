@@ -505,7 +505,6 @@ jobs:
           
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 -v || true
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/$VAULT" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" --transfers 16 -v || true
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/audio" "data:Colab_AutoVideoCreator/public/audio" --transfers 16 -v || true
 
   # ---------------------------------------------------------
   # PHASE 2b (Parallel): overlay_hunter_job
@@ -1053,7 +1052,6 @@ jobs:
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/$VAULT" \
             "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" \
             --transfers 16 -v || true
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/audio" "data:Colab_AutoVideoCreator/public/audio" --transfers 16 -v || true
 
       - name: Send Shutdown Signal to original ollama_server
         if: always()
