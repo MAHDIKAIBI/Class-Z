@@ -734,13 +734,13 @@ export const MagnatesStage_TwoPart: React.FC<{
   const bgPath2 = p2.background?.local_path || bgPath1;
   const rain = p1.raining_particles || {};
 
-  const rawGridColor = p2.background?.grid_color || 'gold';
+  const rawGridColor = payload.theme || payload.theme_accent || p2.background?.grid_color || 'gold';
   const theme = THEME_ACCENTS[rawGridColor] || THEME_ACCENTS.gold;
   const accentColor = (typeof rawGridColor === 'string' && (rawGridColor.startsWith('#') || rawGridColor.startsWith('rgb')))
     ? rawGridColor
     : theme.primary;
 
-  const hero = p1.hero || {};
+  const hero = p1.hero || p1.hero_evidence || {};
   const orbitsRaw = Array.isArray(p1.orbit_helpers)
     ? p1.orbit_helpers
     : p1.orbit_helpers
@@ -915,7 +915,6 @@ export const MagnatesStage_TwoPart: React.FC<{
                 <OffthreadVideo
                   src={getAsset(bgPath1)}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(12px)' }}
-                  loop
                   muted
                 />
               ) : (
@@ -981,7 +980,7 @@ export const MagnatesStage_TwoPart: React.FC<{
                     transformStyle: 'preserve-3d',
                   }}
                 >
-                  {hasUniqueImage ? (
+                  {hasUniqueImage || orb.type === 'UniqueImage' ? (
                     <EvidencePhotograph
                       src={orb.local_path}
                       tag={p.tag}
@@ -991,8 +990,32 @@ export const MagnatesStage_TwoPart: React.FC<{
                       accentColor={accentColor}
                       cornerCrosshairs={false}
                     />
+                  ) : orb.type === 'RedactedMemoEvidence' ? (
+                    <RedactedMemoEvidence
+                      accentColor={accentColor}
+                      width={p.w}
+                      height={p.h}
+                    />
+                  ) : orb.type === 'BiometricWireframeEvidence' ? (
+                    <BiometricWireframeEvidence
+                      accentColor={accentColor}
+                      width={p.w}
+                      height={p.h}
+                    />
+                  ) : orb.type === 'FinancialAuditGraphEvidence' ? (
+                    <FinancialAuditGraphEvidence
+                      accentColor={accentColor}
+                      width={p.w}
+                      height={p.h}
+                    />
                   ) : idx === 1 ? (
                     <RedactedMemoEvidence
+                      accentColor={accentColor}
+                      width={p.w}
+                      height={p.h}
+                    />
+                  ) : idx === 2 ? (
+                    <BiometricWireframeEvidence
                       accentColor={accentColor}
                       width={p.w}
                       height={p.h}
@@ -1108,7 +1131,6 @@ export const MagnatesStage_TwoPart: React.FC<{
                 <OffthreadVideo
                   src={getAsset(bgPath2)}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(8px)' }}
-                  loop
                   muted
                 />
               ) : (

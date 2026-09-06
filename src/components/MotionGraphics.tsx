@@ -301,7 +301,7 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrame
                   end={durationInFrames} 
                   targetPercentage={graphics.targetPercentage || 0}
                   label={graphics.label || 'METRIC'}
-                  brandColor={graphics.brandColor || '#00FF66'}
+                  brandColor={graphics.brandColor || '#D4AF37'}
               />
           </AbsoluteFill>
       );

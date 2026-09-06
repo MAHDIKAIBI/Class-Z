@@ -131,7 +131,7 @@ export const CinematicTextureWrapper: React.FC<CinematicTextureWrapperProps> = (
             pointerEvents: 'none',
           }}
         >
-          <OffthreadVideo src={particleSrc} muted loop style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <OffthreadVideo src={particleSrc} muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </AbsoluteFill>
       )}
 
