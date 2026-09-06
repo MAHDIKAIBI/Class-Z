@@ -25,6 +25,13 @@ import { ZAxisCrashTransition } from './components/transition1';
 import { SpatialWhipTransition } from './components/transition2';
 import { ThermalFlareTransition } from './components/transition3';
 import { RackToBlackTransition } from './components/transition4';
+import { LumaDissolveTransition } from './components/transition5';
+import { ParallaxSlideTransition } from './components/transition6';
+import { ZoomSpinVortexTransition } from './components/transition7';
+import { PrismDispersionTransition } from './components/transition8';
+import { GlitchDataTearTransition } from './components/transition9';
+import { CinematicMatchCutTransition } from './components/transition10';
+import { CameraWallTransition } from './components/transition11';
 
 
 export const useCamera = () => ({ xPan: 0, yPan: 0, zScale: 1.0 });
@@ -43,7 +50,12 @@ const normalisedTimeline = (rawAny.timeline ?? []).map((s: any) => s).filter(Boo
 // ==========================================
 // TRANSITION ROTATION ENGINE
 // ==========================================
-const transitionPool = ['ZAxisCrash', 'SpatialWhip', 'ThermalFlare', 'RackToBlack'];
+const transitionPool = [
+    'ZAxisCrash', 'SpatialWhip', 'ThermalFlare', 'RackToBlack',
+    'LumaDissolve', 'ParallaxSlide', 'ZoomSpinVortex',
+    'PrismDispersion', 'GlitchDataTear', 'CinematicMatchCut',
+    'CameraWall'
+];
 let activePool = [...transitionPool];
 
 const shuffle = (array: any[], seedStr: string) => {
@@ -363,26 +375,61 @@ const AutomatedDocumentary = () => {
                   </Sequence>
 
                   {/* CUSTOM TRANSITION ROUTER */}
-                  {scene.outgoingTransition && scene.outgoingTransition !== 'none' && mappedScenes[index + 1] && (
-                      <Sequence 
-                          from={scene.startFrame + scene.visualDurFrames - 15} 
-                          durationInFrames={30}
-                          style={{ zIndex: 9999 }}
-                      >
-                          {scene.outgoingTransition === 'ZAxisCrash' && (
-                              <ZAxisCrashTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
-                          )}
-                          {scene.outgoingTransition === 'SpatialWhip' && (
-                              <SpatialWhipTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
-                          )}
-                          {scene.outgoingTransition === 'ThermalFlare' && (
-                              <ThermalFlareTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
-                          )}
-                          {scene.outgoingTransition === 'RackToBlack' && (
-                              <RackToBlackTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
-                          )}
-                      </Sequence>
-                  )}
+                  {scene.outgoingTransition && scene.outgoingTransition !== 'none' && mappedScenes[index + 1] && (() => {
+                      const isCameraWall = scene.outgoingTransition === 'CameraWall';
+                      const transDuration = isCameraWall ? 60 : 30;
+                      const offsetFrames = isCameraWall ? 30 : 15;
+
+                      return (
+                          <Sequence 
+                              from={scene.startFrame + scene.visualDurFrames - offsetFrames} 
+                              durationInFrames={transDuration}
+                              style={{ zIndex: 9999 }}
+                          >
+                              {scene.outgoingTransition === 'ZAxisCrash' && (
+                                  <ZAxisCrashTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              )}
+                              {scene.outgoingTransition === 'SpatialWhip' && (
+                                  <SpatialWhipTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              )}
+                              {scene.outgoingTransition === 'ThermalFlare' && (
+                                  <ThermalFlareTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              )}
+                              {scene.outgoingTransition === 'RackToBlack' && (
+                                  <RackToBlackTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              )}
+                              {scene.outgoingTransition === 'LumaDissolve' && (
+                                  <LumaDissolveTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              )}
+                              {scene.outgoingTransition === 'ParallaxSlide' && (
+                                  <ParallaxSlideTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              )}
+                              {scene.outgoingTransition === 'ZoomSpinVortex' && (
+                                  <ZoomSpinVortexTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              )}
+                              {scene.outgoingTransition === 'PrismDispersion' && (
+                                  <PrismDispersionTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              )}
+                              {scene.outgoingTransition === 'GlitchDataTear' && (
+                                  <GlitchDataTearTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={25} />
+                              )}
+                              {scene.outgoingTransition === 'CinematicMatchCut' && (
+                                  <CinematicMatchCutTransition SceneA={<TransitionSceneA scene={scene} index={index} />} SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} durationInFrames={30} />
+                              )}
+                              {scene.outgoingTransition === 'CameraWall' && (
+                                  <CameraWallTransition 
+                                      SceneA={<TransitionSceneA scene={scene} index={index} />} 
+                                      SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} 
+                                      durationInFrames={60}
+                                      galleryVideos={[
+                                          ...mappedScenes.slice(0, index).map((s: any) => s.visual_asset || s.media_path).filter(Boolean).reverse(),
+                                          ...mappedScenes.slice(index + 2).map((s: any) => s.visual_asset || s.media_path).filter(Boolean)
+                                      ]}
+                                  />
+                              )}
+                          </Sequence>
+                      );
+                  })()}
 
                   {/* DECOUPLED AUDIO SEQUENCE (Allows exact J/L overlapping independently of visual duration) */}
                   <Sequence from={scene.startFrame} durationInFrames={scene.audioDurFrames}>
