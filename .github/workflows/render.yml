@@ -604,77 +604,6 @@ jobs:
             rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s google_cookies.json "engine:Colab_AutoVideoCreator/google_cookies.json" -v || true
           fi
 
-  start_sam2_nodes:
-    needs: [creation_job, brain_prep_job, tts_matrix]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        node: [1, 2]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Install System Dependencies
-        run: |
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _retry in 1 2 3 4 5; do sudo apt-get update && sudo apt-get install -y rclone jq && break || { echo "Command failed, retrying..."; sleep 15; }; done
-      - name: Configure rclone Silently
-        env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-        run: |
-          mkdir -p ~/.config/rclone
-          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
-          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
-          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
-          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
-          cat << EOF > ~/.config/rclone/rclone.conf
-          [engine]
-          type = drive
-          client_id = $CLIENT_ID
-          client_secret = $CLIENT_SECRET
-          scope = drive
-          token = $ENGINE_TOKEN
-          EOF
-      - name: Download Engine
-        run: rclone copy --tpslimit 10 "engine:Colab_AutoVideoCreator" . --include "sam2_server.py" --include "requirements.txt" --include "checkpoints/**"
-      - name: Install Cloudflared
-        run: |
-          for _retry in 1 2 3 4 5; do wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          sudo dpkg -i cloudflared-linux-amd64.deb
-      - name: Install Dependencies
-        run: |
-          for _retry in 1 2 3 4 5; do pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do pip install fastapi uvicorn python-multipart pillow numpy opencv-python-headless && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do pip install git+https://github.com/facebookresearch/segment-anything-2.git && break || { echo "Command failed, retrying..."; sleep 15; }; done
-      - name: Run Server and Tunnel
-        run: |
-          uvicorn sam2_server:app --host 0.0.0.0 --port 8000 &
-          cloudflared tunnel --url http://localhost:8000 > cloudflared.log 2>&1 &
-          sleep 10
-          cat cloudflared.log | grep -o 'https://.*\.trycloudflare.com' | head -n 1 > sam2-url-${{ matrix.node }}.txt
-      - name: Upload URL Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sam2-url-${{ matrix.node }}
-          path: sam2-url-${{ matrix.node }}.txt
-      - name: Keep Server Alive
-        run: |
-          while true; do
-            if rclone lsf "engine:Colab_AutoVideoCreator/sam2_shutdown_${{ github.run_id }}.txt" >/dev/null 2>&1; then
-              echo "Shutdown signal received."
-              break
-            fi
-            sleep 10
-          done
-
   download_matrix:
     needs: [creation_job, brain_prep_job, tts_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
@@ -682,7 +611,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
+        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
     steps:
       - uses: actions/checkout@v4
 
@@ -782,24 +711,11 @@ jobs:
           OLLAMA_HOST="127.0.0.1" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
           sleep 5
 
-      - name: Fetch SAM2 URLs
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "Waiting for SAM 2 nodes to boot and publish URLs..."
-          mkdir -p sam2_urls
-          for i in {1..15}; do
-            gh run download ${{ github.run_id }} --pattern "sam2-url-*" --dir sam2_urls 2>/dev/null && break || sleep 10
-          done
-          URLS=$(find sam2_urls -type f -name "sam2-url-*.txt" -exec cat {} + | paste -sd "," - || echo "http://localhost:8000")
-          echo "SAM2_API_URLS=$URLS" >> $GITHUB_ENV
-
       - name: Run Download Worker
         env:
-          SAM2_API_URLS: ${{ env.SAM2_API_URLS }}
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
-          DOWNLOAD_TOTAL_WORKERS: "14"
-          YOUTUBE_TOTAL_WORKERS: "3"
+          DOWNLOAD_TOTAL_WORKERS: "15"
+          YOUTUBE_TOTAL_WORKERS: "4"
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -820,8 +736,8 @@ jobs:
       - name: Run Overlay Worker
         env:
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
-          DOWNLOAD_TOTAL_WORKERS: "14"
-          YOUTUBE_TOTAL_WORKERS: "3"
+          DOWNLOAD_TOTAL_WORKERS: "15"
+          YOUTUBE_TOTAL_WORKERS: "4"
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -871,7 +787,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        worker: [0, 1, 2]
+        worker: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
 
@@ -950,7 +866,7 @@ jobs:
       - name: Run YouTube Download Worker
         env:
           YOUTUBE_WORKER_ID: ${{ matrix.worker }}
-          YOUTUBE_TOTAL_WORKERS: 3
+          YOUTUBE_TOTAL_WORKERS: 4
           YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
           YOUTUBE_PO_TOKEN: ${{ secrets.YOUTUBE_PO_TOKEN }}
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
@@ -1050,11 +966,6 @@ jobs:
           git config --global user.name "Pipeline Bot"
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
 
-      - name: Signal SAM 2 Nodes to Shutdown
-        run: |
-          echo "shutdown" > sam2_shutdown.txt
-          rclone copyto --update sam2_shutdown.txt "engine:Colab_AutoVideoCreator/sam2_shutdown_${{ github.run_id }}.txt" || true
-
       - name: Nuke Global Assets Residue
         run: |
           echo "[*] Nuking global_used_assets residue from Drive..."
@@ -1093,8 +1004,8 @@ jobs:
         env:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
-          DOWNLOAD_TOTAL_WORKERS: "14"
-          YOUTUBE_TOTAL_WORKERS: "3"
+          DOWNLOAD_TOTAL_WORKERS: "15"
+          YOUTUBE_TOTAL_WORKERS: "4"
           GITHUB_RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
@@ -1320,19 +1231,6 @@ jobs:
           echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
           for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install rclone jq -y && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
 
-      - name: Download SAM2 URLs
-        uses: actions/download-artifact@v4
-        with:
-          pattern: sam2-url-*
-          merge-multiple: true
-
-      - name: Set SAM2 URLS Env
-        run: |
-          URLS=$(cat sam2-url-*.txt | paste -sd "," -)
-          echo "SAM2_API_URLS=$URLS" >> $GITHUB_ENV
-          echo "Discovered SAM 2 Nodes: $URLS"
-          
-
       - name: Configure rclone Silently
         env:
           ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
@@ -1416,7 +1314,6 @@ jobs:
               rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
             done
             rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
-            rclone delete --drive-use-trash=false "engine:Colab_AutoVideoCreator/sam2_shutdown_${{ github.run_id }}.txt" || true
 
       - name: Sync Final Video to Google Drive
         run: |
