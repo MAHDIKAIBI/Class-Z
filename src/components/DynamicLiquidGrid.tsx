@@ -124,16 +124,58 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
           return (
             <div key={i} style={{ ...liquidGlassStyle, width: `${currentWidth}%`, opacity: cardOpacity, transform: `scale(${cardScale})` }}>
               
-              {/* Top Glare */}
-              <div style={{ position: "absolute", top: 0, width: "100%", height: "40%", background: "linear-gradient(180deg, rgba(255,255,255,0.4) 0%, transparent 100%)", zIndex: 2, pointerEvents: "none" }} />
+              {/* Layer 1: Ambient Blurred Backdrop (Fills widescreen card with color-matched atmospheric glow) */}
+              {asset.url ? (
+                <div style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 1 }}>
+                  <Img
+                    src={staticFile(asset.url)}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      filter: "blur(35px) brightness(0.4) saturate(1.4)",
+                      transform: "scale(1.2)",
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{ position: "absolute", inset: 0, backgroundColor: "#111", zIndex: 1 }} />
+              )}
 
-              {/* Asset Image */}
-              {asset.url ? <Img src={staticFile(asset.url)} style={{ width: "100%", height: "100%", objectFit: "cover", zIndex: 1 }} /> : <div style={{ width: "100%", height: "100%", backgroundColor: "#111", zIndex: 1 }} />}
-              
+              {/* Layer 2: Crisp Uncropped Hero Subject (Preserves full head/body/aspect ratio) */}
+              {asset.url && (
+                <div
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 2,
+                    padding: "24px",
+                    paddingBottom: "115px", // Preserve clean runway for bottom Text HUD
+                  }}
+                >
+                  <Img
+                    src={staticFile(asset.url)}
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "100%",
+                      objectFit: "contain",
+                      borderRadius: "16px",
+                      filter: "drop-shadow(0 20px 35px rgba(0,0,0,0.65))",
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Top Glare */}
+              <div style={{ position: "absolute", top: 0, width: "100%", height: "40%", background: "linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%)", zIndex: 3, pointerEvents: "none" }} />
+
               {/* Text HUD */}
               <div style={{
                 position: "absolute", bottom: 0, width: "100%", padding: "40px 30px",
-                background: "linear-gradient(to top, rgba(0,0,0,0.95), transparent)", zIndex: 3
+                background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 60%, transparent 100%)", zIndex: 4
               }}>
                 <h2 style={{ color: "#fff", fontSize: "36px", fontWeight: 800, margin: "0 0 8px 0", letterSpacing: "-1px" }}>{asset.title}</h2>
                 <p style={{ color: "rgba(255,255,255,0.7)", fontSize: "20px", fontWeight: 500, margin: 0 }}>{asset.subtitle}</p>
