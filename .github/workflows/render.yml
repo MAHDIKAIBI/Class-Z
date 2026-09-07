@@ -609,7 +609,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     steps:
       - uses: actions/checkout@v4
 
@@ -712,7 +712,7 @@ jobs:
       - name: Run Download Worker
         env:
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
-          DOWNLOAD_TOTAL_WORKERS: "12"
+          DOWNLOAD_TOTAL_WORKERS: "13"
           YOUTUBE_TOTAL_WORKERS: "7"
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
