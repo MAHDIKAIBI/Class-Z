@@ -32,6 +32,7 @@ import { PrismDispersionTransition } from './components/transition8';
 import { GlitchDataTearTransition } from './components/transition9';
 import { CinematicMatchCutTransition } from './components/transition10';
 import { CameraWallTransition } from './components/transition11';
+import { ShortsGlassOutro } from './components/ShortsGlassOutro';
 
 
 export const useCamera = () => ({ xPan: 0, yPan: 0, zScale: 1.0 });
@@ -469,7 +470,24 @@ const RemotionRoot = () => {
     : 0;
   const totalDurationMs = Math.max(metaDurationMs, lastSceneEndMs, 10000);
   const totalFrames = Math.max(1, Math.round((totalDurationMs / 1000) * 30)) + 60;
-  return <Composition id="AutomatedDocumentary" component={AutomatedDocumentary} durationInFrames={totalFrames} fps={30} width={2560} height={1333} />;
+  return (
+    <>
+      <Composition id="AutomatedDocumentary" component={AutomatedDocumentary} durationInFrames={totalFrames} fps={30} width={2560} height={1333} />
+      <Composition
+        id="ShortsGlassOutro"
+        component={ShortsGlassOutro}
+        durationInFrames={90}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          thumbnailSrc: 'test_thumb.png',
+          headline: 'WATCH FULL VIDEO',
+          subtext: '(First link in description 👇)',
+        }}
+      />
+    </>
+  );
 };
 
 registerRoot(RemotionRoot);

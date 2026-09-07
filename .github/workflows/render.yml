@@ -1301,7 +1301,54 @@ jobs:
           done
           
           ffmpeg -f concat -safe 0 -i file_list.txt -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 320k -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
-          
+
+      - name: Short Creation (9:16 Vertical Hook + 3D Glass Outro)
+        run: |
+          echo "[*] Initiating 9:16 Short Creation from final_video.mp4..."
+          TARGET_DIR="channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
+          if [ -s "$TARGET_DIR/final_video.mp4" ]; then
+            # 1. Extract 15s Hook and fill screen vertically (scale and center-crop to 1080x1920)
+            ffmpeg -y -ss 0 -t 15 -i "$TARGET_DIR/final_video.mp4" \
+              -vf "scale=-2:1920,crop=1080:1920" \
+              -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k "hook_15s.mp4"
+
+            # 2. Locate Thumbnail for 3D Glass Card
+            THUMB_SRC=""
+            for t_cand in "$TARGET_DIR/thumbnail.png" "$TARGET_DIR/thumbnail.jpg" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/thumbnail.png" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/thumbnail.jpg" "thumbnail.png"; do
+              if [ -s "$t_cand" ]; then
+                THUMB_SRC="$t_cand"
+                break
+              fi
+            done
+
+            mkdir -p public
+            if [ -n "$THUMB_SRC" ]; then
+              cp "$THUMB_SRC" public/current_thumb.png
+            elif [ -f "public/test_thumb.png" ]; then
+              cp public/test_thumb.png public/current_thumb.png
+            fi
+
+            # 3. Render 3-Second 3D Glass Outro in Remotion (90 frames @ 30fps)
+            npx remotion render src/index.tsx ShortsGlassOutro "outro_3s.mp4" \
+              --props='{"thumbnailSrc":"current_thumb.png","headline":"WATCH FULL VIDEO","subtext":"(First link in description 👇)"}' \
+              --codec=h264
+
+            # 4. Smoothly Crossfade 15s Hook with 3s Outro (18s total) + Sub-bass impact
+            if [ -s "outro_3s.mp4" ]; then
+              ffmpeg -y -i "hook_15s.mp4" -i "outro_3s.mp4" \
+                -f lavfi -t 3 -i "aevalsrc=sin(2*PI*50*t)*exp(-3*t):s=44100:d=3" \
+                -filter_complex "[0:v][1:v]xfade=transition=fade:duration=0.5:offset=14.5[v];[0:a]afade=t=out:st=14.5:d=0.5[a0];[2:a]afade=t=in:st=0:d=0.3[a1];[a0][a1]concat=n=2:v=0:a=1[a]" \
+                -map "[v]" -map "[a]" -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k -movflags +faststart "$TARGET_DIR/short_video.mp4"
+              echo "[+] 9:16 Short Created Successfully -> $TARGET_DIR/short_video.mp4"
+              rm -f hook_15s.mp4 outro_3s.mp4
+            else
+              echo "[!] Outro render failed. Falling back to cropped hook as short."
+              cp "hook_15s.mp4" "$TARGET_DIR/short_video.mp4"
+            fi
+          else
+            echo "[!] Warning: final_video.mp4 missing. Skipping short creation."
+          fi
+
       - name: Clean Up Public Assets Folder
         run: |
           echo "Purging raw rendering assets from Google Drive to save space..."
@@ -1318,6 +1365,9 @@ jobs:
         run: |
           echo "Saving final video to Google Drive 'to upload' folder..."
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" -v
+          if [ -f "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/short_video.mp4" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/short_video.mp4" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" -v
+          fi
           
       - name: Upload Video to YouTube API
         env:
