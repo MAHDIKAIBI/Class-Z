@@ -609,7 +609,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     steps:
       - uses: actions/checkout@v4
 
@@ -712,8 +712,8 @@ jobs:
       - name: Run Download Worker
         env:
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
-          DOWNLOAD_TOTAL_WORKERS: "15"
-          YOUTUBE_TOTAL_WORKERS: "4"
+          DOWNLOAD_TOTAL_WORKERS: "12"
+          YOUTUBE_TOTAL_WORKERS: "7"
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -735,8 +735,8 @@ jobs:
       - name: Run Overlay Worker
         env:
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
-          DOWNLOAD_TOTAL_WORKERS: "15"
-          YOUTUBE_TOTAL_WORKERS: "4"
+          DOWNLOAD_TOTAL_WORKERS: "12"
+          YOUTUBE_TOTAL_WORKERS: "7"
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
@@ -787,7 +787,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        worker: [0, 1, 2, 3]
+        worker: [0, 1, 2, 3, 4, 5, 6]
     steps:
       - uses: actions/checkout@v4
 
@@ -866,7 +866,7 @@ jobs:
       - name: Run YouTube Download Worker
         env:
           YOUTUBE_WORKER_ID: ${{ matrix.worker }}
-          YOUTUBE_TOTAL_WORKERS: 4
+          YOUTUBE_TOTAL_WORKERS: 7
           YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
           YOUTUBE_PO_TOKEN: ${{ secrets.YOUTUBE_PO_TOKEN }}
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
@@ -1004,8 +1004,8 @@ jobs:
         env:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
-          DOWNLOAD_TOTAL_WORKERS: "15"
-          YOUTUBE_TOTAL_WORKERS: "4"
+          DOWNLOAD_TOTAL_WORKERS: "12"
+          YOUTUBE_TOTAL_WORKERS: "7"
           GITHUB_RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
