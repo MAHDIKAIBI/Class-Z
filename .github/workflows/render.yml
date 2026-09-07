@@ -1212,6 +1212,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -1302,6 +1307,9 @@ jobs:
           
           ffmpeg -f concat -safe 0 -i file_list.txt -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 320k -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
 
+      - name: Install Remotion Dependencies
+        run: for _retry in 1 2 3 4 5; do npm ci && break || { echo "Command failed, retrying..."; sleep 15; }; done
+
       - name: Short Creation (9:16 Vertical Hook + 3D Glass Outro)
         run: |
           echo "[*] Initiating 9:16 Short Creation from final_video.mp4..."
@@ -1326,24 +1334,37 @@ jobs:
               cp "$THUMB_SRC" public/current_thumb.png
             elif [ -f "public/test_thumb.png" ]; then
               cp public/test_thumb.png public/current_thumb.png
+            else
+              ffmpeg -y -ss 2 -i "$TARGET_DIR/final_video.mp4" -vframes 1 -q:v 2 public/current_thumb.png || true
             fi
+
+            # 2b. Ensure master_timeline.json exists for Remotion Webpack bundler
+            if [ -s "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_timeline.json" ]; then
+              cp "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_timeline.json" master_timeline.json
+            elif [ ! -s master_timeline.json ]; then
+              echo '{"timeline":[]}' > master_timeline.json
+            fi
+
+            # 2c. Write Outro Props JSON safely
+            echo '{"thumbnailSrc":"current_thumb.png","headline":"WATCH FULL VIDEO","subtext":"(First link in description 👇)"}' > outro_props.json
 
             # 3. Render 3-Second 3D Glass Outro in Remotion (90 frames @ 30fps)
             npx remotion render src/index.tsx ShortsGlassOutro "outro_3s.mp4" \
-              --props='{"thumbnailSrc":"current_thumb.png","headline":"WATCH FULL VIDEO","subtext":"(First link in description 👇)"}' \
-              --codec=h264
+              --props=outro_props.json \
+              --codec=h264 || true
 
             # 4. Smoothly Crossfade 15s Hook with 3s Outro (18s total) + Sub-bass impact
             if [ -s "outro_3s.mp4" ]; then
               ffmpeg -y -i "hook_15s.mp4" -i "outro_3s.mp4" \
                 -f lavfi -t 3 -i "aevalsrc=sin(2*PI*50*t)*exp(-3*t):s=44100:d=3" \
-                -filter_complex "[0:v][1:v]xfade=transition=fade:duration=0.5:offset=14.5[v];[0:a]afade=t=out:st=14.5:d=0.5[a0];[2:a]afade=t=in:st=0:d=0.3[a1];[a0][a1]concat=n=2:v=0:a=1[a]" \
+                -filter_complex "[0:v][1:v]xfade=transition=fade:duration=0.5:offset=14.5[v];[0:a]aformat=sample_rates=44100:channel_layouts=stereo,afade=t=out:st=14.5:d=0.5[a0];[2:a]aformat=sample_rates=44100:channel_layouts=stereo,afade=t=in:st=0:d=0.3[a1];[a0][a1]concat=n=2:v=0:a=1[a]" \
                 -map "[v]" -map "[a]" -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k -movflags +faststart "$TARGET_DIR/short_video.mp4"
               echo "[+] 9:16 Short Created Successfully -> $TARGET_DIR/short_video.mp4"
-              rm -f hook_15s.mp4 outro_3s.mp4
+              rm -f hook_15s.mp4 outro_3s.mp4 outro_props.json
             else
               echo "[!] Outro render failed. Falling back to cropped hook as short."
               cp "hook_15s.mp4" "$TARGET_DIR/short_video.mp4"
+              rm -f hook_15s.mp4 outro_props.json
             fi
           else
             echo "[!] Warning: final_video.mp4 missing. Skipping short creation."
