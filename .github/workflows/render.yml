@@ -1357,10 +1357,17 @@ jobs:
             if [ -s "outro_3s.mp4" ]; then
               ffmpeg -y -i "hook_15s.mp4" -i "outro_3s.mp4" \
                 -f lavfi -t 3 -i "aevalsrc=sin(2*PI*50*t)*exp(-3*t):s=44100:d=3" \
-                -filter_complex "[0:v][1:v]xfade=transition=fade:duration=0.5:offset=14.5[v];[0:a]aformat=sample_rates=44100:channel_layouts=stereo,afade=t=out:st=14.5:d=0.5[a0];[2:a]aformat=sample_rates=44100:channel_layouts=stereo,afade=t=in:st=0:d=0.3[a1];[a0][a1]concat=n=2:v=0:a=1[a]" \
-                -map "[v]" -map "[a]" -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k -movflags +faststart "$TARGET_DIR/short_video.mp4"
-              echo "[+] 9:16 Short Created Successfully -> $TARGET_DIR/short_video.mp4"
-              rm -f hook_15s.mp4 outro_3s.mp4 outro_props.json
+                -filter_complex "[0:v]settb=AVTB,fps=30,format=yuv420p[v0];[1:v]settb=AVTB,fps=30,format=yuv420p[v1];[v0][v1]xfade=transition=fade:duration=0.5:offset=14.5[v];[0:a]aformat=sample_rates=44100:channel_layouts=stereo,afade=t=out:st=14.5:d=0.5[a0];[2:a]aformat=sample_rates=44100:channel_layouts=stereo,afade=t=in:st=0:d=0.3[a1];[a0][a1]concat=n=2:v=0:a=1[a]" \
+                -map "[v]" -map "[a]" -c:v libx264 -preset fast -crf 18 -c:a aac -b:a 192k -movflags +faststart "$TARGET_DIR/short_video.mp4" || true
+              
+              if [ -s "$TARGET_DIR/short_video.mp4" ]; then
+                echo "[+] 9:16 Short Created Successfully -> $TARGET_DIR/short_video.mp4"
+                rm -f hook_15s.mp4 outro_3s.mp4 outro_props.json
+              else
+                echo "[!] Stitched short missing or ffmpeg failed. Falling back to cropped hook as short."
+                cp "hook_15s.mp4" "$TARGET_DIR/short_video.mp4"
+                rm -f hook_15s.mp4 outro_props.json
+              fi
             else
               echo "[!] Outro render failed. Falling back to cropped hook as short."
               cp "hook_15s.mp4" "$TARGET_DIR/short_video.mp4"
