@@ -22,6 +22,7 @@ on:
         options:
           - ClassZ
           - Midi-Fi
+          - ARTIFY
       topic:
         description: 'Topic Name'
         required: false
