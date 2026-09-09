@@ -335,8 +335,30 @@ export const MagnatesStage_TwoPartShowcase = () => {
     return <MagnatesStage_TwoPart payload={testPayload} durationInFrames={210} />;
 };
 
+import { Floating3DCardsCanvas } from './components/Floating3DCards';
+
+export const Floating3DCardsShowcase = () => (
+    <AbsoluteFill style={{ backgroundColor: '#020306' }}>
+        <Floating3DCardsCanvas payload={{
+            duration: 240,
+            actualDurationFrames: 240,
+            headlineTag: "TOPIC REVEAL // THE 2026 PAYLOAD",
+            headlineText: "We Are Breaking Down The Only 5 Brands That Genuinely Deserve Your Money",
+            themeNiche: "midi",
+            subjects: [
+                { id: "s1", rank: "#5", label: "ENTRY BENCHMARK", subtitle: "UNCOMPROMISED VELOCITY", color: "#00F0FF" },
+                { id: "s2", rank: "#4", label: "STANDALONE HYBRID", subtitle: "ZERO SOFTWARE LOCK-IN", color: "#00E5FF" },
+                { id: "s3", rank: "#3", label: "PRO STUDIO WORKHORSE", subtitle: "FATAR KEYBED PHYSICS", color: "#38BDF8" },
+                { id: "s4", rank: "#2", label: "ANALOG EXPRESSION", subtitle: "POLYPHONIC BIDIRECTIONAL", color: "#60A5FA" },
+                { id: "s5", rank: "#1", label: "THE UNDISPUTED TITAN", subtitle: "CLASSIFIED // TOP REVEAL", color: "#F59E0B", isClassified: true }
+            ]
+        }} />
+    </AbsoluteFill>
+);
+
 export const ShowcaseRegistry = () => (
     <>
+        <Composition id="Preview-Floating3DCards" component={Floating3DCardsShowcase} durationInFrames={240} fps={30} width={2560} height={1333} />
         <Composition id="Preview-ProceduralEvidence" component={ProceduralEvidenceShowcase} durationInFrames={120} fps={30} width={2560} height={1333} />
         <Composition id="Preview-MagnatesStage-TwoPart" component={MagnatesStage_TwoPartShowcase} durationInFrames={210} fps={30} width={2560} height={1333} />
         <Composition id="Preview-AnimatedNumber" component={AnimatedNumberShowcase} durationInFrames={150} fps={30} width={2560} height={1333} />
