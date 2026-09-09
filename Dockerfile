@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright/python:v1.44.0-jammy
+FROM python:3.11-bookworm
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -54,15 +54,17 @@ RUN pip install --no-cache-dir \
     huggingface_hub \
     qwen-tts==0.1.1
 
-# 6. Automation, Scraping, Vision, Media & LLMs
+# 6. Automation, Chromium, Scraping, Vision & LLMs
 RUN pip install --no-cache-dir \
+    "numpy<2.0.0" \
+    playwright \
     playwright-stealth==2.0.3 \
     selenium \
     seleniumbase==4.51.8 \
     undetected-chromedriver==3.5.5 \
     beautifulsoup4 \
     pyperclip \
-    opencv-python-headless \
+    "opencv-python-headless<5.0.0" \
     Pillow \
     yt-dlp \
     youtube-transcript-api \
@@ -81,8 +83,9 @@ RUN pip install --no-cache-dir \
     tweepy \
     requests \
     python-dotenv \
-    filelock
+    filelock \
+    && python -m playwright install --with-deps chromium
 
 # 7. Verification Smoke Test
 RUN ffmpeg -version && ffprobe -version && ollama --version \
-    && python -c "import torch, whisperx, faster_whisper, librosa, seleniumbase, g4f; print('Golden Environment Verified!')"
+    && python -c "import numpy; assert not numpy.__version__.startswith('2.'), f'NumPy 2.x detected: {numpy.__version__}'; import torch, whisperx, faster_whisper, librosa, seleniumbase, g4f, google.genai; print('Golden Environment Verified on Python 3.11 with NumPy 1.x!')"
