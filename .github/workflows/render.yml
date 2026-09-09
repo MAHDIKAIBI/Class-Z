@@ -460,7 +460,9 @@ jobs:
           # Robust Playwright Install
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
-          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium firefox && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
+          python -m pip install -U playwright
+          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
+          python -m playwright install chromium || true
 
 
       - name: Run The_Brain PREP phase (audio + timeline, no clip downloads)
@@ -698,7 +700,9 @@ jobs:
           # Robust Playwright Install
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
-          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium firefox && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
+          python -m pip install -U playwright
+          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
+          python -m playwright install chromium || true
 
       - name: Setup Local Ollama Brain & 4GB Swap Space
         run: |
@@ -1006,7 +1010,9 @@ jobs:
           # Robust Playwright Install
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
-          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium firefox && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
+          python -m pip install -U playwright
+          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
+          python -m playwright install chromium || true
 
       - name: Merge Partial Timelines
         if: needs.creation_job.outputs.skip_downloads != 'true'
