@@ -17,7 +17,6 @@ import { EffectsDirector } from './components/Effects';
 import { CaptionDirector } from './components/CaptionDirector';
 import { DynamicLiquidGrid } from './components/DynamicLiquidGrid';
 import { MonolithEngine } from './components/MonolithEngine';
-import { DioramaCanvas } from './components/Diorama';
 import { Floating3DCardsCanvas } from './components/Floating3DCards';
 import { GlobalFinisher } from './components/GlobalFinisher';
 import { CinematicChapterReveal } from './components/CinematicChapterReveal';
@@ -243,12 +242,12 @@ const SceneContent = ({ scene, index }: any) => {
             {/* VISUAL ROUTING ENGINE */}
             {(scene.scene_type === 'monolith') ? (
                 <MonolithEngine payload={{...(scene.monolith_payload || {}), bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '', assetSrc: scene.monolith_payload?.assetSrc ? staticFile(scene.monolith_payload.assetSrc) : ''}} />
-            ) : (scene.scene_type === 'floating_cards' || scene.scene_type === 'topic_reveal') ? (
+            ) : (scene.scene_type === 'floating_cards') ? (
                 <Floating3DCardsCanvas payload={{
-                    ...(scene.floating_cards_payload || scene.diorama_payload || {}),
+                    ...(scene.floating_cards_payload || {}),
                     actualDurationFrames: scene.visualDurFrames,
                     bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '',
-                    subjects: ((scene.floating_cards_payload?.subjects || scene.diorama_payload?.subjects || [])).map((sub: any, i: number) => {
+                    subjects: (scene.floating_cards_payload?.subjects || []).map((sub: any, i: number) => {
                         const asset = (scene.visual?.assets || [])[i];
                         const resolvedImg = asset?.local_path || sub.imageUrl || '';
                         return {
@@ -288,7 +287,7 @@ const SceneContent = ({ scene, index }: any) => {
                     <CinematicOverlay src={scene.overlay_image} durationInFrames={Math.max(1, scene.visualDurFrames - Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps))} />
                 </Sequence>
             )}
-            {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'topic_reveal' && scene.scene_type !== 'floating_cards' && scene.scene_type !== 'monolith' && scene.scene_type !== 'magnates_2.5d' && scene.scene_type !== 'two_part_whip' && (!scene.diorama_payload || Object.keys(scene.diorama_payload).length === 0) && (!scene.floating_cards_payload || Object.keys(scene.floating_cards_payload).length === 0) && (!scene.monolith_payload || Object.keys(scene.monolith_payload).length === 0) && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (
+            {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'floating_cards' && scene.scene_type !== 'monolith' && scene.scene_type !== 'magnates_2.5d' && scene.scene_type !== 'two_part_whip' && (!scene.floating_cards_payload || Object.keys(scene.floating_cards_payload).length === 0) && (!scene.monolith_payload || Object.keys(scene.monolith_payload).length === 0) && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (
                 <CaptionDirector scene={scene} />
             )}
         </AbsoluteFill>
