@@ -357,15 +357,67 @@ const EvidencePhotograph: React.FC<{
           border: '1px solid rgba(0, 0, 0, 0.8)',
         }}
       >
-        <Img
-          src={getAsset(src)}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            filter: 'contrast(1.15) brightness(0.95)',
-          }}
-        />
+        {src ? (
+          <Img
+            src={getAsset(src)}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              filter: 'contrast(1.15) brightness(0.95)',
+            }}
+          />
+        ) : (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: `radial-gradient(ellipse at 50% 50%, ${accentColor}20 0%, #060911 80%)`,
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: `linear-gradient(to right, ${accentColor}15 1px, transparent 1px), linear-gradient(to bottom, ${accentColor}15 1px, transparent 1px)`,
+                backgroundSize: '24px 24px',
+              }}
+            />
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                border: `2px dashed ${accentColor}88`,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: `0 0 20px ${accentColor}25`,
+              }}
+            >
+              <div style={{ width: 10, height: 10, backgroundColor: accentColor, borderRadius: '50%' }} />
+            </div>
+            <span
+              style={{
+                marginTop: 14,
+                fontFamily: 'monospace',
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: '3px',
+                color: accentColor,
+                textTransform: 'uppercase',
+              }}
+            >
+              {tag || 'CONFIDENTIAL DOSSIER'}
+            </span>
+          </div>
+        )}
 
         {/* Specular Diagonal Sheen across photo */}
         <div
@@ -761,11 +813,20 @@ export const MagnatesStage_TwoPart: React.FC<{
   const subject = p2.subject || {};
   const typography = p2.typography || {};
 
-  // Timing keyframes (matching original orchestrator payload defaults)
-  const heroFrame = msTof(hero.trigger_start_ms !== undefined ? hero.trigger_start_ms : 1000);
-  const whipFrame = msTof(tr.trigger_start_ms !== undefined ? tr.trigger_start_ms : 4000);
-  const subjectFrame = msTof(subject.trigger_start_ms !== undefined ? subject.trigger_start_ms : 4200);
-  const typoFrame = msTof(typography.trigger_start_ms !== undefined ? typography.trigger_start_ms : 4500);
+  // Timing keyframes: Dynamically bounded by scene duration for golden pacing
+  const heroFrame = Math.min(
+    hero.trigger_start_ms !== undefined ? msTof(hero.trigger_start_ms) : 0,
+    Math.floor(durationInFrames * 0.1)
+  );
+
+  const minWhip = Math.max(15, Math.floor(durationInFrames * 0.38));
+  const maxWhip = Math.max(minWhip + 10, Math.floor(durationInFrames * 0.50));
+  const defaultWhip = Math.floor(durationInFrames * 0.44);
+  const rawWhip = tr.trigger_start_ms !== undefined ? msTof(tr.trigger_start_ms) : defaultWhip;
+  const whipFrame = Math.max(minWhip, Math.min(rawWhip, maxWhip));
+
+  const subjectFrame = whipFrame + Math.min(4, Math.floor(durationInFrames * 0.03));
+  const typoFrame = whipFrame + Math.min(10, Math.floor(durationInFrames * 0.08));
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CINEMATIC TRANSITION PHYSICS (THE WHIP & DIVE)
@@ -945,7 +1006,10 @@ export const MagnatesStage_TwoPart: React.FC<{
             { x: 740, y: -240, z: -180, rotZ: 12, rotX: 10, blur: 4, w: 400, h: 300, tag: 'EXHIBIT 04', sub: 'FINANCIAL AUDIT' },
           ].map((p, idx) => {
             const orb = orbits[idx] || orbits[0] || {};
-            const orbStart = msTof(orb.trigger_start_ms || 700 + idx * 220);
+            const orbStart = Math.min(
+              msTof(orb.trigger_start_ms !== undefined ? orb.trigger_start_ms : 200 + idx * 150),
+              Math.max(0, whipFrame - 15)
+            );
             if (frame < orbStart) return null;
 
             const orbRel = frame - orbStart;
@@ -1033,7 +1097,7 @@ export const MagnatesStage_TwoPart: React.FC<{
           })}
 
           {/* ── THE PRIMARY EVIDENCE DOSSIER PHOTOGRAPH (ZOOMED-IN HERO) ──── */}
-          {hero.local_path && frame >= heroFrame && (
+          {frame >= heroFrame && (
             <div
               style={{
                 position: 'absolute',
@@ -1167,7 +1231,7 @@ export const MagnatesStage_TwoPart: React.FC<{
           />
 
           {/* ── THE ZOOMED-IN TARGET SUBJECT PHOTOGRAPH / CUTOUT ───────────── */}
-          {subject.local_path && frame >= subjectFrame && (
+          {frame >= subjectFrame && (
             <div
               style={{
                 position: 'absolute',
