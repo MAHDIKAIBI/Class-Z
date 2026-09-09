@@ -37,17 +37,15 @@ export const BiometricScanRing: React.FC<RadialDataProps> = ({
     config: { damping: 200, stiffness: 45, mass: 1.2 } 
   });
 
-  // Smooth cinematic data counting
-  const fillProgress = interpolate(
-    localFrame,
-    [8, Math.max(9, duration - 15)],
-    [0, targetPercentage],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.25, 0.1, 0.25, 1) }
-  );
+  // Snappy Quartic Ease-Out Landing (10 frames - 0.33s)
+  // Eliminates counting lag where voiceover says 100% while HUD lags
+  const countProgress = Math.min(1, Math.max(0, localFrame / 10));
+  const countEase = 1 - Math.pow(1 - countProgress, 4);
+  const fillProgress = countProgress >= 1 ? targetPercentage : targetPercentage * countEase;
 
-  const scale = isActive ? interpolate(entranceSpring, [0, 1], [0.92, 1]) : 1;
-  const opacity = isActive ? interpolate(localFrame, [0, 15], [0, 1], { extrapolateRight: "clamp" }) : 0;
-  const blurAmount = isActive ? interpolate(localFrame, [0, 15], [12, 0], { extrapolateRight: "clamp" }) : 12;
+  const scale = isActive ? interpolate(entranceSpring, [0, 1], [0.94, 1]) : 1;
+  const opacity = isActive ? interpolate(localFrame, [0, 8], [0, 1], { extrapolateRight: "clamp" }) : 0;
+  const blurAmount = isActive ? interpolate(localFrame, [0, 8], [10, 0], { extrapolateRight: "clamp" }) : 10;
 
   // Concentric Ring Radii
   const outerRadius = 145;

@@ -1,4 +1,4 @@
-﻿import { 
+import { 
   AbsoluteFill, 
   useCurrentFrame, 
   interpolate, 
@@ -12,6 +12,12 @@ export type CinematicMatchCutTransitionProps = {
   durationInFrames?: number;
 };
 
+/**
+ * FOCAL ANCHOR MORPH CUT (Transition 10 - Redesigned)
+ * Replaces aggressive macro dive and explosive shockwaves with an elegant
+ * focal anchor match cut. Subtle center push (1.0x -> 1.12x), gentle optical
+ * defocus, smooth crossfade, and an anamorphic lens streak at the cut point.
+ */
 export const CinematicMatchCutTransition: React.FC<CinematicMatchCutTransitionProps> = ({ 
   SceneA, 
   SceneB, 
@@ -19,77 +25,49 @@ export const CinematicMatchCutTransition: React.FC<CinematicMatchCutTransitionPr
 }) => {
   const frame = useCurrentFrame();
 
-  const midpoint = Math.floor(durationInFrames / 2);
+  const progress = interpolate(frame, [0, durationInFrames], [0, 1], {
+    easing: Easing.bezier(0.25, 0.1, 0.25, 1.0),
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
-  // 1. SCENE A: EXPONENTIAL ZOOM DIVE INTO CENTER
-  const zoomA = interpolate(
-    frame,
-    [0, midpoint],
-    [1.0, 3.2],
-    { easing: Easing.bezier(0.6, 0.0, 0.8, 1.0), extrapolateRight: "clamp" }
-  );
-  const blurA = interpolate(
-    frame,
-    [0, midpoint],
-    [0, 30],
-    { easing: Easing.in(Easing.cubic), extrapolateRight: "clamp" }
-  );
-  const opacityA = interpolate(
-    frame,
-    [midpoint - 3, midpoint],
-    [1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  // 1. GENTLE FOCAL DRIFT (Anchors the subject without disorientation)
+  const scaleA = interpolate(progress, [0, 1], [1.0, 1.12]);
+  const scaleB = interpolate(progress, [0, 1], [1.08, 1.0]);
+
+  // 2. SOFT OPTICAL DEFOCUS AT CUT POINT
+  const blur = interpolate(
+    progress,
+    [0, 0.5, 1],
+    [0, 7, 0],
+    { easing: Easing.inOut(Easing.ease), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
-  // 2. SCENE B: ERUPTS FROM MACRO POINT OUTWARD
-  const zoomB = interpolate(
-    frame,
-    [midpoint, durationInFrames],
-    [0.35, 1.0],
-    { easing: Easing.bezier(0.1, 0.8, 0.2, 1.0), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-  const blurB = interpolate(
-    frame,
-    [midpoint, durationInFrames],
-    [25, 0],
-    { easing: Easing.out(Easing.cubic), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-  const opacityB = interpolate(
-    frame,
-    [midpoint, midpoint + 4],
-    [0, 1],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
+  // 3. SEAMLESS OVERLAPPING CROSSFADE
+  const opacityA = interpolate(progress, [0.35, 0.65], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const opacityB = interpolate(progress, [0.35, 0.65], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
-  // 3. RADIAL MATCH-CUT SHOCKWAVE EXPANSION
-  const shockwaveRadius = interpolate(
-    frame,
-    [midpoint - 2, durationInFrames],
-    [0, 140],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-  const shockwaveOpacity = interpolate(
-    frame,
-    [midpoint - 2, midpoint + 2, durationInFrames],
-    [0, 0.9, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-  );
-
-  // 4. CENTRAL LIGHT FLARE AT CONTACT POINT
-  const centerFlare = interpolate(
-    frame,
-    [midpoint - 4, midpoint, midpoint + 5],
-    [0, 1, 0],
-    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  // 4. DELICATE HORIZONTAL ANAMORPHIC FLARE AT APEX
+  const flareOpacity = interpolate(
+    progress,
+    [0.35, 0.5, 0.65],
+    [0, 0.32, 0],
+    { easing: Easing.inOut(Easing.ease), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#020306", overflow: "hidden" }}>
-      {/* SCENE A (Zooms into center macro vortex) */}
+      {/* SCENE A (Gently drifts forward, keeping subject anchored) */}
       <AbsoluteFill
         style={{
-          transform: `scale(${zoomA})`,
-          filter: `blur(${blurA}px)`,
+          transform: `scale(${scaleA})`,
+          filter: blur > 0.5 ? `blur(${blur}px)` : "none",
           opacity: opacityA,
           transformOrigin: "50% 50%",
           pointerEvents: opacityA > 0 ? "auto" : "none",
@@ -98,11 +76,11 @@ export const CinematicMatchCutTransition: React.FC<CinematicMatchCutTransitionPr
         {SceneA}
       </AbsoluteFill>
 
-      {/* SCENE B (Expands from center focal origin) */}
+      {/* SCENE B (Resolves smoothly into anchor position) */}
       <AbsoluteFill
         style={{
-          transform: `scale(${zoomB})`,
-          filter: `blur(${blurB}px)`,
+          transform: `scale(${scaleB})`,
+          filter: blur > 0.5 ? `blur(${blur}px)` : "none",
           opacity: opacityB,
           transformOrigin: "50% 50%",
           pointerEvents: opacityB > 0 ? "auto" : "none",
@@ -111,40 +89,43 @@ export const CinematicMatchCutTransition: React.FC<CinematicMatchCutTransitionPr
         {SceneB}
       </AbsoluteFill>
 
-      {/* MATCH CUT RADIAL SHOCKWAVE */}
-      {shockwaveOpacity > 0.01 && (
+      {/* SUBTLE HORIZONTAL ANAMORPHIC STREAK AT CUT POINT */}
+      {flareOpacity > 0.01 && (
         <AbsoluteFill
           style={{
             pointerEvents: "none",
             mixBlendMode: "screen",
-            opacity: shockwaveOpacity,
-            background: `radial-gradient(circle at 50% 50%, transparent ${Math.max(0, shockwaveRadius - 20)}%, rgba(212, 175, 55, 0.7) ${shockwaveRadius}%, rgba(255, 255, 255, 0.9) ${shockwaveRadius + 3}%, transparent ${shockwaveRadius + 15}%)`,
-            filter: "blur(4px)",
+            opacity: flareOpacity,
+            background: "linear-gradient(90deg, transparent 15%, rgba(200, 230, 255, 0.8) 50%, transparent 85%)",
+            transform: "scaleY(0.18)",
+            filter: "blur(6px)",
           }}
         />
       )}
 
-      {/* VOLUMETRIC CENTER CORE FLARE */}
-      {centerFlare > 0.01 && (
+      {/* SOFT OPTICAL GLOW CORE */}
+      {flareOpacity > 0.01 && (
         <AbsoluteFill
           style={{
             pointerEvents: "none",
             mixBlendMode: "screen",
-            opacity: centerFlare,
-            background: "radial-gradient(circle at 50% 50%, #FFFFFF 0%, #F5D77F 25%, #D4AF37 50%, transparent 75%)",
-            filter: "blur(8px)",
+            opacity: flareOpacity * 0.7,
+            background: "radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.9) 0%, rgba(212, 175, 55, 0.4) 30%, transparent 65%)",
+            filter: "blur(10px)",
           }}
         />
       )}
 
       {/* PERIMETER DEPTH VIGNETTE */}
-      <AbsoluteFill
+      <div
         style={{
-          boxShadow: `inset 0 0 ${interpolate(frame, [0, midpoint, durationInFrames], [0, 300, 0])}px rgba(0, 0, 0, 0.9)`,
+          position: "absolute",
+          inset: 0,
+          boxShadow: `inset 0 0 100px rgba(0, 0, 0, ${0.4 + flareOpacity * 0.5})`,
           pointerEvents: "none",
-          zIndex: 80,
         }}
       />
     </AbsoluteFill>
   );
 };
+

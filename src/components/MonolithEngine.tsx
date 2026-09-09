@@ -42,6 +42,29 @@ export const MonolithEngine: React.FC<{ payload: MonolithPayload }> = ({ payload
   const { fps } = useVideoConfig();
   const dur = Number(payload.duration) || 150;
 
+  // HARD RULE: If no image asset was downloaded/found, DO NOT render empty monolith card or HUD
+  if (!payload.assetSrc || String(payload.assetSrc).trim() === '') {
+    return (
+      <CinematicTextureWrapper
+        backgroundLayer={
+          <AbsoluteFill style={{ zIndex: 0, opacity: 1 }}>
+            {payload.bgVideoSrc ? (
+              <OffthreadVideo 
+                src={staticFile(payload.bgVideoSrc)} 
+                style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                muted 
+              />
+            ) : (
+              <div style={{ width: "100%", height: "100%", backgroundColor: "#07070a" }} />
+            )}
+          </AbsoluteFill>
+        }
+      >
+        <AbsoluteFill />
+      </CinematicTextureWrapper>
+    );
+  }
+
   // CAMERA LOGIC
   const scale = interpolate(frame, [0, dur], [1, 1.15], { extrapolateRight: 'clamp' });
   const driftX = Math.sin(frame / 60) * 2;

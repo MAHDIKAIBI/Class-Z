@@ -35,23 +35,57 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
+  // Detect if background is video or image
+  const bgExt = bgVideoUrl?.split('.').pop()?.toLowerCase() || '';
+  const bgIsVideo = ['mp4', 'mov', 'webm'].includes(bgExt);
+
+  const validAssets = (assets || []).filter(a => a && a.url && typeof a.url === 'string' && a.url.trim() !== '');
+
+  // HARD RULE: If no images were downloaded/found, DO NOT render empty cards or HUD
+  if (validAssets.length === 0) {
+    return (
+      <CinematicTextureWrapper
+        backgroundLayer={
+          <AbsoluteFill style={{ transform: "scale(1.1) translateZ(0)", zIndex: 0 }}>
+            {bgIsVideo ? (
+              <OffthreadVideo src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => console.log("Media playback error caught on Video:", e)} />
+            ) : (
+              <>
+                {bgVideoUrl ? <Img src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <div style={{ width: "100%", height: "100%", backgroundColor: "#0a0a0a" }} />}
+              </>
+            )}
+          </AbsoluteFill>
+        }
+      >
+        <AbsoluteFill />
+      </CinematicTextureWrapper>
+    );
+  }
+
   // DYNAMIC SPRING ENGINE (100% crash-proof)
-  // If an asset doesn't exist, its trigger defaults to frame 9999 (never fires)
-  const trigger1 = assets[1]?.trigger_frame ?? 9999;
-  const trigger2 = assets[2]?.trigger_frame ?? 9999;
+  const trigger1 = validAssets[1]?.trigger_frame ?? 9999;
+  const trigger2 = validAssets[2]?.trigger_frame ?? 9999;
 
   const spring1 = spring({ frame: Math.max(0, frame - trigger1), fps, config: { damping: 28, stiffness: 90, mass: 1 } });
   const spring2 = spring({ frame: Math.max(0, frame - trigger2), fps, config: { damping: 28, stiffness: 90, mass: 1 } });
 
-  // FLUID WIDTH MATH (100 -> 50/50 -> 33/33/33)
-  const w0 = interpolate(spring1, [0, 1], [100, 50]) - interpolate(spring2, [0, 1], [0, 16.66]);
-  const w1 = interpolate(spring1, [0, 1], [0, 50]) - interpolate(spring2, [0, 1], [0, 16.66]);
-  const w2 = interpolate(spring2, [0, 1], [0, 33.33]);
-  const widths = [w0, w1, w2];
+  // FLUID WIDTH MATH ADAPTED TO VALID ASSET COUNT
+  let widths = [100, 0, 0];
+  if (validAssets.length === 1) {
+    widths = [100, 0, 0];
+  } else if (validAssets.length === 2) {
+    const w0 = interpolate(spring1, [0, 1], [100, 50]);
+    const w1 = interpolate(spring1, [0, 1], [0, 50]);
+    widths = [w0, w1, 0];
+  } else {
+    const w0 = interpolate(spring1, [0, 1], [100, 50]) - interpolate(spring2, [0, 1], [0, 16.66]);
+    const w1 = interpolate(spring1, [0, 1], [0, 50]) - interpolate(spring2, [0, 1], [0, 16.66]);
+    const w2 = interpolate(spring2, [0, 1], [0, 33.33]);
+    widths = [w0, w1, w2];
+  }
 
   // DYNAMIC BACKGROUND BLUR (Starts sharp, blurs on first trigger)
-  const firstTrigger = assets[0]?.trigger_frame ?? 0;
-  // Use opacity instead of blur for hardware acceleration to prevent video tearing
+  const firstTrigger = validAssets[0]?.trigger_frame ?? 0;
   const blurOpacity = interpolate(frame, [firstTrigger - 10, firstTrigger], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   const liquidGlassStyle: React.CSSProperties = {
@@ -68,15 +102,10 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
     height: "100%",
   };
 
-  // Detect if background is video or image
-  const bgExt = bgVideoUrl?.split('.').pop()?.toLowerCase() || '';
-  const bgIsVideo = ['mp4', 'mov', 'webm'].includes(bgExt);
-
   return (
     <CinematicTextureWrapper
       backgroundLayer={
         <AbsoluteFill>
-          {/* BACKGROUND LAYER (Clean, hardware-accelerated, no animating filters) */}
           <AbsoluteFill style={{ transform: "scale(1.1) translateZ(0)", zIndex: 0 }}>
             {bgIsVideo ? (
               <OffthreadVideo src={staticFile(bgVideoUrl)} style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={(e) => console.log("Media playback error caught on Video:", e)} />
@@ -87,7 +116,6 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
             )}
           </AbsoluteFill>
 
-          {/* BLUR OVERLAY (Animates opacity instead of CSS blur radius to save GPU) */}
           <AbsoluteFill style={{ 
               backgroundColor: `rgba(0,0,0,${blurOpacity * 0.4})`,
               backdropFilter: "blur(40px) saturate(150%)",
@@ -100,9 +128,6 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
       }
     >
       <AbsoluteFill style={{ backgroundColor: "transparent", fontFamily: '"Geist", "Inter", system-ui, sans-serif' }}>
-
-
-      {/* DYNAMIC GRID CONTAINER */}
       <div style={{
         position: "absolute",
         top: "10%",
@@ -113,7 +138,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
         gap: "24px",
         zIndex: 10
       }}>
-        {assets.map((asset, i) => {
+        {validAssets.map((asset, i) => {
           const currentWidth = widths[i];
           if (currentWidth < 1) return null;
 
@@ -124,50 +149,44 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({ bgVideoUrl
           return (
             <div key={i} style={{ ...liquidGlassStyle, width: `${currentWidth}%`, opacity: cardOpacity, transform: `scale(${cardScale})` }}>
               
-              {/* Layer 1: Ambient Blurred Backdrop (Fills widescreen card with color-matched atmospheric glow) */}
-              {asset.url ? (
-                <div style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 1 }}>
-                  <Img
-                    src={staticFile(asset.url)}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      filter: "blur(35px) brightness(0.4) saturate(1.4)",
-                      transform: "scale(1.2)",
-                    }}
-                  />
-                </div>
-              ) : (
-                <div style={{ position: "absolute", inset: 0, backgroundColor: "#111", zIndex: 1 }} />
-              )}
-
-              {/* Layer 2: Crisp Uncropped Hero Subject (Preserves full head/body/aspect ratio) */}
-              {asset.url && (
-                <div
+              {/* Layer 1: Ambient Blurred Backdrop */}
+              <div style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 1 }}>
+                <Img
+                  src={staticFile(asset.url)}
                   style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 2,
-                    padding: "24px",
-                    paddingBottom: "115px", // Preserve clean runway for bottom Text HUD
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    filter: "blur(35px) brightness(0.4) saturate(1.4)",
+                    transform: "scale(1.2)",
                   }}
-                >
-                  <Img
-                    src={staticFile(asset.url)}
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: "100%",
-                      objectFit: "contain",
-                      borderRadius: "16px",
-                      filter: "drop-shadow(0 20px 35px rgba(0,0,0,0.65))",
-                    }}
-                  />
-                </div>
-              )}
+                />
+              </div>
+
+              {/* Layer 2: Crisp Uncropped Hero Subject */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 2,
+                  padding: "24px",
+                  paddingBottom: "115px",
+                }}
+              >
+                <Img
+                  src={staticFile(asset.url)}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                    borderRadius: "16px",
+                    filter: "drop-shadow(0 20px 35px rgba(0,0,0,0.65))",
+                  }}
+                />
+              </div>
 
               {/* Top Glare */}
               <div style={{ position: "absolute", top: 0, width: "100%", height: "40%", background: "linear-gradient(180deg, rgba(255,255,255,0.3) 0%, transparent 100%)", zIndex: 3, pointerEvents: "none" }} />

@@ -61,6 +61,20 @@ export const CaptionDirector = ({ scene }: any) => {
     
     if (!scene) return null;
     
+    // Suppress subtitles/captions during Floating3DCards (has its own built-in subtitles), AnimatedNumber, and Dynamic3DComparison scenes
+    const gType = (scene.graphics?.graphics_type || '').toLowerCase();
+    if (['animatednumber', 'animated_number', 'dynamic3dcomparison', 'dynamic_3d_comparison'].includes(gType)) {
+        return null;
+    }
+
+    const sType = (scene.scene_type || scene.visual?.scene_type || '').toLowerCase();
+    const hasFloatingCards = sType === 'floating_cards' ||
+                             (scene.floating_cards_payload && Object.keys(scene.floating_cards_payload).length > 0) ||
+                             (scene.visual?.floating_cards_payload && Object.keys(scene.visual.floating_cards_payload).length > 0);
+    if (hasFloatingCards) {
+        return null;
+    }
+
     const preset = scene.caption_preset || scene.visual?.caption_preset || 'GlassPillCaption';
     if (preset === 'none') return null;
     

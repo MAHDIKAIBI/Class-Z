@@ -33,6 +33,7 @@ import { GlitchDataTearTransition } from './components/transition9';
 import { CinematicMatchCutTransition } from './components/transition10';
 import { CameraWallTransition } from './components/transition11';
 import { ShortsGlassOutro } from './components/ShortsGlassOutro';
+import { ShowcaseRegistry } from './Showcases';
 
 
 export const useCamera = () => ({ xPan: 0, yPan: 0, zScale: 1.0 });
@@ -240,14 +241,14 @@ const SceneContent = ({ scene, index }: any) => {
     return (
         <AbsoluteFill>
             {/* VISUAL ROUTING ENGINE */}
-            {(scene.scene_type === 'monolith') ? (
-                <MonolithEngine payload={{...(scene.monolith_payload || {}), bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '', assetSrc: scene.monolith_payload?.assetSrc ? staticFile(scene.monolith_payload.assetSrc) : ''}} />
-            ) : (scene.scene_type === 'floating_cards') ? (
+            {(scene.scene_type === 'monolith' && scene.monolith_payload?.assetSrc && String(scene.monolith_payload.assetSrc).trim() !== '') ? (
+                <MonolithEngine payload={{...(scene.monolith_payload || {}), bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '', assetSrc: staticFile(scene.monolith_payload.assetSrc)}} />
+            ) : (scene.scene_type === 'floating_cards' || scene.visual?.scene_type === 'floating_cards' || (scene.floating_cards_payload && Object.keys(scene.floating_cards_payload).length > 0) || (scene.visual?.floating_cards_payload && Object.keys(scene.visual.floating_cards_payload).length > 0)) ? (
                 <Floating3DCardsCanvas payload={{
-                    ...(scene.floating_cards_payload || {}),
+                    ...(scene.floating_cards_payload || scene.visual?.floating_cards_payload || {}),
                     actualDurationFrames: scene.visualDurFrames,
                     bgVideoSrc: scene.media_paths?.[0] ? staticFile(scene.media_paths[0]) : '',
-                    subjects: (scene.floating_cards_payload?.subjects || []).map((sub: any, i: number) => {
+                    subjects: ((scene.floating_cards_payload?.subjects || scene.visual?.floating_cards_payload?.subjects) || []).map((sub: any, i: number) => {
                         const asset = (scene.visual?.assets || [])[i];
                         const resolvedImg = asset?.local_path || sub.imageUrl || '';
                         return {
@@ -260,8 +261,8 @@ const SceneContent = ({ scene, index }: any) => {
                 <CinematicChapterReveal chapterNumber={scene.chapter_payload?.chapterNumber || 1} subtitle={scene.chapter_payload?.subtitle || ""} bgImgUrl={scene.visual?.assets?.find((a:any) => a.role === 'bg_chapter')?.local_path || ""} leftAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'left_chapter')?.local_path || ""} rightAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'right_chapter')?.local_path || ""} />
             ) : (scene.scene_type === 'magnates_2.5d' || scene.visual?.scene_type === 'magnates_2.5d' || scene.scene_type === 'two_part_whip' || scene.visual?.scene_type === 'two_part_whip') ? (
                 <MagnatesStage payload={scene.visual || {}} durationInFrames={Math.max(1, scene.visualDurFrames || 1)} />
-            ) : (scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') ? (
-                <DynamicLiquidGrid bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''} assets={(scene.visual?.assets || scene.assets || []).filter((a: any) => a.layer !== 'background' && a.type !== 'video').map((a: any, idx: number) => ({url: a.local_path || a.downloaded_path || '', title: a.title || '', subtitle: a.subtitle || '', trigger_frame: a.trigger_start_ms ? Math.round(((a.trigger_start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps) : (a.trigger_frame ?? (idx === 0 ? 0 : 9999))}))} />
+            ) : ((scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') && (scene.visual?.assets || scene.assets || []).some((a: any) => (a.local_path || a.downloaded_path) && a.layer !== 'background' && a.type !== 'video')) ? (
+                <DynamicLiquidGrid bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''} assets={(scene.visual?.assets || scene.assets || []).filter((a: any) => (a.local_path || a.downloaded_path) && a.layer !== 'background' && a.type !== 'video').map((a: any, idx: number) => ({url: a.local_path || a.downloaded_path || '', title: a.title || '', subtitle: a.subtitle || '', trigger_frame: a.trigger_start_ms ? Math.round(((a.trigger_start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps) : (a.trigger_frame ?? (idx === 0 ? 0 : 9999))}))} />
             ) : (
                 <div style={{ position: 'absolute', inset: 0, animationName: scene.cutStyle === 'split_cut' ? 'none' : 'crossFocus', animationDuration: `${scene.overlapFrames / fps}s` }}>
                     <div style={{ position: 'absolute', inset: 0, animationName: scene.overlay_image ? 'slowZoomBg' : 'none', animationDuration: `${scene.visualDurFrames / fps}s`, animationTimingFunction: 'linear', animationFillMode: 'forwards' }}>
@@ -287,30 +288,30 @@ const SceneContent = ({ scene, index }: any) => {
                     <CinematicOverlay src={scene.overlay_image} durationInFrames={Math.max(1, scene.visualDurFrames - Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps))} />
                 </Sequence>
             )}
-            {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'floating_cards' && scene.scene_type !== 'monolith' && scene.scene_type !== 'magnates_2.5d' && scene.scene_type !== 'two_part_whip' && (!scene.floating_cards_payload || Object.keys(scene.floating_cards_payload).length === 0) && (!scene.monolith_payload || Object.keys(scene.monolith_payload).length === 0) && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (
+            {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'floating_cards' && scene.visual?.scene_type !== 'floating_cards' && (scene.scene_type !== 'monolith' || !scene.monolith_payload?.assetSrc) && scene.scene_type !== 'magnates_2.5d' && scene.scene_type !== 'two_part_whip' && (!scene.floating_cards_payload || Object.keys(scene.floating_cards_payload).length === 0) && (!scene.visual?.floating_cards_payload || Object.keys(scene.visual?.floating_cards_payload).length === 0) && (!scene.monolith_payload?.assetSrc) && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && !(['animatednumber', 'animated_number', 'dynamic3dcomparison', 'dynamic_3d_comparison'].includes((scene.graphics?.graphics_type || '').toLowerCase())) && (
                 <CaptionDirector scene={scene} />
             )}
         </AbsoluteFill>
     );
 };
 
-const TransitionSceneA = ({ scene, index }: any) => {
+const TransitionSceneA = ({ scene, index, offsetFrames = 15 }: any) => {
     return (
-        <Sequence from={15 - scene.visualDurFrames} layout="none">
+        <Sequence from={offsetFrames - scene.visualDurFrames} layout="none">
             <SceneContent scene={scene} index={index} />
         </Sequence>
     );
 };
 
-const TransitionSceneB = ({ scene, index }: any) => {
+const TransitionSceneB = ({ scene, index, offsetFrames = 15 }: any) => {
     return (
         <AbsoluteFill>
-            <Sequence durationInFrames={15} layout="none">
+            <Sequence durationInFrames={offsetFrames} layout="none">
                 <Freeze frame={0}>
                     <SceneContent scene={scene} index={index} />
                 </Freeze>
             </Sequence>
-            <Sequence from={15} layout="none">
+            <Sequence from={offsetFrames} layout="none">
                 <SceneContent scene={scene} index={index} />
             </Sequence>
         </AbsoluteFill>
@@ -414,8 +415,8 @@ const AutomatedDocumentary = () => {
                               )}
                               {scene.outgoingTransition === 'CameraWall' && (
                                   <CameraWallTransition 
-                                      SceneA={<TransitionSceneA scene={scene} index={index} />} 
-                                      SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} />} 
+                                      SceneA={<TransitionSceneA scene={scene} index={index} offsetFrames={30} />} 
+                                      SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} offsetFrames={30} />} 
                                       durationInFrames={60}
                                       galleryVideos={[
                                           ...mappedScenes.slice(0, index).map((s: any) => s.visual_asset || s.media_path).filter(Boolean).reverse(),
@@ -481,6 +482,7 @@ const RemotionRoot = () => {
           subtext: '(First link in description 👇)',
         }}
       />
+      <ShowcaseRegistry />
     </>
   );
 };

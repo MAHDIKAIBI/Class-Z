@@ -2,8 +2,6 @@ import {
   AbsoluteFill, 
   useCurrentFrame, 
   interpolate, 
-  spring,
-  useVideoConfig,
   Easing,
 } from "remotion";
 import React from "react";
@@ -14,6 +12,13 @@ export type ZoomSpinVortexTransitionProps = {
   durationInFrames?: number;
 };
 
+/**
+ * VERTIGO DOLLY PUSH (Transition 7 - Redesigned)
+ * Replaces aggressive rotational zoom-spin and shockwaves with a pure
+ * Hitchcock-style Vertigo dolly zoom. Smooth focal push (1.0x -> 1.18x) into 
+ * Scene A, seamless optical crossfade, and a settling pull-out (1.12x -> 1.0x)
+ * into Scene B with soft depth-of-field racking.
+ */
 export const ZoomSpinVortexTransition: React.FC<ZoomSpinVortexTransitionProps> = ({ 
   SceneA, 
   SceneB, 
@@ -21,59 +26,52 @@ export const ZoomSpinVortexTransition: React.FC<ZoomSpinVortexTransitionProps> =
 }) => {
   const frame = useCurrentFrame();
 
-  // 1. DYNAMIC FOCAL ZOOM BLUR (Bell curve peaking at exact midpoint, zero tilt)
+  // 1. SMOOTH CINEMATIC EASING CURVE
   const progress = interpolate(frame, [0, durationInFrames], [0, 1], {
+    easing: Easing.bezier(0.25, 0.1, 0.25, 1.0),
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  
-  // High-velocity optical zoom blur: 0px -> 36px -> 0px
-  const zoomBlur = interpolate(
+
+  // 2. CONTROLLED VERTIGO DOLLY ZOOM (Zero spin, cinematic scale momentum)
+  const scaleA = interpolate(progress, [0, 1], [1.0, 1.18]);
+  const scaleB = interpolate(progress, [0, 1], [1.12, 1.0]);
+
+  // 3. OPTICAL DEPTH DEFOCUS (Soft, subtle rack focus - max 8px)
+  const blurA = interpolate(progress, [0.2, 0.7], [0, 8], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const blurB = interpolate(progress, [0.3, 0.8], [8, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // 4. SEAMLESS OVERLAPPING CROSSFADE
+  const opacityA = interpolate(progress, [0.35, 0.65], [1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const opacityB = interpolate(progress, [0.35, 0.65], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // 5. SUBTLE OPTICAL FOCAL FLARE (Gentle central glow at transition apex)
+  const opticalGlow = interpolate(
     progress,
-    [0, 0.5, 1],
-    [0, 36, 0],
-    {
-      easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    }
-  );
-
-  // 2. CONTINUOUS FORWARD DIVE SCALING (100% Level, Zero Tilt)
-  const scaleA = interpolate(frame, [0, durationInFrames], [1.0, 1.38], {
-    easing: Easing.bezier(0.5, 0, 0.2, 1),
-    extrapolateRight: "clamp",
-  });
-  const scaleB = interpolate(frame, [0, durationInFrames], [0.76, 1.0], {
-    easing: Easing.bezier(0.2, 0, 0.2, 1),
-    extrapolateLeft: "clamp",
-  });
-
-  // 3. SEAMLESS CROSSFADE AT PEAK BLUR
-  const opacityA = interpolate(frame, [durationInFrames * 0.35, durationInFrames * 0.55], [1, 0], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const opacityB = interpolate(frame, [durationInFrames * 0.45, durationInFrames * 0.68], [0, 1], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-
-  // 4. CENTRAL OPTICAL PULSE FLASH
-  const flash = interpolate(
-    frame,
-    [0, durationInFrames / 2, durationInFrames],
-    [0, 0.85, 0],
+    [0.3, 0.5, 0.7],
+    [0, 0.22, 0],
     { easing: Easing.inOut(Easing.ease), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#020306", overflow: "hidden" }}>
-      {/* SCENE A (Zooms forward into screen with velocity blur, NO TILT) */}
+      {/* SCENE A (Pushes forward gently into camera with soft focal rack) */}
       <AbsoluteFill
         style={{
           transform: `scale(${scaleA})`,
-          filter: `blur(${zoomBlur}px)`,
+          filter: blurA > 0.5 ? `blur(${blurA}px)` : "none",
           opacity: opacityA,
           transformOrigin: "center center",
           pointerEvents: opacityA > 0 ? "auto" : "none",
@@ -82,11 +80,11 @@ export const ZoomSpinVortexTransition: React.FC<ZoomSpinVortexTransitionProps> =
         {SceneA}
       </AbsoluteFill>
 
-      {/* SCENE B (Expands forward to 1.0x with resolving blur, NO TILT) */}
+      {/* SCENE B (Pulls back gently to 1.0x as focus resolves) */}
       <AbsoluteFill
         style={{
           transform: `scale(${scaleB})`,
-          filter: `blur(${zoomBlur}px)`,
+          filter: blurB > 0.5 ? `blur(${blurB}px)` : "none",
           opacity: opacityB,
           transformOrigin: "center center",
           pointerEvents: opacityB > 0 ? "auto" : "none",
@@ -95,30 +93,29 @@ export const ZoomSpinVortexTransition: React.FC<ZoomSpinVortexTransitionProps> =
         {SceneB}
       </AbsoluteFill>
 
-      {/* OPTICAL LIGHT FLARE OVERLAY */}
-      {flash > 0.01 && (
+      {/* DELICATE OPTICAL CENTER GLOW AT APEX */}
+      {opticalGlow > 0.01 && (
         <AbsoluteFill
           style={{
             pointerEvents: "none",
             mixBlendMode: "screen",
-            opacity: flash,
-            background: `radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(212,175,55,0.4) 60%, rgba(255,255,255,0.8) 72%, transparent 85%)`,
-            transform: `scale(${1 + flash * 0.2})`,
-            filter: "blur(12px)",
+            opacity: opticalGlow,
+            background: "radial-gradient(ellipse at 50% 50%, rgba(255, 230, 180, 0.6) 0%, rgba(220, 180, 100, 0.2) 40%, transparent 70%)",
+            filter: "blur(10px)",
           }}
         />
       )}
 
-      {/* PERIMETER SHOCKWAVE EDGE */}
+      {/* CINEMATIC PERIMETER VIGNETTE */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          boxShadow: `inset 0 0 ${flash * 150}px rgba(212, 175, 55, ${flash * 0.6})`,
+          boxShadow: `inset 0 0 120px rgba(0, 0, 0, ${0.4 + opticalGlow * 0.4})`,
           pointerEvents: "none",
-          zIndex: 90,
         }}
       />
     </AbsoluteFill>
   );
 };
+

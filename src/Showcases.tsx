@@ -59,6 +59,10 @@ export const CameraAndFinisherShowcase = () => (
 );
 
 import { MagnatesStage_TwoPart, RedactedMemoEvidence, FinancialAuditGraphEvidence, BiometricWireframeEvidence } from './components/MagnatesStage_TwoPart';
+import { ZAxisCrashTransition } from './components/transition1';
+import { SpatialWhipTransition } from './components/transition2';
+import { ThermalFlareTransition } from './components/transition3';
+import { RackToBlackTransition } from './components/transition4';
 import { LumaDissolveTransition } from './components/transition5';
 import { ParallaxSlideTransition } from './components/transition6';
 import { ZoomSpinVortexTransition } from './components/transition7';
@@ -104,6 +108,22 @@ export const SampleSceneBeta = () => (
         <h1 style={{ fontSize: 110, color: '#FFFFFF', margin: 0, textTransform: 'uppercase', letterSpacing: 8, textShadow: '0 20px 40px rgba(0,0,0,0.95)' }}>CAPITAL FLIGHT DEPT</h1>
         <span style={{ fontFamily: 'monospace', fontSize: 22, color: '#00F0FF', marginTop: 20, letterSpacing: 5 }}>STATUS: ASSET INTERCEPT ACTIVE</span>
     </AbsoluteFill>
+);
+
+export const Transition1Showcase = () => (
+    <ZAxisCrashTransition SceneA={<SampleSceneAlpha />} SceneB={<SampleSceneBeta />} durationInFrames={30} />
+);
+
+export const Transition2Showcase = () => (
+    <SpatialWhipTransition SceneA={<SampleSceneAlpha />} SceneB={<SampleSceneBeta />} durationInFrames={30} />
+);
+
+export const Transition3Showcase = () => (
+    <ThermalFlareTransition SceneA={<SampleSceneAlpha />} SceneB={<SampleSceneBeta />} durationInFrames={30} />
+);
+
+export const Transition4Showcase = () => (
+    <RackToBlackTransition SceneA={<SampleSceneAlpha />} SceneB={<SampleSceneBeta />} durationInFrames={30} />
 );
 
 export const Transition5Showcase = () => (
@@ -368,7 +388,11 @@ export const ShowcaseRegistry = () => (
         <Composition id="Preview-KineticStack" component={KineticStackShowcase} durationInFrames={150} fps={30} width={2560} height={1333} />
         <Composition id="Preview-OrganicCamera-GlobalFinisher" component={CameraAndFinisherShowcase} durationInFrames={150} fps={30} width={2560} height={1333} />
         
-        {/* NEW 6 TRANSITIONS SHOWCASE */}
+        {/* 11 TRANSITIONS SHOWCASE */}
+        <Composition id="Preview-Transition1-ZAxisCrash" component={Transition1Showcase} durationInFrames={30} fps={30} width={2560} height={1333} />
+        <Composition id="Preview-Transition2-SpatialWhip" component={Transition2Showcase} durationInFrames={30} fps={30} width={2560} height={1333} />
+        <Composition id="Preview-Transition3-ThermalFlare" component={Transition3Showcase} durationInFrames={30} fps={30} width={2560} height={1333} />
+        <Composition id="Preview-Transition4-RackToBlack" component={Transition4Showcase} durationInFrames={30} fps={30} width={2560} height={1333} />
         <Composition id="Preview-Transition5-LumaDissolve" component={Transition5Showcase} durationInFrames={30} fps={30} width={2560} height={1333} />
         <Composition id="Preview-Transition6-ParallaxSlide" component={Transition6Showcase} durationInFrames={30} fps={30} width={2560} height={1333} />
         <Composition id="Preview-Transition7-ZoomSpinVortex" component={Transition7Showcase} durationInFrames={30} fps={30} width={2560} height={1333} />

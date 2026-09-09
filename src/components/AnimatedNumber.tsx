@@ -17,133 +17,232 @@ export const AnimatedNumber: React.FC<Props> = ({ numericValue, type = 'generic'
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
 
-    // 1. Old Money Palette
-    let numColor = "#FFFFFF";
-    let suffixColor = "rgba(255,255,255,0.6)";
+    // 1. Apex Cinematic Palette & Glow Hierarchy
+    let numColor = "#D4AF37";      // Default Rich Gold
+    let brightColor = "#FFDF73";
+    let glowColor = "rgba(212, 175, 55, 0.45)";
+    let classificationTag = "[RECORD METRIC]";
 
-    if (type === "money") {
-        numColor = "#D4AF37"; // Rich Gold
-        suffixColor = "#D4AF37";
+    if (type === "money" || type === "gain") {
+        numColor = "#D4AF37";
+        brightColor = "#FFDF73";
+        glowColor = "rgba(212, 175, 55, 0.45)";
+        classificationTag = "[VALUATION METRIC]";
     } else if (type === "year") {
         numColor = "#FFFFFF";
-        suffixColor = "rgba(255,255,255,0.6)";
+        brightColor = "#E6EEFF";
+        glowColor = "rgba(255, 255, 255, 0.25)";
+        classificationTag = "[HISTORICAL TIMELINE]";
     } else if (type === "hp") {
         numColor = "#D4AF37";
-        suffixColor = "#D4AF37";
+        brightColor = "#FFDF73";
+        glowColor = "rgba(212, 175, 55, 0.45)";
+        classificationTag = "[OUTPUT BENCHMARK]";
     } else if (type === "percent") {
-        numColor = "#D4AF37"; 
-        suffixColor = "#D4AF37"; 
-    } else if (type === "loss") {
-        numColor = "#C41E3A"; // Crimson Red
-        suffixColor = "#C41E3A";
-    } else if (type === "gain") {
         numColor = "#D4AF37";
-        suffixColor = "#D4AF37";
+        brightColor = "#FFDF73";
+        glowColor = "rgba(212, 175, 55, 0.45)";
+        classificationTag = "[DOMINANCE INDEX]";
+    } else if (type === "loss") {
+        numColor = "#FF2A4D";      // Crimson Red
+        brightColor = "#FF7388";
+        glowColor = "rgba(255, 42, 77, 0.45)";
+        classificationTag = "[CRITICAL DEFICIT]";
     }
 
     const sfxPath = useDynamicSfx(type, globalIndex);
 
-    // 2. Majestic Slow Burn Counting
-    const countDuration = 20; 
-    const currentNum = interpolate(frame, [0, countDuration], [0, numericValue], { extrapolateRight: 'clamp' });
-    
-    // 3. Heavy Camera Easing (No Bounce, No Shake)
+    // 2. Snappy Quartic Ease-Out Landing (Locks in 7 frames - 0.23s)
+    // Eliminates counting lag where voiceover says 100 while HUD shows 1.
+    const countProgress = Math.min(1, Math.max(0, frame / 7));
+    const countEase = 1 - Math.pow(1 - countProgress, 4);
+    const currentNum = countProgress >= 1 ? numericValue : numericValue * countEase;
+
+    // 3. Heavy Camera Easing Entrance (No Bounce, Tight Tabular Kerning)
     const entranceSprg = spring({
         frame,
         fps,
-        config: { damping: 200, stiffness: 40 },
+        config: { damping: 200, stiffness: 45, mass: 1.2 },
     });
 
-    // Slow-Burn Fade & Blur
-    const blurAmount = interpolate(frame, [0, 10], [10, 0], { extrapolateRight: 'clamp' });
-    const opacity = interpolate(frame, [0, 10], [0, 1], { extrapolateRight: 'clamp' });
-    
-    // Continuous Tracking Expansion
-    const tracking = interpolate(frame, [0, 150], [0, 12]);
+    const blurAmount = interpolate(frame, [0, 8], [12, 0], { extrapolateRight: 'clamp' });
+    const opacity = interpolate(frame, [0, 8], [0, 1], { extrapolateRight: 'clamp' });
+    const entranceScale = interpolate(entranceSprg, [0, 1], [0.94, 1]);
+    const entranceY = interpolate(entranceSprg, [0, 1], [15, 0]);
 
+    // 4. Robust Universal Formatter (Supports all metrics: plain 100, $100, 100%, 100 MPH, $100M)
     const formatValue = (num: number) => {
-        if (type === 'year') return { display: Math.floor(num).toString(), suffix: "" };
-        
-        let display = "";
-        let suffix = "";
-        
-        if (numericValue >= 1e9) {
-            display = (num / 1e9).toFixed(1).replace(/\.0$/, '');
-            suffix = "B";
-        } else if (numericValue >= 1e6) {
-            display = (num / 1e6).toFixed(1).replace(/\.0$/, '');
-            suffix = "M";
-        } else if (numericValue >= 1000) {
-            display = (num / 1000).toFixed(1).replace(/\.0$/, '');
-            suffix = "K";
-        } else {
-            display = (numericValue % 1 !== 0) ? num.toFixed(1) : Math.floor(num).toString();
+        if (type === 'year') {
+            return { display: Math.round(num).toString(), suffix: "" };
         }
 
-        if (type === 'percent') suffix = "%";
-        else if (type === 'hp') suffix = " HP";
-        else if (type === 'duration') suffix = " Seconds";
+        let display = "";
+        let computedSuffix = "";
 
-        return { display, suffix };
+        if (suffixOverride) {
+            if (numericValue >= 1e9 && suffixOverride.toUpperCase().startsWith('B')) {
+                display = (num / 1e9).toFixed(1).replace(/\.0$/, '');
+            } else if (numericValue >= 1e6 && suffixOverride.toUpperCase().startsWith('M')) {
+                display = (num / 1e6).toFixed(1).replace(/\.0$/, '');
+            } else if (numericValue >= 1000 && suffixOverride.toUpperCase().startsWith('K')) {
+                display = (num / 1000).toFixed(1).replace(/\.0$/, '');
+            } else {
+                display = (numericValue % 1 !== 0) ? num.toFixed(1) : Math.round(num).toLocaleString();
+            }
+            return { display, suffix: suffixOverride };
+        }
+
+        if (numericValue >= 1e9) {
+            display = (num / 1e9).toFixed(1).replace(/\.0$/, '');
+            computedSuffix = "B";
+        } else if (numericValue >= 1e6) {
+            display = (num / 1e6).toFixed(1).replace(/\.0$/, '');
+            computedSuffix = "M";
+        } else if (numericValue >= 1000) {
+            display = (num / 1000).toFixed(1).replace(/\.0$/, '');
+            computedSuffix = "K";
+        } else {
+            display = (numericValue % 1 !== 0) ? num.toFixed(1) : Math.round(num).toLocaleString();
+        }
+
+        if (type === 'percent') computedSuffix = "%";
+        else if (type === 'hp') computedSuffix = " HP";
+        else if (type === 'duration') computedSuffix = " SEC";
+
+        return { display, suffix: computedSuffix };
     };
 
-    const { display, suffix: computedSuffix } = formatValue(currentNum);
-    const suffix = suffixOverride || computedSuffix;
-    const prefix = prefixOverride || (type === 'money' ? '$' : '');
+    const { display, suffix: formattedSuffix } = formatValue(currentNum);
+    const suffix = suffixOverride !== undefined ? suffixOverride : formattedSuffix;
+    const prefix = prefixOverride !== undefined ? prefixOverride : (type === 'money' ? '$' : '');
 
     return (
-        <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(20, 20, 30, 0.5)', zIndex: 200, pointerEvents: 'none', transformStyle: 'preserve-3d', perspective: '1000px' }}>
+        <AbsoluteFill style={{
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: 'transparent', // Scrim removed: keeps footage crisp and un-dimmed
+            zIndex: 200,
+            pointerEvents: 'none',
+            perspective: '1400px',
+            transformStyle: 'preserve-3d'
+        }}>
             {sfxPath && <SmartAudio src={sfxPath} durationFrames={durationFrames} />}
 
-            {/* 4. The Dossier Data Callout */}
+            {/* THE 2K APEX DOSSIER METRIC PANEL */}
             <div style={{
-                position: 'absolute',
-                top: '50%',
-                transform: `translateY(-50%) translateZ(100px) scale(${interpolate(entranceSprg, [0, 1], [0.95, 1])})`,
-                filter: `blur(${blurAmount}px)`,
-                opacity: opacity,
-                
-                // Dossier Glass Panel Styling
-                padding: '40px 90px',
-                background: 'linear-gradient(to bottom, rgba(5,7,10,0.85), rgba(0,0,0,0.95))',
-                backdropFilter: 'blur(30px) saturate(1.2)',
-                border: '1px solid rgba(212, 175, 55, 0.15)',
-                borderTop: '2px solid rgba(212, 175, 55, 0.7)', 
-                boxShadow: '0 60px 100px rgba(0,0,0,0.9), inset 0 5px 20px rgba(212, 175, 55, 0.1)',
-                borderRadius: '8px',
-                
+                position: 'relative',
+                minWidth: '580px',
+                maxWidth: '920px',
+                padding: '48px 64px 40px',
+                borderRadius: '24px',
+                background: 'linear-gradient(135deg, rgba(16, 22, 34, 0.88) 0%, rgba(5, 7, 12, 0.96) 100%)',
+                backdropFilter: 'blur(45px) saturate(1.4)',
+                WebkitBackdropFilter: 'blur(45px) saturate(1.4)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                boxShadow: `0 60px 140px rgba(0, 0, 0, 0.95), 0 0 60px ${glowColor}, inset 0 1px 0 rgba(255, 255, 255, 0.25)`,
                 display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'baseline',
+                flexDirection: 'column',
+                alignItems: 'center',
                 justifyContent: 'center',
-                
-                // Clean Sans-Serif Typography
-                fontFamily: '"Inter", "-apple-system", "SF Pro Display", sans-serif',
-                fontVariantNumeric: 'tabular-nums',
-                fontSize: '150px',
-                fontWeight: 600,
-                letterSpacing: `${tracking}px`,
-                textShadow: '0 10px 40px rgba(0,0,0,1)',
+                transform: `scale(${entranceScale}) translateY(${entranceY}px)`,
+                opacity: opacity,
+                filter: `blur(${blurAmount}px)`,
+                transformStyle: 'preserve-3d',
             }}>
-                {prefix && <span style={{ color: numColor, opacity: 0.8, marginRight: '15px', fontSize: '0.65em', fontWeight: 400 }}>{prefix}</span>}
-                <span style={{ color: numColor }}>{display}</span>
-                {suffix && <span style={{ color: suffixColor, opacity: 0.7, marginLeft: suffix === '%' ? '5px' : '20px', fontSize: '0.5em', fontWeight: 400, letterSpacing: 'normal' }}>{suffix}</span>}
-                
-                {/* 1px Gold Tracing Detail */}
+                {/* 1. Laser Caliper Top Edge */}
                 <div style={{
                     position: 'absolute',
-                    bottom: '-1px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '40%',
-                    height: '1px',
-                    background: 'linear-gradient(90deg, transparent, rgba(212,175,55,1), transparent)',
-                    boxShadow: '0 0 15px rgba(212,175,55,1)'
+                    top: '-1px',
+                    left: '10%',
+                    right: '10%',
+                    height: '2px',
+                    background: `linear-gradient(90deg, transparent, ${numColor} 20%, ${brightColor} 50%, ${numColor} 80%, transparent)`,
+                    boxShadow: `0 0 20px ${numColor}`,
                 }} />
-                
-                {/* Decorative UI Accent Marks */}
-                <div style={{ position: 'absolute', top: '10px', left: '10px', width: '6px', height: '6px', borderTop: '1px solid #D4AF37', borderLeft: '1px solid #D4AF37', opacity: 0.5 }} />
-                <div style={{ position: 'absolute', top: '10px', right: '10px', width: '6px', height: '6px', borderTop: '1px solid #D4AF37', borderRight: '1px solid #D4AF37', opacity: 0.5 }} />
+
+                {/* 2. Precision Corner Brackets */}
+                <div style={{ position: 'absolute', top: '12px', left: '12px', width: '14px', height: '14px', borderTop: `2px solid ${numColor}`, borderLeft: `2px solid ${numColor}`, opacity: 0.7 }} />
+                <div style={{ position: 'absolute', top: '12px', right: '12px', width: '14px', height: '14px', borderTop: `2px solid ${numColor}`, borderRight: `2px solid ${numColor}`, opacity: 0.7 }} />
+                <div style={{ position: 'absolute', bottom: '12px', left: '12px', width: '14px', height: '14px', borderBottom: `2px solid ${numColor}`, borderLeft: `2px solid ${numColor}`, opacity: 0.7 }} />
+                <div style={{ position: 'absolute', bottom: '12px', right: '12px', width: '14px', height: '14px', borderBottom: `2px solid ${numColor}`, borderRight: `2px solid ${numColor}`, opacity: 0.7 }} />
+
+                {/* 3. Top Classification Tag (Zero Subtitles) */}
+                <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    letterSpacing: '4px',
+                    textTransform: 'uppercase',
+                    color: numColor,
+                    background: `${numColor}18`,
+                    border: `1px solid ${numColor}45`,
+                    padding: '5px 18px',
+                    borderRadius: '6px',
+                    boxShadow: `0 0 20px ${glowColor}`,
+                    marginBottom: '20px',
+                    fontFamily: '"Inter", sans-serif',
+                }}>
+                    <span>{classificationTag}</span>
+                </div>
+
+                {/* 4. Giant Number Readout - Fixed Tabular Kerning, No Tracking Drift */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    justifyContent: 'center',
+                    gap: '12px',
+                    fontVariantNumeric: 'tabular-nums',
+                }}>
+                    {prefix ? (
+                        <span style={{
+                            fontSize: '84px',
+                            fontWeight: 600,
+                            color: 'rgba(255, 255, 255, 0.75)',
+                            fontFamily: '"JetBrains Mono", monospace',
+                            lineHeight: 1,
+                        }}>
+                            {prefix}
+                        </span>
+                    ) : null}
+
+                    <span style={{
+                        fontSize: '144px',
+                        fontWeight: 900,
+                        color: '#FFFFFF',
+                        fontFamily: '"Inter", "-apple-system", sans-serif',
+                        lineHeight: 0.95,
+                        letterSpacing: '-2px',
+                        textShadow: '0 10px 40px rgba(0,0,0,0.95), 0 0 50px rgba(255,255,255,0.25)',
+                    }}>
+                        {display}
+                    </span>
+
+                    {suffix ? (
+                        <span style={{
+                            fontSize: '72px',
+                            fontWeight: 800,
+                            color: numColor,
+                            fontFamily: '"Inter", sans-serif',
+                            letterSpacing: '1px',
+                            textShadow: `0 0 30px ${glowColor}`,
+                            marginLeft: suffix === '%' ? '4px' : '14px',
+                        }}>
+                            {suffix}
+                        </span>
+                    ) : null}
+                </div>
+
+                {/* 5. 1px Tracing Detail Line */}
+                <div style={{
+                    marginTop: '22px',
+                    width: '60%',
+                    height: '1px',
+                    background: `linear-gradient(90deg, transparent, ${numColor}, transparent)`,
+                    boxShadow: `0 0 15px ${numColor}`,
+                    opacity: 0.8,
+                }} />
             </div>
         </AbsoluteFill>
     );

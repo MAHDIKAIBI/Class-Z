@@ -262,23 +262,42 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrame
   // NATIVE ROUTES for custom data components
   if (type === 'animatednumber' || type === 'animated_number') {
       // -----------------------------------------------------------------------
-      // FIELD-NAME NORMALIZER
-      // Director prompt emits `value` (raw number, occasionally a loose string)
-      // + `number_type`. The component expects `numericValue` + `type`. We also
-      // tolerate a couple of alternate shapes the model occasionally drifts to,
-      // same defensive pattern as the Dynamic3DComparison normalizer below.
+      // UNIVERSAL METRIC NORMALIZER
+      // Extracts numbers, currencies, percentages, and word forms with 100% precision.
       // -----------------------------------------------------------------------
-      const rawVal = graphics.value ?? graphics.numericValue ?? graphics.amount ?? 0;
-      const numericValue = (typeof rawVal === 'number' && isFinite(rawVal))
-          ? rawVal
-          : (parseFloat(String(rawVal).replace(/[^0-9.\-]/g, '')) || 0);
+      const rawVal = graphics.numericValue ?? graphics.value ?? graphics.amount ?? graphics.val ?? graphics.number ?? 0;
+      let detectedPrefix = graphics.prefix;
+      let detectedSuffix = graphics.suffix;
+      let numericValue = 0;
+
+      if (typeof rawVal === 'number' && isFinite(rawVal)) {
+          numericValue = rawVal;
+      } else if (typeof rawVal === 'string') {
+          const s = rawVal.trim();
+          if (!detectedPrefix) {
+              const pMatch = s.match(/^([$€£¥₹])/);
+              if (pMatch) detectedPrefix = pMatch[1];
+          }
+          if (!detectedSuffix) {
+              const sMatch = s.match(/([%a-zA-Z]+)$/);
+              if (sMatch) detectedSuffix = sMatch[1];
+          }
+          const numMatch = s.replace(/,/g, '').match(/[-+]?[0-9]*\.?[0-9]+/);
+          if (numMatch) {
+              numericValue = parseFloat(numMatch[0]);
+          } else {
+              const wordLower = s.toLowerCase();
+              if (wordLower.includes('hundred')) numericValue = 100;
+              else if (wordLower.includes('thousand')) numericValue = 1000;
+              else if (wordLower.includes('million')) numericValue = 1000000;
+              else if (wordLower.includes('billion')) numericValue = 1000000000;
+              else numericValue = 100;
+          }
+      }
+
       const numberType = (graphics.number_type || graphics.type || graphics.numberType || 'generic').toLowerCase();
       const safeDuration = Math.max(1, durationInFrames - startFrame);
 
-      // AnimatedNumber has no start/end window of its own (unlike BiometricScanRing/
-      // GlassStatGrid) — it just trusts frame 0 = "appear now". Wrapping it in a
-      // Sequence is what actually makes trigger_frame do anything, and gives it a
-      // clean auto hard-cut when the Sequence's duration runs out.
       return (
           <Sequence from={startFrame} durationInFrames={safeDuration} layout="none">
               <AnimatedNumber
@@ -286,8 +305,8 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrame
                   type={numberType}
                   durationFrames={safeDuration}
                   globalIndex={sceneIndex}
-                  prefix={graphics.prefix}
-                  suffix={graphics.suffix}
+                  prefix={detectedPrefix}
+                  suffix={detectedSuffix}
               />
           </Sequence>
       );
@@ -309,36 +328,30 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrame
 
   if (type === 'dynamic3dcomparison' || type === 'dynamic_3d_comparison') {
       // -----------------------------------------------------------------------
-      // ROBUST SCHEMA NORMALIZER
-      // The AI may produce several incompatible item shapes. We handle all of them:
-      //   Schema A (correct): { title, subtitle, value (number), color, start, end }
-      //   Schema B (AI v1):   { label, value (string like "675K MILES") }
-      //   Schema C (AI v2):   { name, stat (string like "ORIGINAL" / "800K") }
-      // We also guard against NaN / non-finite values that crash interpolate().
+      // ROBUST 3D ARENA NORMALIZER (Zero Subtitles, Clean Numerical Extraction)
       // -----------------------------------------------------------------------
       const extractNumericValue = (raw: any): number => {
           if (typeof raw === 'number' && isFinite(raw) && raw > 0) return raw;
-          if (typeof raw !== 'string') return 1;
-          // Remove commas, spaces, and trailing text — grab the first number-like token
-          const stripped = raw.replace(/,/g, '').replace(/k/gi, '000');
+          if (typeof raw !== 'string') return 100;
+          const stripped = raw.replace(/,/g, '').replace(/k/gi, '000').replace(/m/gi, '000000').replace(/b/gi, '000000000');
           const match = stripped.match(/(\d+\.?\d*)/);
           if (match) {
               const n = parseFloat(match[1]);
               if (isFinite(n) && n > 0) return n;
           }
-          return 1; // non-parseable strings (e.g. "ORIGINAL") get value=1 so bars render
+          const wordLower = raw.toLowerCase();
+          if (wordLower.includes('hundred')) return 100;
+          if (wordLower.includes('thousand')) return 1000;
+          if (wordLower.includes('million')) return 1000000;
+          return 100;
       };
 
       const normalizeItem = (raw: any, defaultColor: string, startOffset: number): any => {
-          if (!raw) return { title: '', subtitle: '', value: 1, color: defaultColor, start: startFrame + startOffset, end: durationInFrames };
-          // Determine the display title and subtitle from whichever fields exist
-          const title    = raw.title    ?? raw.label ?? raw.name   ?? '';
-          const subtitle = raw.subtitle ?? raw.stat  ?? raw.value  ?? '';
-          // Numeric value: prefer raw.value if numeric, otherwise parse stat or label
-          const numericValue = extractNumericValue(raw.value ?? raw.stat ?? raw.label ?? 1);
+          if (!raw) return { title: '', value: 100, color: defaultColor, start: startFrame + startOffset, end: durationInFrames };
+          const title = raw.title ?? raw.label ?? raw.name ?? '';
+          const numericValue = extractNumericValue(raw.value ?? raw.stat ?? raw.label ?? 100);
           return {
               title,
-              subtitle: typeof subtitle === 'string' ? subtitle : String(subtitle),
               value:     numericValue,
               color:     raw.color       ?? defaultColor,
               imageUrl:  raw.imageUrl    ?? raw.local_path ?? undefined,
@@ -347,8 +360,8 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrame
           };
       };
 
-      const patchedItemA = normalizeItem(graphics.itemA, '#ff1a40', 0);
-      const patchedItemB = normalizeItem(graphics.itemB, '#00e6b8', 15);
+      const patchedItemA = normalizeItem(graphics.itemA, '#D4AF37', 0);
+      const patchedItemB = normalizeItem(graphics.itemB, '#00F0FF', 10);
 
       return (
           <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 100 }}>

@@ -619,12 +619,16 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install FFmpeg
+      - name: Setup FFmpeg & FFprobe
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify FFmpeg & FFprobe
         run: |
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
+          which ffmpeg && which ffprobe
+          ffprobe -version | head -n 1
+
       - name: Install System Dependencies
         run: |
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
@@ -802,12 +806,16 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install FFmpeg
+      - name: Setup FFmpeg & FFprobe
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify FFmpeg & FFprobe
         run: |
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
+          which ffmpeg && which ffprobe
+          ffprobe -version | head -n 1
+
 
       - name: Install System Dependencies
         run: |

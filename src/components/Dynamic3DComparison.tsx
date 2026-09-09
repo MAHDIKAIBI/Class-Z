@@ -34,7 +34,10 @@ const Cinematic3DBar: React.FC<{
   maxHeight: number;
   opacity: number;
   side: 'left' | 'right';
-}> = ({ height, maxHeight, opacity, side }) => {
+  displayValue: number;
+  unit: string;
+  barColor?: string;
+}> = ({ height, maxHeight, opacity, side, displayValue, unit, barColor = "#D4AF37" }) => {
   const barHeight = Math.max(8, (height / maxHeight) * 420);
   
   return (
@@ -46,15 +49,53 @@ const Cinematic3DBar: React.FC<{
       opacity,
       transition: "none",
     }}>
+      {/* Floating Apex Stat Capsule */}
+      <div style={{
+        position: "absolute",
+        top: "-80px",
+        left: "50%",
+        transform: "translateX(-50%) translateZ(70px)",
+        textAlign: "center",
+        whiteSpace: "nowrap",
+        background: "rgba(8, 11, 18, 0.9)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        padding: "6px 22px 8px",
+        borderRadius: "16px",
+        border: "1px solid rgba(255, 255, 255, 0.15)",
+        boxShadow: `0 16px 40px rgba(0, 0, 0, 0.8), 0 0 20px ${barColor}40`,
+      }}>
+        <span style={{
+          fontSize: "48px",
+          fontWeight: 900,
+          color: "#FFFFFF",
+          fontFamily: '"Inter", sans-serif',
+          fontVariantNumeric: "tabular-nums",
+          textShadow: `0 0 25px ${barColor}`,
+        }}>
+          {Math.round(displayValue).toLocaleString()}
+        </span>
+        {unit && (
+          <span style={{
+            fontSize: "18px",
+            fontWeight: 700,
+            color: barColor,
+            marginLeft: "4px",
+          }}>
+            {unit}
+          </span>
+        )}
+      </div>
+
       {/* Front Face: High-Gloss Obsidian Monolith */}
       <div style={{
         position: "absolute",
         width: "100%",
         height: "100%",
         background: `linear-gradient(180deg, rgba(24, 28, 36, 0.95) 0%, rgba(6, 7, 10, 0.98) 100%)`,
-        borderLeft: `1px solid rgba(212, 175, 55, 0.3)`,
+        borderLeft: `1px solid ${barColor}50`,
         borderRight: `1px solid rgba(0, 0, 0, 0.9)`,
-        boxShadow: `inset 0 2px 15px rgba(212, 175, 55, 0.15), 0 50px 120px rgba(0,0,0,0.95)`,
+        boxShadow: `inset 0 2px 15px ${barColor}25, 0 50px 120px rgba(0,0,0,0.95)`,
         transform: "translateZ(50px)",
         borderRadius: "4px 4px 0 0",
         overflow: "hidden"
@@ -62,7 +103,7 @@ const Cinematic3DBar: React.FC<{
         {/* Subtle Micro-Grid Texture */}
         <div style={{
           position: "absolute", inset: 0,
-          backgroundImage: 'radial-gradient(rgba(212, 175, 55, 0.08) 1px, transparent 1px)',
+          backgroundImage: `radial-gradient(${barColor}15 1px, transparent 1px)`,
           backgroundSize: '6px 6px',
           opacity: 0.6
         }}/>
@@ -75,8 +116,8 @@ const Cinematic3DBar: React.FC<{
           left: "50%",
           width: "2px",
           transform: "translateX(-50%)",
-          background: "linear-gradient(180deg, rgba(255,223,115,0.8) 0%, rgba(212,175,55,0.2) 100%)",
-          boxShadow: "0 0 12px rgba(212, 175, 55, 0.8)"
+          background: `linear-gradient(180deg, #FFFFFF 0%, ${barColor} 60%, transparent 100%)`,
+          boxShadow: `0 0 12px ${barColor}`
         }} />
       </div>
 
@@ -89,20 +130,20 @@ const Cinematic3DBar: React.FC<{
         right: 0,
         transformOrigin: "right center",
         transform: "rotateY(90deg)",
-        borderRight: "1px solid rgba(212, 175, 55, 0.15)"
+        borderRight: `1px solid ${barColor}25`
       }} />
 
-      {/* Top Face: Liquid Gold Cap Emitter */}
+      {/* Top Face: Liquid Cap Emitter */}
       <div style={{
         position: "absolute",
         width: "100%",
         height: "100px",
-        background: `linear-gradient(135deg, #FFF2A8 0%, #D4AF37 50%, #8A7322 100%)`,
+        background: `linear-gradient(135deg, #FFFFFF 0%, ${barColor} 50%, rgba(0,0,0,0.8) 100%)`,
         top: 0,
         transformOrigin: "top center",
         transform: "rotateX(90deg)",
-        border: "1px solid #FFF2A8",
-        boxShadow: `inset 0 0 25px rgba(255,255,255,0.7), 0 0 60px rgba(212, 175, 55, 0.6)`,
+        border: "1px solid rgba(255,255,255,0.6)",
+        boxShadow: `inset 0 0 25px rgba(255,255,255,0.7), 0 0 60px ${barColor}90`,
         borderRadius: "4px"
       }} />
 
@@ -121,8 +162,8 @@ const Cinematic3DBar: React.FC<{
       }}>
         {Array.from({ length: 9 }).map((_, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <div style={{ width: i % 2 === 0 ? "10px" : "5px", height: "1px", backgroundColor: "#D4AF37" }} />
-            {i % 4 === 0 && <span style={{ fontSize: "7px", color: "rgba(212, 175, 55, 0.8)", fontFamily: "monospace" }}>{100 - i * 10}%</span>}
+            <div style={{ width: i % 2 === 0 ? "10px" : "5px", height: "1px", backgroundColor: barColor }} />
+            {i % 4 === 0 && <span style={{ fontSize: "7px", color: `${barColor}cc`, fontFamily: "monospace" }}>{100 - i * 10}%</span>}
           </div>
         ))}
       </div>
@@ -207,8 +248,21 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
   const camPanZ = interpolate(frame, [0, durationInFrames], [0, 180], { extrapolateRight: "clamp" });
 
   const MAX_3D_HEIGHT = 24; 
-  const safeA = (typeof itemA.value === 'number' && isFinite(itemA.value) && itemA.value > 0) ? itemA.value : 1;
-  const safeB = (typeof itemB.value === 'number' && isFinite(itemB.value) && itemB.value > 0) ? itemB.value : 1;
+  const extractNum = (raw: any): number => {
+    if (typeof raw === 'number' && isFinite(raw) && raw > 0) return raw;
+    if (typeof raw === 'string') {
+      const stripped = raw.replace(/,/g, '').replace(/k/gi, '000').replace(/m/gi, '000000').replace(/b/gi, '000000000');
+      const match = stripped.match(/(\d+\.?\d*)/);
+      if (match) {
+        const n = parseFloat(match[1]);
+        if (isFinite(n) && n > 0) return n;
+      }
+    }
+    return 100;
+  };
+
+  const safeA = extractNum(itemA.value);
+  const safeB = extractNum(itemB.value);
   const maxValue = Math.max(safeA, safeB, 1); 
   const targetHeightA = (safeA / maxValue) * MAX_3D_HEIGHT;
   const targetHeightB = (safeB / maxValue) * MAX_3D_HEIGHT;
@@ -216,24 +270,27 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
   // ================= ITEM A LOGIC =================
   const isActiveA = frame >= itemA.start && frame < itemA.end;
   const localFrameA = isActiveA ? frame - itemA.start : 0;
-  const springA = spring({ frame: localFrameA, fps, config: { damping: 200, stiffness: 40 } });
+  const springA = spring({ frame: localFrameA, fps, config: { damping: 200, stiffness: 45, mass: 1.2 } });
   const heightA = interpolate(springA, [0, 1], [0.1, targetHeightA]);
-  const opacityA = isActiveA ? interpolate(localFrameA, [0, 50], [0, 1], { extrapolateRight: 'clamp' }) : 0;
-  const blurA = isActiveA ? interpolate(localFrameA, [0, 50], [16, 0], { extrapolateRight: 'clamp' }) : 16;
+  const opacityA = isActiveA ? interpolate(localFrameA, [0, 8], [0, 1], { extrapolateRight: 'clamp' }) : 0;
+  const blurA = isActiveA ? interpolate(localFrameA, [0, 8], [10, 0], { extrapolateRight: 'clamp' }) : 10;
   
-  const durationA = Math.max(2, (itemA.end - itemA.start) - 30);
-  const displayValueA = interpolate(localFrameA, [10, Math.max(11, durationA)], [0, safeA], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+  // Snappy 8-frame quartic ease-out landing (locks immediately, zero voiceover lag)
+  const countProgressA = Math.min(1, Math.max(0, localFrameA / 8));
+  const countEaseA = 1 - Math.pow(1 - countProgressA, 4);
+  const displayValueA = countProgressA >= 1 ? safeA : safeA * countEaseA;
 
   // ================= ITEM B LOGIC =================
   const isActiveB = frame >= itemB.start && frame < itemB.end;
   const localFrameB = isActiveB ? frame - itemB.start : 0;
-  const springB = spring({ frame: localFrameB, fps, config: { damping: 200, stiffness: 40 } });
+  const springB = spring({ frame: localFrameB, fps, config: { damping: 200, stiffness: 45, mass: 1.2 } });
   const heightB = interpolate(springB, [0, 1], [0.1, targetHeightB]);
-  const opacityB = isActiveB ? interpolate(localFrameB, [0, 50], [0, 1], { extrapolateRight: 'clamp' }) : 0;
-  const blurB = isActiveB ? interpolate(localFrameB, [0, 50], [16, 0], { extrapolateRight: 'clamp' }) : 16;
+  const opacityB = isActiveB ? interpolate(localFrameB, [0, 8], [0, 1], { extrapolateRight: 'clamp' }) : 0;
+  const blurB = isActiveB ? interpolate(localFrameB, [0, 8], [10, 0], { extrapolateRight: 'clamp' }) : 10;
   
-  const durationB = Math.max(2, (itemB.end - itemB.start) - 30);
-  const displayValueB = interpolate(localFrameB, [10, Math.max(11, durationB)], [0, safeB], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
+  const countProgressB = Math.min(1, Math.max(0, localFrameB / 8));
+  const countEaseB = 1 - Math.pow(1 - countProgressB, 4);
+  const displayValueB = countProgressB >= 1 ? safeB : safeB * countEaseB;
 
   // Comparison Delta Calculation
   const ratio = (Math.max(safeA, safeB) / Math.min(safeA, safeB)).toFixed(1);
@@ -266,36 +323,68 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
           }}>
             {/* PILLAR A */}
             <div style={{ transform: "rotateY(-24deg) rotateX(14deg)", transformStyle: "preserve-3d", filter: `blur(${blurA}px)` }}>
-              <Cinematic3DBar height={heightA} maxHeight={MAX_3D_HEIGHT} opacity={opacityA} side="left" />
+              <Cinematic3DBar height={heightA} maxHeight={MAX_3D_HEIGHT} opacity={opacityA} side="left" displayValue={displayValueA} unit={unit} barColor={itemA.color || GOLD_ACCENT} />
               <div style={{
                 position: "absolute", bottom: "-35px", left: "-50%", width: "200%", height: "80px",
-                background: `radial-gradient(ellipse, rgba(212, 175, 55, 0.6) 0%, transparent 60%)`,
+                background: `radial-gradient(ellipse, ${itemA.color || GOLD_ACCENT}99 0%, transparent 60%)`,
                 filter: "blur(25px)", opacity: opacityA * 0.5, transform: "rotateX(75deg)"
               }} />
             </div>
 
             {/* PILLAR B */}
             <div style={{ transform: "rotateY(-24deg) rotateX(14deg)", transformStyle: "preserve-3d", filter: `blur(${blurB}px)` }}>
-              <Cinematic3DBar height={heightB} maxHeight={MAX_3D_HEIGHT} opacity={opacityB} side="right" />
+              <Cinematic3DBar height={heightB} maxHeight={MAX_3D_HEIGHT} opacity={opacityB} side="right" displayValue={displayValueB} unit={unit} barColor={itemB.color || "#00F0FF"} />
               <div style={{
                 position: "absolute", bottom: "-35px", left: "-50%", width: "200%", height: "80px",
-                background: `radial-gradient(ellipse, rgba(212, 175, 55, 0.6) 0%, transparent 60%)`,
+                background: `radial-gradient(ellipse, ${itemB.color || "#00F0FF"}99 0%, transparent 60%)`,
                 filter: "blur(25px)", opacity: opacityB * 0.5, transform: "rotateX(75deg)"
               }} />
             </div>
           </div>
+
+          {/* Caliper Delta Bridge Across Pillars */}
+          <div style={{
+            position: "absolute",
+            bottom: "48%",
+            left: "50%",
+            transform: "translateX(-50%) translateZ(80px)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "8px",
+            opacity: Math.min(opacityA, opacityB),
+          }}>
+            <div style={{
+              background: "rgba(6, 8, 12, 0.92)",
+              border: `1px solid ${GOLD_ACCENT}`,
+              padding: "8px 20px",
+              borderRadius: "8px",
+              fontSize: "16px",
+              fontWeight: 800,
+              color: "#FFDF73",
+              fontFamily: "'JetBrains Mono', monospace",
+              boxShadow: "0 0 25px rgba(212, 175, 55, 0.4)",
+              letterSpacing: "1px",
+            }}>
+              DELTA: {safeA >= safeB ? '+' : '-'}{Math.abs(safeA - safeB).toLocaleString()}{unit ? ` ${unit}` : ''} ({percentDelta > 0 ? `+${percentDelta}%` : `${percentDelta}%`})
+            </div>
+            <div style={{
+              width: "320px",
+              height: "2px",
+              background: "linear-gradient(90deg, transparent, #D4AF37 30%, #D4AF37 70%, transparent)",
+              boxShadow: "0 0 15px #D4AF37",
+            }} />
+          </div>
         </div>
       </AbsoluteFill>
 
-      {/* FOREGROUND: LUXURY DOSSIER COMPARISON CARDS */}
+      {/* FOREGROUND: LUXURY DOSSIER COMPARISON CARDS (ZERO SUBTITLES, TIGHT TABULAR KERNING) */}
       <div style={{ position: "absolute", bottom: "7%", display: "flex", gap: "50px", alignItems: "center", zIndex: 20 }}>
         
         {[
           { item: itemA, opac: opacityA, val: displayValueA, blur: blurA, localFrame: localFrameA, label: "EXHIBIT [A]" },
           { item: itemB, opac: opacityB, val: displayValueB, blur: blurB, localFrame: localFrameB, label: "EXHIBIT [B]" }
         ].map((card, idx) => {
-          const trackSpacing = interpolate(card.localFrame, [0, 300], [0, 8]); 
-          
           return (
             <div key={idx} style={{
               position: "relative",
@@ -303,9 +392,9 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
               backdropFilter: "blur(40px) saturate(1.4)",
               WebkitBackdropFilter: "blur(40px) saturate(1.4)",
               border: `1px solid rgba(212, 175, 55, 0.2)`,
-              borderTop: `2px solid ${GOLD_ACCENT}`,
+              borderTop: `2px solid ${card.item.color || GOLD_ACCENT}`,
               borderRadius: "10px",
-              padding: "32px 42px",
+              padding: "28px 40px",
               boxShadow: `0 50px 120px rgba(0,0,0,0.95), inset 0 2px 20px rgba(212, 175, 55, 0.1)`,
               opacity: card.opac,
               filter: `blur(${card.blur}px)`,
@@ -320,23 +409,15 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
               <div style={{ position: "absolute", top: "8px", right: "8px", width: "10px", height: "10px", borderTop: "2px solid #D4AF37", borderRight: "2px solid #D4AF37", opacity: 0.8 }} />
 
               <div style={{ position: "relative", zIndex: 1, textAlign: 'center' }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginBottom: "8px" }}>
                   <span style={{ 
                       fontFamily: '"Inter", monospace', 
-                      color: GOLD_ACCENT, 
+                      color: card.item.color || GOLD_ACCENT, 
                       fontSize: "11px", 
                       letterSpacing: "3px", 
                       fontWeight: 600 
                   }}>
                     {card.label}
-                  </span>
-                  <span style={{ 
-                      fontFamily: '"Inter", sans-serif', 
-                      color: "rgba(255,255,255,0.4)", 
-                      fontSize: "10px", 
-                      letterSpacing: "1px" 
-                  }}>
-                    {card.item.subtitle}
                   </span>
                 </div>
 
@@ -344,7 +425,7 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
                     fontFamily: '"Playfair Display", "Cinzel", Georgia, serif', 
                     color: "#FFFFFF", 
                     margin: "4px 0 16px 0", 
-                    fontSize: "30px", 
+                    fontSize: "28px", 
                     fontWeight: "700", 
                     letterSpacing: "1px", 
                     textShadow: "0 8px 25px rgba(0,0,0,0.9)" 
@@ -353,33 +434,33 @@ export const Dynamic3DComparison: React.FC<Comparison3DProps> = ({ unit, itemA, 
                 </h2>
 
                 {card.item.imageUrl && (
-                  <div style={{ width: "100%", height: "150px", borderRadius: "6px", overflow: "hidden", marginBottom: "20px", border: `1px solid rgba(212, 175, 55, 0.15)`, position: "relative" }}>
+                  <div style={{ width: "100%", height: "140px", borderRadius: "6px", overflow: "hidden", marginBottom: "18px", border: `1px solid rgba(212, 175, 55, 0.15)`, position: "relative" }}>
                     <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, rgba(5,5,8,0.9), transparent 60%)`, zIndex: 1 }} />
                     <Img src={card.item.imageUrl ? staticFile(card.item.imageUrl) : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "contrast(1.1) saturate(1.1)" }} />
                   </div>
                 )}
 
-                {/* Primary Number Readout */}
+                {/* Primary Number Readout - Fixed Tabular Kerning, No Expanding Tracking */}
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "center", gap: "8px" }}>
                   <span style={{ 
                     fontFamily: '"Inter", "-apple-system", sans-serif',
                     fontSize: "64px", 
                     fontWeight: "700", 
                     fontVariantNumeric: "tabular-nums", 
-                    letterSpacing: `${trackSpacing}px`,
+                    letterSpacing: "-1px",
                     background: "linear-gradient(180deg, #FFFFFF 20%, #E2B714 80%, #AA8529 100%)",
                     WebkitBackgroundClip: "text",
                     WebkitTextFillColor: "transparent",
                     filter: `drop-shadow(0 8px 30px rgba(0,0,0,1))`, 
                     lineHeight: 1 
                   }}>
-                    {Math.floor(card.val).toLocaleString()}
+                    {Math.round(card.val).toLocaleString()}
                   </span>
                   <span style={{ 
                       fontFamily: '"Inter", sans-serif',
-                      color: GOLD_ACCENT, 
+                      color: card.item.color || GOLD_ACCENT, 
                       fontSize: "22px", 
-                      fontWeight: "500" 
+                      fontWeight: "600" 
                    }}>
                     {unit}
                   </span>

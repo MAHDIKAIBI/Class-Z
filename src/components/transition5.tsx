@@ -1,4 +1,4 @@
-﻿import { 
+import { 
   AbsoluteFill, 
   useCurrentFrame, 
   interpolate, 
@@ -12,6 +12,12 @@ export type LumaDissolveTransitionProps = {
   durationInFrames?: number;
 };
 
+/**
+ * SPECTRAL HIGHLIGHT DISSOLVE (Transition 5 - Redesigned)
+ * Replaces harsh circular cigarette burn holes with organic 35mm film halation.
+ * Features exposure-lift highlight bleeding, optical depth softening, and a
+ * warm spectral emulsion glow for seamless documentary transitions.
+ */
 export const LumaDissolveTransition: React.FC<LumaDissolveTransitionProps> = ({ 
   SceneA, 
   SceneB, 
@@ -19,85 +25,108 @@ export const LumaDissolveTransition: React.FC<LumaDissolveTransitionProps> = ({
 }) => {
   const frame = useCurrentFrame();
 
-  // 1. PROGRESSIVE SMOOTH EASING
+  // 1. ORGANIC S-CURVE TRANSITION PROGRESS
   const progress = interpolate(frame, [0, durationInFrames], [0, 1], {
-    easing: Easing.bezier(0.4, 0.0, 0.2, 1.0),
+    easing: Easing.bezier(0.35, 0.0, 0.25, 1.0),
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  // 2. SCALE BREATHING & FORWARD MOMENTUM
-  const scaleA = interpolate(progress, [0, 1], [1.0, 1.06]);
-  const scaleB = interpolate(progress, [0, 1], [1.08, 1.0]);
+  // 2. SUBTLE FOCAL BREATHING (1.0 -> 1.03 for A, 1.03 -> 1.0 for B)
+  const scaleA = interpolate(progress, [0, 1], [1.0, 1.03]);
+  const scaleB = interpolate(progress, [0, 1], [1.03, 1.0]);
 
-  // 3. OPTICAL DEPTH DEFOCUS
-  const blurA = interpolate(progress, [0, 0.7, 1], [0, 8, 20]);
-  const blurB = interpolate(progress, [0, 0.4, 1], [18, 6, 0]);
-
-  // 4. LUMA MASK THRESHOLD (Center outward radial burn wipe)
-  const maskRadius = interpolate(progress, [0.1, 0.9], [0, 130], {
+  // 3. OPTICAL DEPTH DEFOCUS (Soft focus racking)
+  const blurA = interpolate(progress, [0.2, 0.8], [0, 8], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const blurB = interpolate(progress, [0.2, 0.8], [8, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  // 5. EMULSION BURN & GOLDEN GLOW ON EDGES
-  const burnGlow = interpolate(progress, [0.25, 0.5, 0.75], [0, 1, 0], {
+  // 4. EXPOSURE & HIGHLIGHT BLEED (Lifts midtones and highlights at apex)
+  const exposureA = interpolate(progress, [0, 0.5, 1], [1.0, 1.28, 1.0], {
+    easing: Easing.inOut(Easing.ease),
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const exposureB = interpolate(progress, [0, 0.5, 1], [1.0, 1.28, 1.0], {
+    easing: Easing.inOut(Easing.ease),
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 
-  const opacityA = interpolate(progress, [0.75, 1], [1, 0], {
+  // 5. SMOOTH SPECTRAL CROSSFADE
+  const opacityA = interpolate(progress, [0.25, 0.75], [1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const opacityB = interpolate(progress, [0.25, 0.75], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  // 6. 35MM FILM HALATION & EMULSION WARMTH (Peaks at midpoint)
+  const halationGlow = interpolate(
+    progress,
+    [0.2, 0.5, 0.8],
+    [0, 0.35, 0],
+    { easing: Easing.inOut(Easing.ease), extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#020305", overflow: "hidden" }}>
-      {/* SCENE B (Underneath, revealed as hole expands) */}
+      {/* SCENE B (Underneath, resolving focus as exposure normalizes) */}
       <AbsoluteFill
         style={{
           transform: `scale(${scaleB})`,
-          filter: `blur(${blurB}px)`,
+          filter: blurB > 0.5 ? `blur(${blurB}px) brightness(${exposureB})` : `brightness(${exposureB})`,
+          opacity: opacityB,
+          pointerEvents: opacityB > 0 ? "auto" : "none",
         }}
       >
         {SceneB}
       </AbsoluteFill>
 
-      {/* SCENE A (On top, with hole burning through center) */}
+      {/* SCENE A (On top, blooming highlights softly dissolve away) */}
       <AbsoluteFill
         style={{
           transform: `scale(${scaleA})`,
-          filter: `blur(${blurA}px)`,
+          filter: blurA > 0.5 ? `blur(${blurA}px) brightness(${exposureA})` : `brightness(${exposureA})`,
           opacity: opacityA,
-          maskImage: `radial-gradient(circle at 50% 50%, transparent ${maskRadius}%, black ${maskRadius + 14}%)`,
-          WebkitMaskImage: `radial-gradient(circle at 50% 50%, transparent ${maskRadius}%, black ${maskRadius + 14}%)`,
+          pointerEvents: opacityA > 0 ? "auto" : "none",
         }}
       >
         {SceneA}
       </AbsoluteFill>
 
-      {/* GOLDEN EMULSION BURN FILAMENT (Edge highlight where Scene A melts into Scene B) */}
-      {burnGlow > 0.01 && (
+      {/* 35MM SPECTRAL HALATION WASH (Soft golden/warm bleed) */}
+      {halationGlow > 0.01 && (
         <AbsoluteFill
           style={{
             pointerEvents: "none",
             mixBlendMode: "screen",
-            opacity: burnGlow,
-            background: `radial-gradient(circle at 50% 50%, transparent ${Math.max(0, maskRadius - 6)}%, rgba(245, 215, 127, 0.9) ${maskRadius}%, rgba(212, 175, 55, 0.5) ${maskRadius + 10}%, transparent ${maskRadius + 18}%)`,
-            filter: "blur(6px)",
+            opacity: halationGlow,
+            background: "radial-gradient(ellipse at 50% 50%, rgba(255, 215, 150, 0.7) 0%, rgba(255, 160, 80, 0.3) 45%, transparent 75%)",
+            filter: "blur(12px)",
           }}
         />
       )}
 
-      {/* AMBIENT WARMTH BLEED (Center solarization) */}
-      <AbsoluteFill
-        style={{
-          pointerEvents: "none",
-          mixBlendMode: "overlay",
-          opacity: burnGlow * 0.7,
-          background: "radial-gradient(circle at 50% 50%, #FFD700 0%, #D4AF37 35%, transparent 70%)",
-        }}
-      />
+      {/* AMBIENT HIGHLIGHT DIFFUSION */}
+      {halationGlow > 0.01 && (
+        <AbsoluteFill
+          style={{
+            pointerEvents: "none",
+            mixBlendMode: "soft-light",
+            opacity: halationGlow * 1.2,
+            background: "linear-gradient(180deg, rgba(255, 235, 200, 0.25) 0%, transparent 60%)",
+          }}
+        />
+      )}
     </AbsoluteFill>
   );
 };
+

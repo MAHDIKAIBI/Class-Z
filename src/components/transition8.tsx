@@ -53,22 +53,22 @@ export const PrismDispersionTransition: React.FC<PrismDispersionTransitionProps>
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#020305", overflow: "hidden" }}>
-      {/* SCENE B (Revealed behind the diagonal glass wipe) */}
-      <AbsoluteFill style={{ transform: `scale(${scaleB})` }}>
-        {SceneB}
+      {/* SCENE A (Outgoing scene at base, 100% visible at start) */}
+      <AbsoluteFill style={{ transform: `scale(${scaleA})` }}>
+        {SceneA}
       </AbsoluteFill>
 
-      {/* SCENE A (Diagonal clipped wipe) */}
+      {/* SCENE B (Incoming scene, cleanly wipes in across diagonal glass blade) */}
       <div
         style={{
           position: "absolute",
           inset: 0,
           clipPath: `polygon(0% 0%, ${xTop}% 0%, ${xBottom}% 100%, 0% 100%)`,
           WebkitClipPath: `polygon(0% 0%, ${xTop}% 0%, ${xBottom}% 100%, 0% 100%)`,
-          transform: `scale(${scaleA})`,
+          transform: `scale(${scaleB})`,
         }}
       >
-        <AbsoluteFill>{SceneA}</AbsoluteFill>
+        <AbsoluteFill>{SceneB}</AbsoluteFill>
       </div>
 
       {/* CHROMATIC ABERRATION SPLIT LAYERS (Along the glass refraction edge) */}
