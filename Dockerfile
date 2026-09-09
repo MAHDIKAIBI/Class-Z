@@ -1,4 +1,4 @@
-﻿FROM mcr.microsoft.com/playwright/python:v1.44.0-jammy
+FROM mcr.microsoft.com/playwright/python:v1.44.0-jammy
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -41,49 +41,48 @@ RUN pip install --no-cache-dir \
 # 5. Audio, Speech & Alignment Libraries
 RUN pip install --no-cache-dir \
     "numpy<2.0.0" \
-    scipy==1.13.1 \
-    soundfile==0.12.1 \
-    librosa==0.10.2.post1 \
-    pedalboard==0.8.14 \
-    pyloudnorm==0.1.1 \
+    scipy \
+    soundfile \
+    librosa==0.10.1 \
+    pedalboard==0.9.23 \
+    pyloudnorm==0.2.0 \
     pydub==0.25.1 \
-    pyrubberband==0.3.0 \
-    faster-whisper==1.0.3 \
+    pyrubberband==0.4.0 \
+    faster-whisper==1.2.1 \
     whisperx==3.1.1 \
-    transformers==4.41.2 \
-    huggingface_hub==0.23.4 \
-    qwen-tts
+    transformers==4.57.3 \
+    huggingface_hub \
+    qwen-tts==0.1.1
 
 # 6. Automation, Scraping, Vision, Media & LLMs
 RUN pip install --no-cache-dir \
-    playwright==1.44.0 \
-    playwright-stealth==1.0.6 \
-    selenium==4.21.0 \
-    seleniumbase==4.27.6 \
+    playwright-stealth==2.0.3 \
+    selenium \
+    seleniumbase==4.51.8 \
     undetected-chromedriver==3.5.5 \
-    beautifulsoup4==4.12.3 \
-    pyperclip==1.8.2 \
-    opencv-python-headless==4.9.0.80 \
-    Pillow==10.3.0 \
-    yt-dlp==2024.5.27 \
-    youtube-transcript-api==0.6.2 \
-    ddgs==1.5.0 \
-    duckduckgo-search==5.3.1b1 \
-    g4f==0.3.2.7 \
-    curl_cffi==0.7.0b4 \
-    aiohttp==3.9.5 \
-    nest_asyncio==1.6.0 \
-    google-genai==0.1.1 \
-    google-generativeai==0.6.0 \
-    openai==1.30.5 \
-    google-api-python-client==2.131.0 \
-    google-auth-httplib2==0.2.0 \
-    google-auth-oauthlib==1.2.0 \
-    tweepy==4.14.0 \
-    requests==2.32.3 \
-    python-dotenv==1.0.1 \
-    filelock==3.14.0
+    beautifulsoup4 \
+    pyperclip \
+    opencv-python-headless \
+    Pillow \
+    yt-dlp \
+    youtube-transcript-api \
+    ddgs \
+    duckduckgo-search \
+    g4f==8.1.7 \
+    curl_cffi \
+    aiohttp \
+    nest_asyncio \
+    google-genai \
+    google-generativeai \
+    openai \
+    google-api-python-client \
+    google-auth-httplib2 \
+    google-auth-oauthlib \
+    tweepy \
+    requests \
+    python-dotenv \
+    filelock
 
 # 7. Verification Smoke Test
 RUN ffmpeg -version && ffprobe -version && ollama --version \
-    && python -c "import torch, whisperx, faster_whisper, librosa, playwright, seleniumbase, g4f; print('Golden Environment Verified!')"
+    && python -c "import torch, whisperx, faster_whisper, librosa, seleniumbase, g4f; print('Golden Environment Verified!')"
