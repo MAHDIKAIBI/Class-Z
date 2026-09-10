@@ -39,6 +39,10 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: write
+  packages: read
+
 env:
   INPUT_TOPIC: ${{ inputs.topic }}
 
@@ -47,6 +51,8 @@ jobs:
   creation_job:
     if: inputs.action_type != 'RENDER_ONLY'
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     outputs:
       vault_name: ${{ steps.orchestrator.outputs.vault_name }}
       total_frames: ${{ steps.orchestrator.outputs.total_frames }}
@@ -56,28 +62,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Cache apt packages
-        uses: actions/cache@v4
-        with:
-          path: /var/cache/apt/archives
-          key: apt-brain-${{ runner.os }}-firefox
-          restore-keys: apt-brain-${{ runner.os }}-
-
-      - name: Install System Dependencies
-        run: |
-          sudo snap remove firefox || true
-          for i in {1..5}; do sudo add-apt-repository ppa:mozillateam/ppa -y && break || sleep 15; done
-          echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _retry in 1 2 3 4 5; do sudo apt-get update && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw rubberband-cli -y && break || { echo "Command failed, retrying..."; sleep 15; }; done
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
 
 
@@ -197,11 +183,8 @@ jobs:
           NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
-          for _retry in 1 2 3 4 5; do python -m pip install requests selenium undetected-chromedriver && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs faster-whisper whisperx && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          
-            # Export GITHUB_OUTPUT explicitly to xvfb-run just in case it strips it
-            xvfb-run -a --server-args="-screen 0 1920x1080x24" env GITHUB_OUTPUT="$GITHUB_OUTPUT" python -u .github/scripts/orchestrator.py
+          # Export GITHUB_OUTPUT explicitly to xvfb-run just in case it strips it
+          xvfb-run -a --server-args="-screen 0 1920x1080x24" env GITHUB_OUTPUT="$GITHUB_OUTPUT" python -u .github/scripts/orchestrator.py
             
             # Failsafe: if Python failed to write to GITHUB_OUTPUT, Bash will do it directly!
             if [ -f "generated_vault.txt" ]; then
@@ -240,7 +223,6 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          for _retry in 1 2 3 4 5; do python -m pip install "huggingface_hub<1.0" && break || { echo "Command failed, retrying..."; sleep 15; }; done
           if [ -n "$HF_TOKEN" ]; then huggingface-cli login --token "$HF_TOKEN" || true; else echo "No HF_TOKEN provided..."; fi
           huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-Base
 
@@ -251,6 +233,8 @@ jobs:
     needs: [creation_job]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_tts != 'true'
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     strategy:
       fail-fast: false
       matrix:
@@ -258,21 +242,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install System Dependencies
-        run: |
-          # Remove broken Microsoft repos that cause apt-get update to fail on ubuntu-latest
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _retry in 1 2 3 4 5; do sudo apt-get update -o Acquire::AllowInsecureRepositories=false || sudo apt-get update --allow-unauthenticated || true && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do sudo apt-get install rclone jq sox libsox-fmt-all -y && break || { echo "Command failed, retrying..."; sleep 15; }; done
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Configure rclone Silently
         env:
@@ -332,10 +303,6 @@ jobs:
           # Download master reference voice if present
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/$CHANNEL/voice" "channels/$CHANNEL/voice/" || true
 
-      - name: Install Python Dependencies
-        run: |
-          for _retry in 1 2 3 4 5; do if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; fi && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs faster-whisper whisperx && break || { echo "Command failed, retrying..."; sleep 15; }; done
 
       - name: Cache HuggingFace Models
         uses: actions/cache@v4
@@ -371,37 +338,13 @@ jobs:
     needs: [creation_job, tts_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_prep != 'true'
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Cache apt packages
-        uses: actions/cache@v4
-        with:
-          path: /var/cache/apt/archives
-          key: apt-brain-prep-${{ runner.os }}-firefox
-          restore-keys: apt-brain-prep-${{ runner.os }}-
-
-      - name: Install FFmpeg
-        run: |
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
-      - name: Install System Dependencies
-        run: |
-          sudo snap remove firefox || true
-          for i in {1..5}; do sudo add-apt-repository ppa:mozillateam/ppa -y && break || sleep 15; done
-          echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _retry in 1 2 3 4 5; do sudo apt-get update && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd pciutils lshw -y && break || { echo "Command failed, retrying..."; sleep 15; }; done
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Configure rclone Silently
         env:
@@ -451,18 +394,6 @@ jobs:
               rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" || true
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" || true
 
-      - name: Install Python Dependencies
-        run: |
-          for _retry in 1 2 3 4 5; do if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; fi && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs faster-whisper whisperx && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          
-          for _retry in 1 2 3 4 5; do python -m pip install -U seleniumbase python-dotenv requests && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          # Robust Playwright Install
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
-          python -m pip install -U playwright
-          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
-          python -m playwright install chromium || true
 
 
       - name: Run The_Brain PREP phase (audio + timeline, no clip downloads)
@@ -517,23 +448,13 @@ jobs:
     needs: [creation_job, brain_prep_job, tts_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install System Dependencies
-        run: |
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _retry in 1 2 3 4 5; do sudo apt-get update || true && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do sudo apt-get install rclone jq xvfb -y && break || { echo "Command failed, retrying..."; sleep 15; }; done
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Configure rclone Silently
         env:
@@ -573,9 +494,6 @@ jobs:
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT"  "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" --include "partial_*.json" --transfers 1 || true
 
-      - name: Install Python Dependencies
-        run: |
-          for _retry in 1 2 3 4 5; do python -m pip install nodriver seleniumbase requests g4f curl_cffi aiohttp nest_asyncio ddgs google-generativeai && break || { echo "Command failed, retrying..."; sleep 15; }; done
 
       - name: Run Master Hunter (Google Images)
         env:
@@ -609,6 +527,8 @@ jobs:
     needs: [creation_job, brain_prep_job, tts_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     strategy:
       fail-fast: false
       matrix:
@@ -616,32 +536,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Setup FFmpeg & FFprobe
-        run: |
-          if ! command -v ffmpeg &> /dev/null || ! command -v ffprobe &> /dev/null; then
-            sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-            sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-            echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-            for _apt_try in 1 2 3 4 5; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/5..."; sleep 10; }; done
-          fi
-          which ffmpeg && which ffprobe
-          ffmpeg -version | head -n 1
-          ffprobe -version | head -n 1
-
-      - name: Install System Dependencies
-        run: |
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _retry in 1 2 3 4 5; do sudo apt-get update || true && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do sudo apt-get install rclone jq sox libsox-fmt-all xvfb -y && break || { echo "Command failed, retrying..."; sleep 15; }; done
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Configure rclone Silently
         env:
@@ -693,32 +589,12 @@ jobs:
             rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" || true
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT"  "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 || true
 
-      - name: Install Python Dependencies
+      - name: Start Ollama Server
         run: |
-          for _retry in 1 2 3 4 5; do if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs faster-whisper whisperx ddgs && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          
-          for _retry in 1 2 3 4 5; do python -m pip install -U seleniumbase python-dotenv requests && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          # Robust Playwright Install
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
-          python -m pip install -U playwright
-          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
-          python -m playwright install chromium || true
-
-      - name: Setup Local Ollama Brain & 4GB Swap Space
-        run: |
-          echo "[*] Creating 4GB Swap File to prevent OOM crashes..."
-          sudo fallocate -l 4G /swapfile2 || sudo dd if=/dev/zero of=/swapfile2 bs=1M count=4096
-          sudo chmod 600 /swapfile2
-          sudo mkswap /swapfile2
-          sudo swapon /swapfile2 || true
-          
-          echo "[*] Installing Ollama directly into the worker..."
-          for i in 1 2 3 4 5; do curl -fsSL https://ollama.com/install.sh | sh && break || { echo "Ollama install failed (attempt $i), retrying in 10s..."; sleep 10; }; done
-          sudo systemctl stop ollama || true
+          echo "[*] Launching pre-baked Ollama server..."
           OLLAMA_HOST="127.0.0.1" OLLAMA_ORIGINS="*" ollama serve > ollama.log 2>&1 &
-          sleep 5
+          sleep 3
+          ollama --version
 
       - name: Run Download Worker
         env:
@@ -795,6 +671,8 @@ jobs:
     needs: [creation_job, brain_prep_job, tts_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     strategy:
       fail-fast: false
       matrix:
@@ -802,35 +680,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Setup Node.js (For yt-dlp JS Runtime)
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Setup FFmpeg & FFprobe
-        run: |
-          if ! command -v ffmpeg &> /dev/null || ! command -v ffprobe &> /dev/null; then
-            sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-            sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-            echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-            for _apt_try in 1 2 3 4 5; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/5..."; sleep 10; }; done
-          fi
-          which ffmpeg && which ffprobe
-          ffmpeg -version | head -n 1
-          ffprobe -version | head -n 1
-
-
-      - name: Install System Dependencies
-        run: |
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list
-          for _retry in 1 2 3 4 5; do sudo apt-get update || true && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do sudo apt-get install rclone jq xvfb -y && break || { echo "Command failed, retrying..."; sleep 15; }; done
 
       - name: Configure rclone Silently
         env:
@@ -871,14 +727,6 @@ jobs:
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
           rclone copy --tpslimit 10 --retries 5 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" --include "partial_*.json" || true
 
-      - name: Install Python Dependencies
-        run: |
-          for _retry in 1 2 3 4 5; do if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do python -m pip install -U yt-dlp requests python-dotenv && break || { echo "Command failed, retrying..."; sleep 15; }; done
-            # Robust Playwright Install
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
-          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
 
       - name: Run YouTube Download Worker
         env:
@@ -915,30 +763,13 @@ jobs:
     needs: [creation_job, brain_prep_job, download_matrix, youtube_download_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY'
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install FFmpeg
-        run: |
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
-      - name: Install System Dependencies
-        run: |
-          sudo snap remove firefox || true
-          for i in {1..5}; do sudo add-apt-repository ppa:mozillateam/ppa -y && break || sleep 15; done
-          echo -e 'Package: *\nPin: release o=LP-PPA-mozillateam\nPin-Priority: 1001' | sudo tee /etc/apt/preferences.d/mozilla-firefox
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _retry in 1 2 3 4 5; do sudo apt-get update && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do sudo apt-get install rclone jq firefox xvfb xclip sox libsox-fmt-all zstd -y && break || { echo "Command failed, retrying..."; sleep 15; }; done
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Configure rclone Silently
         env:
@@ -1005,18 +836,6 @@ jobs:
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --transfers 16 || true
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/audio" "public/audio" --transfers 16
 
-      - name: Install Python Dependencies
-        run: |
-          for _retry in 1 2 3 4 5; do if [ -f requirements.txt ]; then python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu; python -m pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu; fi && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do python -m pip install -U g4f curl_cffi aiohttp nest_asyncio ddgs faster-whisper whisperx && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          
-          for _retry in 1 2 3 4 5; do python -m pip install -U seleniumbase python-dotenv requests && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          # Robust Playwright Install
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
-          python -m pip install -U playwright
-          for _retry in 1 2 3 4 5; do python -m playwright install --with-deps chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
-          python -m playwright install chromium || true
 
       - name: Merge Partial Timelines
         if: needs.creation_job.outputs.skip_downloads != 'true'
@@ -1231,31 +1050,18 @@ jobs:
     needs: [creation_job, brain_finish_job, render_matrix]
     if: always() && !cancelled() && !failure()
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install FFmpeg
-        run: |
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
-      - name: Install System Dependencies
-        run: |
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
-          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install rclone jq -y && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
 
       - name: Configure rclone Silently
         env:
@@ -1435,13 +1241,7 @@ jobs:
           mkdir -p tokens
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/tokens" "tokens" -v
           
-          echo "Installing Google API requirements..."
-          for _retry in 1 2 3 4 5; do python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib tweepy requests playwright && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          for _retry in 1 2 3 4 5; do python -m pip install -U seleniumbase python-dotenv requests && break || { echo "Command failed, retrying..."; sleep 15; }; done
-          # Robust Playwright Install
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
-          for _retry in 1 2 3 4 5; do python -m playwright install chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
+          echo "Dependencies already loaded in golden runner image."
           
           echo "Running YouTube Uploader..."
           python youtube_uploader.py
