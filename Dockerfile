@@ -56,7 +56,7 @@ RUN pip install --no-cache-dir \
     pyloudnorm==0.2.0 \
     pydub==0.25.1 \
     pyrubberband==0.4.0 \
-    faster-whisper==1.2.1 \
+    faster-whisper==1.0.3 \
     whisperx==3.1.1 \
     transformers==4.57.3 \
     "huggingface_hub[cli]" \
