@@ -31,10 +31,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && ln -sf /usr/bin/firefox-esr /usr/bin/firefox \
     && rm -rf /var/lib/apt/lists/*
 
-# 2. Pinned Ollama Linux amd64 Binary (v0.3.10)
-RUN curl -fsSL https://github.com/ollama/ollama/releases/download/v0.3.10/ollama-linux-amd64.tgz -o /tmp/ollama.tgz \
-    && tar -xzf /tmp/ollama.tgz -C /usr \
-    && rm -f /tmp/ollama.tgz
+# 2. Latest Ollama Linux amd64 Binary (v0.34.0)
+RUN curl -fsSL https://ollama.com/download/ollama-linux-amd64.tar.zst -o /tmp/ollama.tar.zst \
+    && zstd -d -c /tmp/ollama.tar.zst | tar -xf - -C /usr \
+    && rm -f /tmp/ollama.tar.zst
 
 # 3. Pip & Build Tools
 RUN pip install --no-cache-dir -U pip "setuptools<82.0.0" wheel
