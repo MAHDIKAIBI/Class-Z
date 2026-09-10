@@ -27,5 +27,7 @@ jobs:
           firefox --version
           echo "=== 7. Qwen3-TTS Model Weights Verification ==="
           python -c "import os; cache = os.path.join(os.environ.get('HF_HOME', '/opt/huggingface'), 'hub', 'models--Qwen--Qwen3-TTS-12Hz-1.7B-Base'); assert os.path.isdir(cache), f'Missing {cache}'; print('✅ Qwen3-TTS Model Weights Verified at:', cache)"
+          echo "=== 8. Qwen-TTS & pkg_resources Verification ==="
+          python -c "import pkg_resources, qwen_tts; print('✅ Qwen-TTS and pkg_resources Verified!')"
 
 

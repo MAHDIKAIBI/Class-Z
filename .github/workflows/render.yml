@@ -297,11 +297,20 @@ jobs:
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          pip install -q "setuptools<82.0.0"
+          FAILED=1
           for i in {1..10}; do
-            python -u tts_worker.py && break
+            if python -u tts_worker.py; then
+              FAILED=0
+              break
+            fi
             echo "[!] Worker crashed or hit 429. Rebooting instantly (Attempt $i/10)..."
             sleep 5
           done
+          if [ "$FAILED" -eq 1 ]; then
+            echo "[!] FATAL: tts_worker.py failed all 10 attempts!"
+            exit 1
+          fi
 
       - name: Upload WAV Chunks to Drive
         run: |
