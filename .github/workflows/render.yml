@@ -14,6 +14,7 @@ on:
           - CREATE_AUTOMATIC
           - RESUME
           - RENDER_ONLY
+          - STITCH_ONLY
       channel_name:
         description: 'Channel to operate on'
         required: true
@@ -49,7 +50,7 @@ env:
 jobs:
 
   creation_job:
-    if: inputs.action_type != 'RENDER_ONLY'
+    if: inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
@@ -900,7 +901,7 @@ jobs:
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   render_matrix:
     needs: [creation_job, brain_finish_job]
-    if: always() && !cancelled() && !failure()
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'STITCH_ONLY'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -1036,30 +1037,40 @@ jobs:
 
       - name: Render Video Chunk
         run: |
-          npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --muted --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --concurrency=1 --timeout=300000 --crf=14 --pixel-format=yuv444p --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
+          if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks/chunk_${{ matrix.chunk }}.mp4" 2>/dev/null | grep -q "chunk_${{ matrix.chunk }}.mp4"; then
+            echo "[+] Chunk ${{ matrix.chunk }} already exists on Drive, skipping render!"
+          else
+            npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --muted --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --concurrency=1 --timeout=300000 --crf=14 --pixel-format=yuv444p --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
+          fi
       - name: Upload Chunk to G Drive
         run: |
-          rclone copy chunk_${{ matrix.chunk }}.mp4 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks" --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s
+          if [ -f "chunk_${{ matrix.chunk }}.mp4" ]; then
+            rclone copy chunk_${{ matrix.chunk }}.mp4 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks" --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s
+          fi
 
   stitch_and_upload:
     needs: [creation_job, brain_finish_job, render_matrix]
     if: always() && !cancelled() && !failure()
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
-    defaults:
-      run:
-        shell: bash
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configure Git Safe Directory
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install System Dependencies
+        run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg rclone jq && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
 
       - name: Configure rclone Silently
         env:
@@ -1101,7 +1112,7 @@ jobs:
       - name: Set Vault Inputs
         id: vault_inputs
         run: |
-          if [ "${{ inputs.action_type }}" = "RENDER_ONLY" ]; then
+          if [ "${{ inputs.action_type }}" = "RENDER_ONLY" ] || [ "${{ inputs.action_type }}" = "STITCH_ONLY" ]; then
              echo "vault_name=$INPUT_TOPIC" >> $GITHUB_ENV
           else
              echo "vault_name=${{ needs.creation_job.outputs.vault_name }}" >> $GITHUB_ENV
@@ -1261,7 +1272,12 @@ jobs:
           mkdir -p tokens
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/tokens" "tokens" -v
           
-          echo "Dependencies already loaded in golden runner image."
+          echo "Installing YouTube Uploader dependencies..."
+          for _retry in 1 2 3 4 5; do python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib tweepy requests playwright && break || { echo "Command failed, retrying..."; sleep 15; }; done
+          for _retry in 1 2 3 4 5; do python -m pip install -U seleniumbase python-dotenv requests && break || { echo "Command failed, retrying..."; sleep 15; }; done
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
+          for _retry in 1 2 3 4 5; do python -m playwright install chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
           
           echo "Running YouTube Uploader..."
           python youtube_uploader.py
