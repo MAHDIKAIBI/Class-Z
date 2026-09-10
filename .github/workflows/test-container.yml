@@ -20,4 +20,9 @@ jobs:
           echo "=== 3. Ollama ==="
           ollama --version
           echo "=== 4. Instant AI and Media Engine Imports ==="
-          python -c "import numpy; print('NumPy version:', numpy.__version__); import torch, whisperx, faster_whisper, librosa, seleniumbase, g4f, google.genai; print('🚀 ALL ENGINES LOADED IN ZERO SECONDS!')"
+          python -c "import numpy; print('NumPy version:', numpy.__version__); import torch, whisperx, faster_whisper, librosa, seleniumbase, g4f, google.genai, nodriver, bing_image_downloader, fastapi, rembg, imagehash; print('🚀 ALL ENGINES LOADED IN ZERO SECONDS!')"
+          echo "=== 5. Xvfb and Display Check ==="
+          xvfb-run -a python -c "print('Xvfb virtual display active and functional!')"
+          echo "=== 6. Browser Verification ==="
+          firefox --version
+

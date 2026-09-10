@@ -3,14 +3,16 @@ FROM python:3.11-bookworm
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV GOLDEN_CONTAINER=true
 
-# 1. System Tools, Audio DSP & Ubuntu FFmpeg/FFprobe
+# 1. System Tools, Audio DSP, X11/Xvfb, Firefox & Ubuntu/Debian FFmpeg/FFprobe
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     sox \
     libsox-fmt-all \
     rubberband-cli \
     xvfb \
+    xauth \
     xclip \
     pciutils \
     lshw \
@@ -20,7 +22,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     git \
+    sudo \
+    procps \
+    firefox-esr \
+    fonts-liberation \
     ca-certificates \
+    && ln -sf /usr/bin/firefox-esr /usr/bin/firefox \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Pinned Ollama Linux amd64 Binary (v0.3.10)
@@ -51,7 +58,7 @@ RUN pip install --no-cache-dir \
     faster-whisper==1.2.1 \
     whisperx==3.1.1 \
     transformers==4.57.3 \
-    huggingface_hub \
+    "huggingface_hub[cli]" \
     qwen-tts==0.1.1
 
 # 6. Automation, Chromium, Scraping, Vision & LLMs
@@ -84,8 +91,14 @@ RUN pip install --no-cache-dir \
     requests \
     python-dotenv \
     filelock \
+    nodriver \
+    bing-image-downloader \
+    fastapi \
+    rembg \
+    imagehash \
     && python -m playwright install --with-deps chromium
 
-# 7. Verification Smoke Test
+# 7. Verification Smoke Test (Runs through xvfb-run to verify X11, xauth, and libraries)
 RUN ffmpeg -version && ffprobe -version && ollama --version \
-    && python -c "import numpy; assert not numpy.__version__.startswith('2.'), f'NumPy 2.x detected: {numpy.__version__}'; import torch, whisperx, faster_whisper, librosa, seleniumbase, g4f, google.genai; print('Golden Environment Verified on Python 3.11 with NumPy 1.x!')"
+    && xvfb-run -a python -c "import numpy; assert not numpy.__version__.startswith('2.'), f'NumPy 2.x detected: {numpy.__version__}'; import torch, whisperx, faster_whisper, librosa, seleniumbase, g4f, google.genai, nodriver, bing_image_downloader, fastapi, rembg, imagehash; print('Golden Environment Verified on Python 3.11 with NumPy 1.x and xvfb-run!')"
+
