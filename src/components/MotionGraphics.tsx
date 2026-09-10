@@ -273,14 +273,28 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrame
       if (typeof rawVal === 'number' && isFinite(rawVal)) {
           numericValue = rawVal;
       } else if (typeof rawVal === 'string') {
-          const s = rawVal.trim();
+          let s = rawVal.trim();
+
+          // Check for trailing currency symbol e.g. "1000$"
+          const trailingCurrency = s.match(/([$€£¥₹])$/);
+          if (trailingCurrency) {
+              if (!detectedPrefix) detectedPrefix = trailingCurrency[1];
+              s = s.substring(0, s.length - 1).trim();
+          }
+
           if (!detectedPrefix) {
               const pMatch = s.match(/^([$€£¥₹])/);
-              if (pMatch) detectedPrefix = pMatch[1];
+              if (pMatch) {
+                  detectedPrefix = pMatch[1];
+                  s = s.substring(1).trim();
+              }
           }
           if (!detectedSuffix) {
               const sMatch = s.match(/([%a-zA-Z]+)$/);
-              if (sMatch) detectedSuffix = sMatch[1];
+              if (sMatch) {
+                  detectedSuffix = sMatch[1];
+                  s = s.substring(0, s.length - sMatch[1].length).trim();
+              }
           }
           const numMatch = s.replace(/,/g, '').match(/[-+]?[0-9]*\.?[0-9]+/);
           if (numMatch) {
@@ -295,7 +309,10 @@ export const MotionGraphicsRouter = ({ graphics, sceneIndex = 0, durationInFrame
           }
       }
 
-      const numberType = (graphics.number_type || graphics.type || graphics.numberType || 'generic').toLowerCase();
+      let numberType = (graphics.number_type || graphics.type || graphics.numberType || 'generic').toLowerCase();
+      if ((detectedPrefix === '$' || detectedPrefix === '€' || detectedPrefix === '£' || detectedPrefix === '¥' || detectedPrefix === '₹') && numberType === 'generic') {
+          numberType = 'money';
+      }
       const safeDuration = Math.max(1, durationInFrames - startFrame);
 
       return (
