@@ -5,6 +5,7 @@ ENV PYTHONUNBUFFERED=1
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV GOLDEN_CONTAINER=true
 ENV HF_HOME=/opt/huggingface
+ENV TORCH_HOME=/opt/torch_home
 
 # 1. System Tools, Audio DSP, X11/Xvfb, Firefox & Ubuntu/Debian FFmpeg/FFprobe
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -105,9 +106,10 @@ RUN huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-Base \
     && chmod -R 777 /opt/huggingface
 
 # 8. Pre-bake WhisperX VAD Segmentation Model (~17.7MB)
-RUN mkdir -p /root/.cache/torch \
-    && curl -fsSL "https://huggingface.co/philschmid/pyannote-segmentation/resolve/main/pytorch_model.bin" -o /root/.cache/torch/whisperx-vad-segmentation.bin \
-    && chmod -R 777 /root/.cache/torch
+RUN mkdir -p /opt/torch_home /root/.cache/torch \
+    && curl -fsSL "https://huggingface.co/philschmid/pyannote-segmentation/resolve/main/pytorch_model.bin" -o /opt/torch_home/whisperx-vad-segmentation.bin \
+    && cp /opt/torch_home/whisperx-vad-segmentation.bin /root/.cache/torch/whisperx-vad-segmentation.bin \
+    && chmod -R 777 /opt/torch_home /root/.cache/torch
 
 # 9. Verification Smoke Test (Runs through xvfb-run to verify X11, xauth, libraries, and model cache)
 RUN ffmpeg -version && ffprobe -version && ollama --version \
