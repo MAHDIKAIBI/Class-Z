@@ -48,6 +48,7 @@ RUN pip install --no-cache-dir \
 
 # 5. Audio, Speech & Alignment Libraries
 RUN pip install --no-cache-dir \
+    "setuptools<82.0.0" \
     "numpy<2.0.0" \
     scipy \
     soundfile \
@@ -64,6 +65,7 @@ RUN pip install --no-cache-dir \
 
 # 6. Automation, Chromium, Scraping, Vision & LLMs
 RUN pip install --no-cache-dir \
+    "setuptools<82.0.0" \
     "numpy<2.0.0" \
     playwright \
     playwright-stealth==2.0.3 \
@@ -97,6 +99,7 @@ RUN pip install --no-cache-dir \
     fastapi \
     rembg \
     imagehash \
+    && pip install --no-cache-dir -U "setuptools<82.0.0" \
     && python -m playwright install --with-deps chromium
 
 # 7. Pre-bake Qwen3-TTS 1.7B Model Weights (~3.5GB)
