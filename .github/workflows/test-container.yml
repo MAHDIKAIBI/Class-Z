@@ -1,0 +1,23 @@
+name: "Test Golden Container"
+
+on:
+  workflow_dispatch:
+
+jobs: 
+  test_runner:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
+
+    steps:
+      - name: Check Environment and Boot Speed
+        run: |
+          echo "=== 1. Python Version ==="
+          python --version
+          echo "=== 2. FFmpeg and FFprobe ==="
+          ffmpeg -version | head -n 2
+          ffprobe -version | head -n 2
+          echo "=== 3. Ollama ==="
+          ollama --version
+          echo "=== 4. Instant AI and Media Engine Imports ==="
+          python -c "import numpy; print('NumPy version:', numpy.__version__); import torch, whisperx, faster_whisper, librosa, seleniumbase, g4f, google.genai; print('🚀 ALL ENGINES LOADED IN ZERO SECONDS!')"
