@@ -211,21 +211,6 @@ jobs:
             echo "[!] No refreshed cookies found to sync (Playwright may have been skipped)."
           fi
 
-      - name: Cache HuggingFace Models
-        uses: actions/cache@v4
-        id: hf-cache
-        with:
-          path: ~/.cache/huggingface
-          key: hf-cache-qwen3-tts
-
-      - name: Pre-download Qwen3-TTS Model
-        if: steps.hf-cache.outputs.cache-hit != 'true'
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          if [ -n "$HF_TOKEN" ]; then huggingface-cli login --token "$HF_TOKEN" || true; else echo "No HF_TOKEN provided..."; fi
-          huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-Base
-
       # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
       # finishes, because The_Brain.py needs Ollama for footage/image search queries.
 
@@ -303,12 +288,6 @@ jobs:
           # Download master reference voice if present
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/$CHANNEL/voice" "channels/$CHANNEL/voice/" || true
 
-
-      - name: Cache HuggingFace Models
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/huggingface
-          key: hf-cache-qwen3-tts
 
       - name: Run TTS Worker
         env:
