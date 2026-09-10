@@ -1047,6 +1047,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -1098,7 +1101,7 @@ jobs:
       - name: Set Vault Inputs
         id: vault_inputs
         run: |
-          if [ "${{ inputs.action_type }}" == "RENDER_ONLY" ]; then
+          if [ "${{ inputs.action_type }}" = "RENDER_ONLY" ]; then
              echo "vault_name=$INPUT_TOPIC" >> $GITHUB_ENV
           else
              echo "vault_name=${{ needs.creation_job.outputs.vault_name }}" >> $GITHUB_ENV
@@ -1107,9 +1110,9 @@ jobs:
       - name: Download Audio Assets from GDrive
         run: |
           mkdir -p public/channels/${{ inputs.channel_name }}/"${{ env.vault_name }}"
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "engine_master.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
             rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --include "master_audio.wav" --include "engine_master.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
       - name: Download all chunks from G Drive
         run: |
           mkdir -p chunks
@@ -1124,14 +1127,36 @@ jobs:
           mkdir -p "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}"
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}" || true
           
-          echo "" > file_list.txt
-          for i in {0..19}; do
+          > file_list.txt
+          for i in $(seq 0 19); do
             if [ -f "chunks/chunk_$i.mp4" ]; then
               echo "file 'chunks/chunk_$i.mp4'" >> file_list.txt
             fi
           done
+
+          if [ ! -s file_list.txt ]; then
+            echo "[!] ERROR: file_list.txt is empty! No chunks were found in chunks/ directory."
+            ls -la chunks/ || true
+            exit 1
+          fi
+
+          AUDIO_INPUT=""
+          for candidate in "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" \
+                           "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/engine_master.wav" \
+                           "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/voiceover.wav"; do
+            if [ -s "$candidate" ]; then
+              AUDIO_INPUT="$candidate"
+              echo "[+] Selected master audio track: $AUDIO_INPUT"
+              break
+            fi
+          done
+
+          if [ -z "$AUDIO_INPUT" ]; then
+            echo "[!] ERROR: No audio track found in public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/!"
+            exit 1
+          fi
           
-          ffmpeg -f concat -safe 0 -i file_list.txt -i "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_audio.wav" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 320k -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
+          ffmpeg -f concat -safe 0 -i file_list.txt -i "$AUDIO_INPUT" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 320k -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
 
       - name: Install Remotion Dependencies
         run: for _retry in 1 2 3 4 5; do npm ci && break || { echo "Command failed, retrying..."; sleep 15; }; done
@@ -1208,7 +1233,7 @@ jobs:
           
           # Clean up ollama pool directory
           echo "shutdown" > shutdown.txt
-            for i in {0..7}; do
+            for i in $(seq 0 7); do
               rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
             done
             rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
