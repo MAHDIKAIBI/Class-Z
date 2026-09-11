@@ -77,6 +77,11 @@ export const MonolithEngine: React.FC<{ payload: MonolithPayload }> = ({ payload
   const cardRotX = interpolate(cardSpring, [0, 1], [20, 0]);
   const opacity = interpolate(cardSpring, [0, 0.5], [0, 1]);
 
+  // SUBTITLE COLOR CONTRAST FALLBACK
+  const rawSubColor = (payload.subTitleColor || '').trim().toLowerCase();
+  const isDarkOrMissing = !rawSubColor || ['#000', '#000000', 'black', '#111', '#111111', '#222', '#222222'].includes(rawSubColor) || rawSubColor.startsWith('#0') || rawSubColor.startsWith('#1') || rawSubColor.startsWith('#2');
+  const safeSubColor = isDarkOrMissing ? '#D4AF37' : payload.subTitleColor;
+
   return (
     <CinematicTextureWrapper
       backgroundLayer={
@@ -156,7 +161,7 @@ export const MonolithEngine: React.FC<{ payload: MonolithPayload }> = ({ payload
           </div>
           <div style={{
             fontSize: "40px", fontFamily: '"Geist", "Inter", sans-serif', fontWeight: 700,
-            color: payload.subTitleColor, letterSpacing: "8px", textTransform: "uppercase",
+            color: safeSubColor, letterSpacing: "8px", textTransform: "uppercase",
             textShadow: "0 20px 40px rgba(0,0,0,0.8)"
           }}>
             {payload.subTitle}
