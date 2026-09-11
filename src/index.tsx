@@ -262,7 +262,19 @@ const SceneContent = ({ scene, index }: any) => {
             ) : (scene.scene_type === 'magnates_2.5d' || scene.visual?.scene_type === 'magnates_2.5d' || scene.scene_type === 'two_part_whip' || scene.visual?.scene_type === 'two_part_whip') ? (
                 <MagnatesStage payload={scene.visual || {}} durationInFrames={Math.max(1, scene.visualDurFrames || 1)} />
             ) : ((scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') && (scene.visual?.assets || scene.assets || []).some((a: any) => (a.local_path || a.downloaded_path) && a.layer !== 'background' && a.type !== 'video')) ? (
-                <DynamicLiquidGrid bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''} assets={(scene.visual?.assets || scene.assets || []).filter((a: any) => (a.local_path || a.downloaded_path) && a.layer !== 'background' && a.type !== 'video').map((a: any, idx: number) => ({url: a.local_path || a.downloaded_path || '', title: a.title || '', subtitle: a.subtitle || '', trigger_frame: a.trigger_start_ms ? Math.round(((a.trigger_start_ms - (scene.timing?.start_ms || 0)) / 1000) * fps) : (a.trigger_frame ?? (idx === 0 ? 0 : 9999))}))} />
+                <DynamicLiquidGrid 
+                    bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''} 
+                    assets={(scene.visual?.assets || scene.assets || []).filter((a: any) => (a.local_path || a.downloaded_path) && a.layer !== 'background' && a.type !== 'video').map((a: any) => ({
+                        url: a.local_path || a.downloaded_path || '', 
+                        title: a.title || '', 
+                        subtitle: a.subtitle || '', 
+                        trigger_start_ms: a.trigger_start_ms,
+                        trigger_frame: a.trigger_frame
+                    }))} 
+                    sceneWords={scene.words}
+                    sceneStartMs={scene.timing?.start_ms || 0}
+                    durationInFrames={scene.visualDurFrames || Math.max(1, scene.audioDurFrames - scene.overlapFrames)}
+                />
             ) : (
                 <div style={{ position: 'absolute', inset: 0, animationName: scene.cutStyle === 'split_cut' ? 'none' : 'crossFocus', animationDuration: `${scene.overlapFrames / fps}s` }}>
                     <div style={{ position: 'absolute', inset: 0, animationName: scene.overlay_image ? 'slowZoomBg' : 'none', animationDuration: `${scene.visualDurFrames / fps}s`, animationTimingFunction: 'linear', animationFillMode: 'forwards' }}>
