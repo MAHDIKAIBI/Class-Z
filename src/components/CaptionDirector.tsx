@@ -60,12 +60,6 @@ export const CaptionDirector = ({ scene }: any) => {
     const { fps } = useVideoConfig();
     
     if (!scene) return null;
-    
-    // Suppress subtitles/captions during Floating3DCards (has its own built-in subtitles), AnimatedNumber, and Dynamic3DComparison scenes
-    const gType = (scene.graphics?.graphics_type || '').toLowerCase();
-    if (['animatednumber', 'animated_number', 'dynamic3dcomparison', 'dynamic_3d_comparison'].includes(gType)) {
-        return null;
-    }
 
     const sType = (scene.scene_type || scene.visual?.scene_type || '').toLowerCase();
     const hasFloatingCards = sType === 'floating_cards' ||
@@ -124,7 +118,7 @@ export const CaptionDirector = ({ scene }: any) => {
                         word: w.word,
                         start: Math.max(0, absStart - chunkStartFrame),
                         end: Math.max(0, absEnd - chunkStartFrame),
-                        isHighlight: w.isHighlight
+                        isHighlight: w.isHighlight || /\d/.test(w.word)
                     };
                 });
                 
