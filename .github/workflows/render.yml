@@ -1274,7 +1274,7 @@ jobs:
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/tokens" "tokens" -v
           
           echo "Installing YouTube Uploader dependencies..."
-          for _retry in 1 2 3 4 5; do python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib tweepy requests playwright && break || { echo "Command failed, retrying..."; sleep 15; }; done
+          for _retry in 1 2 3 4 5; do python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib tweepy requests playwright pillow && break || { echo "Command failed, retrying..."; sleep 15; }; done
           for _retry in 1 2 3 4 5; do python -m pip install -U seleniumbase python-dotenv requests && break || { echo "Command failed, retrying..."; sleep 15; }; done
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
@@ -1298,7 +1298,7 @@ jobs:
         run: |
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y rclone jq && break || sleep 15; done
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg rclone jq && break || sleep 15; done
 
       - name: Configure rclone Silently
         env:
@@ -1351,7 +1351,7 @@ jobs:
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/tokens" "tokens" -v
           
           echo "Installing YouTube Uploader dependencies..."
-          for _retry in 1 2 3 4 5; do python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib tweepy requests playwright && break || { echo "Command failed, retrying..."; sleep 15; }; done
+          for _retry in 1 2 3 4 5; do python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib tweepy requests playwright pillow && break || { echo "Command failed, retrying..."; sleep 15; }; done
           for _retry in 1 2 3 4 5; do python -m pip install -U seleniumbase python-dotenv requests && break || { echo "Command failed, retrying..."; sleep 15; }; done
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
