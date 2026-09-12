@@ -15,6 +15,7 @@ on:
           - RESUME
           - RENDER_ONLY
           - STITCH_ONLY
+          - UPLOAD_ONLY
       channel_name:
         description: 'Channel to operate on'
         required: true
@@ -50,7 +51,7 @@ env:
 jobs:
 
   creation_job:
-    if: inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY'
+    if: inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && inputs.action_type != 'UPLOAD_ONLY'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
@@ -219,7 +220,7 @@ jobs:
 
   tts_matrix:
     needs: [creation_job]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && needs.creation_job.outputs.skip_tts != 'true'
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && inputs.action_type != 'UPLOAD_ONLY' && needs.creation_job.outputs.skip_tts != 'true'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
@@ -327,7 +328,7 @@ jobs:
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   brain_prep_job:
     needs: [creation_job, tts_matrix]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && needs.creation_job.outputs.skip_prep != 'true'
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && inputs.action_type != 'UPLOAD_ONLY' && needs.creation_job.outputs.skip_prep != 'true'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
@@ -439,7 +440,7 @@ jobs:
   # ---------------------------------------------------------
   overlay_hunter_job:
     needs: [creation_job, brain_prep_job, tts_matrix]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && inputs.action_type != 'UPLOAD_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
@@ -518,7 +519,7 @@ jobs:
 
   download_matrix:
     needs: [creation_job, brain_prep_job, tts_matrix]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && inputs.action_type != 'UPLOAD_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
@@ -663,7 +664,7 @@ jobs:
 
   youtube_download_matrix:
     needs: [creation_job, brain_prep_job, tts_matrix]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && inputs.action_type != 'UPLOAD_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
@@ -755,7 +756,7 @@ jobs:
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   brain_finish_job:
     needs: [creation_job, brain_prep_job, download_matrix, youtube_download_matrix]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY'
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && inputs.action_type != 'UPLOAD_ONLY'
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
@@ -901,7 +902,7 @@ jobs:
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   render_matrix:
     needs: [creation_job, brain_finish_job]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'STITCH_ONLY'
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'STITCH_ONLY' && inputs.action_type != 'UPLOAD_ONLY'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -1050,7 +1051,7 @@ jobs:
 
   stitch_and_upload:
     needs: [creation_job, brain_finish_job, render_matrix]
-    if: always() && !cancelled() && !failure()
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'UPLOAD_ONLY'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -1260,6 +1261,83 @@ jobs:
       - name: Upload Video to YouTube API
         env:
           AUTO_TARGET_FOLDER: "BULK"
+        run: |
+          echo "Syncing all pending upload folders from Google Drive..."
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload" "channels/${{ inputs.channel_name }}/to upload" -v
+          
+          echo "Downloading private uploader script and tokens from Google Drive..."
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/youtube_uploader.py" "." -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/distribution_engine.py" "." -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/pinterest_bot.py" "." -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/client_secrets.json" "." -v
+          mkdir -p tokens
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/tokens" "tokens" -v
+          
+          echo "Installing YouTube Uploader dependencies..."
+          for _retry in 1 2 3 4 5; do python -m pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib tweepy requests playwright && break || { echo "Command failed, retrying..."; sleep 15; }; done
+          for _retry in 1 2 3 4 5; do python -m pip install -U seleniumbase python-dotenv requests && break || { echo "Command failed, retrying..."; sleep 15; }; done
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
+          for _retry in 1 2 3 4 5; do python -m playwright install chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
+          
+          echo "Running YouTube Uploader..."
+          python youtube_uploader.py
+
+  upload_only:
+    if: inputs.action_type == 'UPLOAD_ONLY'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install System Dependencies
+        run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y rclone jq && break || sleep 15; done
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ inputs.channel_name == 'Midi-Fi' && secrets.G_DRIVE_TOKEN || secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Upload Video to YouTube API
+        env:
+          AUTO_TARGET_FOLDER: ${{ inputs.topic != '' && format('channels/{0}/to upload/{1}', inputs.channel_name, inputs.topic) || 'BULK' }}
+          CURRENT_CHANNEL: ${{ inputs.channel_name }}
         run: |
           echo "Syncing all pending upload folders from Google Drive..."
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload" "channels/${{ inputs.channel_name }}/to upload" -v
