@@ -1,5 +1,6 @@
 import React from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Img, staticFile, Sequence, Easing, random } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, staticFile, Sequence, Easing, random } from 'remotion';
+import { SafeImage as Img } from './SafeImage';
 import { ProceduralBackground } from './ProceduralBackground';
 import { CinematicParticles } from './CinematicParticles';
 import { THEME_REGISTRY, ThemePreset } from './ThemeRegistry';

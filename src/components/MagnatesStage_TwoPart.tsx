@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Img, staticFile, Sequence, Easing, OffthreadVideo, Audio, random } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, staticFile, Sequence, Easing, OffthreadVideo, Audio, random } from 'remotion';
+import { SafeImage as Img } from './SafeImage';
 
 // ============================================================================
 // AUDIO ENVELOPE HANDLER

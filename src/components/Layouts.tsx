@@ -1,4 +1,5 @@
-import { AbsoluteFill, useCurrentFrame, staticFile as remotionStaticFile, Img as RemotionImg, OffthreadVideo, interpolate, spring, useVideoConfig, Audio, Sequence } from 'remotion';
+import { AbsoluteFill, useCurrentFrame, staticFile as remotionStaticFile, OffthreadVideo, interpolate, spring, useVideoConfig, Audio, Sequence } from 'remotion';
+import { SafeImage as RemotionImg } from './SafeImage';
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;

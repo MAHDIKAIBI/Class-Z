@@ -16,4 +16,10 @@ Config.setHardwareAcceleration('if-possible');
 Config.setPixelFormat('yuv420p');
 Config.setDelayRenderTimeoutInMilliseconds(120000);
 
+// Chromium stability and large image texture processing
+Config.setChromiumDisableWebSecurity(true);
+Config.setChromiumIgnoreCertificateErrors(true);
+Config.setChromiumOpenGlRenderer('swangle');
+Config.setChromiumMultiProcessOnLinux(true);
+
 Config.overrideFfmpegCommand(({ args }) => [...args, '-bf', '0']);

@@ -3,9 +3,9 @@ import {
   useCurrentFrame, 
   useVideoConfig, 
   spring, 
-  interpolate, 
-  Img
+  interpolate 
 } from "remotion";
+import { SafeImage as Img } from './SafeImage';
 import React from "react";
 
 // ============================================================================

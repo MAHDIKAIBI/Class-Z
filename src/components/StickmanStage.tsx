@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
   AbsoluteFill, 
-  Img, 
   OffthreadVideo, 
   staticFile as remotionStaticFile 
 } from 'remotion';

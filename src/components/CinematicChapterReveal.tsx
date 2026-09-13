@@ -4,12 +4,12 @@ import {
   useVideoConfig, 
   spring, 
   interpolate, 
-  Img,
-  Easing,
-  Audio,
-  staticFile as remotionStaticFile,
-  random
+  Easing, 
+  Audio, 
+  staticFile as remotionStaticFile, 
+  random 
 } from "remotion";
+import { SafeImage as Img } from './SafeImage';
 import React, { useMemo } from "react";
 import { CinematicTextureWrapper } from './CinematicTextureWrapper';
 const staticFile = (path: string) => {

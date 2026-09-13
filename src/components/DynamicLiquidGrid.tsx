@@ -4,11 +4,11 @@ import {
   useVideoConfig, 
   spring, 
   interpolate, 
-  Img, 
   OffthreadVideo,
   Sequence,
   staticFile as remotionStaticFile
 } from "remotion";
+import { SafeImage as Img } from './SafeImage';
 import React, { useMemo } from "react";
 import { CinematicTextureWrapper } from './CinematicTextureWrapper';
 import { SmartAudio } from './SmartAudio';

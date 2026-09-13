@@ -5,9 +5,9 @@ import {
   interpolate, 
   Easing, 
   spring, 
-  Img, 
   staticFile as remotionStaticFile 
 } from "remotion";
+import { SafeImage as Img } from './SafeImage';
 import React from "react";
 
 const staticFile = (path: string) => {

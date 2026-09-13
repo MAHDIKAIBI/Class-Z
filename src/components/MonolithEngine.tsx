@@ -5,9 +5,10 @@ import {
   useVideoConfig, 
   spring, 
   interpolate, 
-  Img, staticFile as remotionStaticFile,
+  staticFile as remotionStaticFile,
   OffthreadVideo
 } from "remotion";
+import { SafeImage as Img } from './SafeImage';
 import React from "react";
 import { CinematicTextureWrapper } from './CinematicTextureWrapper';
 const staticFile = (path: string) => {

@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   AbsoluteFill,
-  Img,
   interpolate,
   spring,
   useCurrentFrame,
