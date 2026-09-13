@@ -1,5 +1,6 @@
 import React from 'react';
-import { AbsoluteFill, Video, Img, useVideoConfig } from 'remotion';
+import { AbsoluteFill, Video, useVideoConfig } from 'remotion';
+import { SafeImage as Img } from '../src/components/SafeImage';
 
 export interface CinematicTextureWrapperProps {
   /** The foreground UI elements (Monolith Text, Data HUDs, Topic Reveals) */
