@@ -8,6 +8,7 @@ import {
   Easing,
   staticFile as remotionStaticFile,
 } from 'remotion';
+import { SafeImage as Img } from './SafeImage';
 
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {

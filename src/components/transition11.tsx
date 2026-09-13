@@ -6,6 +6,7 @@ import {
   OffthreadVideo, 
   Loop
 } from "remotion";
+import { SafeImage as Img } from './SafeImage';
 
 export type CameraWallTransitionProps = {
   SceneA: React.ReactNode;

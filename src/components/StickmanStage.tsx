@@ -4,6 +4,7 @@ import {
   OffthreadVideo, 
   staticFile as remotionStaticFile 
 } from 'remotion';
+import { SafeImage as Img } from './SafeImage';
 
 import { DynamicSubtitleBar } from './DynamicSubtitleBar';
 import { PaperTextureWrapper } from './PaperTextureWrapper';
