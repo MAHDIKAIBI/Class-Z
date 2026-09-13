@@ -30,6 +30,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-liberation \
     ca-certificates \
     && ln -sf /usr/bin/firefox-esr /usr/bin/firefox \
+    && wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -O /tmp/chrome.deb \
+    && apt-get install -y --no-install-recommends /tmp/chrome.deb \
+    && rm -f /tmp/chrome.deb \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Latest Ollama Linux amd64 Binary (v0.34.0)
@@ -112,7 +115,7 @@ RUN mkdir -p /opt/torch_home /root/.cache/torch \
     && chmod -R 777 /opt/torch_home /root/.cache/torch
 
 # 9. Verification Smoke Test (Runs through xvfb-run to verify X11, xauth, libraries, and model cache)
-RUN ffmpeg -version && ffprobe -version && ollama --version \
+RUN google-chrome --version && ffmpeg -version && ffprobe -version && ollama --version \
     && xvfb-run -a python -c "import numpy; assert not numpy.__version__.startswith('2.'), f'NumPy 2.x detected: {numpy.__version__}'; import torch, whisperx, faster_whisper, librosa, seleniumbase, g4f, google.genai, nodriver, bing_image_downloader, fastapi, rembg, imagehash, pkg_resources, qwen_tts; print('Golden Environment Verified on Python 3.11 with NumPy 1.x, qwen_tts and xvfb-run!')" \
     && python -c "import os; cache_dir = os.path.join(os.environ['HF_HOME'], 'hub', 'models--Qwen--Qwen3-TTS-12Hz-1.7B-Base'); assert os.path.isdir(cache_dir), f'Qwen3-TTS model weights missing from {cache_dir}'; print('Qwen3-TTS Model Weights Verified in Container Cache!')"
 
