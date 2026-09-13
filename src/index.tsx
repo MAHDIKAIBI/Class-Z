@@ -77,20 +77,14 @@ activePool = shuffle([...transitionPool], videoSeed);
 let transitionIndex = 0;
 
 normalisedTimeline.forEach((scene: any, i: number) => {
-    const words = scene.words || [];
-    const lastWord = words.length > 0 ? words[words.length - 1].word : '';
-    const isEndOfPara = lastWord.endsWith('.') || lastWord.endsWith('?') || lastWord.endsWith('!');
-    
-    if (isEndOfPara) {
-        scene.outgoingTransition = activePool[transitionIndex];
-        transitionIndex++;
-        if (transitionIndex >= activePool.length) {
-            activePool = shuffle([...transitionPool], videoSeed + "_cycle_" + i);
-            transitionIndex = 0;
-        }
-    } else {
-        scene.outgoingTransition = 'none';
+    // 1. Authoritative Semantic Transition from The_Brain.py master timeline
+    const trans = scene.outgoingTransition ?? scene.transition;
+    if (trans !== undefined && trans !== null && trans !== '') {
+        scene.outgoingTransition = trans;
+        return;
     }
+    // 2. Cinematic Default Fallback: Hard Cut (none)
+    scene.outgoingTransition = 'none';
 });
 
 const masterJson: any = {
