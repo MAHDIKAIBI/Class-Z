@@ -49,13 +49,18 @@ export const Floating3DCardsCanvas: React.FC<{ payload: Floating3DCardsPayload }
   const { fps } = useVideoConfig();
 
   // 100% DYNAMIC DURATION: Relies strictly on the actual spoken audio length
-  const dur = payload.actualDurationFrames 
+  const totalDur = payload.actualDurationFrames 
     || (payload as any).visualDurFrames 
     || payload.duration 
     || Math.round(fps * 7.5);
 
   const startFrame = (payload as any).trigger_frame ?? 0;
-  const frame = Math.max(0, Math.min(dur, rawFrame - startFrame));
+  const effectiveDur = Math.max(30, totalDur - startFrame);
+  const isTriggered = rawFrame >= startFrame;
+  const frame = Math.max(0, Math.min(effectiveDur, rawFrame - startFrame));
+
+  // If startFrame is specified, fade in smoothly right at startFrame
+  const stageOpacity = startFrame === 0 ? 1 : interpolate(rawFrame, [startFrame - 2, startFrame + 2], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   const subjects = payload.subjects && payload.subjects.length > 0 
     ? payload.subjects 
@@ -66,16 +71,14 @@ export const Floating3DCardsCanvas: React.FC<{ payload: Floating3DCardsPayload }
   const totalCards = subjects.length;
 
   // -------------------------------------------------------------
-  // ADAPTIVE 3D CYLINDER ARC MATHEMATICS (1 to N Cards)
-  // -------------------------------------------------------------
   // ADAPTIVE 3D CYLINDER ARC MATHEMATICS (1 to N Cards) - 2K UNIVISIUM (2560x1333)
   // -------------------------------------------------------------
-  const arcRadius = 1180;
+  const arcRadius = 1250;
   const arcSpreadDeg = totalCards <= 1 
     ? 0 
     : totalCards === 2 
-      ? 25 
-      : Math.min(23, 140 / (totalCards - 1));
+      ? 24 
+      : Math.min(22, 135 / (totalCards - 1));
 
   const cardsCoords = subjects.map((_, i) => {
     if (totalCards === 1) {
@@ -94,13 +97,13 @@ export const Floating3DCardsCanvas: React.FC<{ payload: Floating3DCardsPayload }
   const lastCardX: number = cardsCoords[cardsCoords.length - 1]?.baseX ?? 0;
 
   // -------------------------------------------------------------
-  // DYNAMIC CAMERA CHOREOGRAPHY NORMALIZED TO AUDIO DURATION:
-  // Phase 1 (0 to 28%): High-angle top-down descent, swooping in
+  // DYNAMIC CAMERA CHOREOGRAPHY NORMALIZED TO SPOKEN AUDIO DURATION:
+  // Phase 1 (0 to 28%): High-angle cinematic descent, swooping in
   // Phase 2 (28% to 52%): Macro zoom dive into Card #1 (sliver of next card)
   // Phase 3 (52% to 100%): Dolly glide across cards to the last card
   // -------------------------------------------------------------
-  const p1End = dur * 0.28;
-  const p2End = dur * 0.52;
+  const p1End = effectiveDur * 0.28;
+  const p2End = effectiveDur * 0.52;
 
   let camPitch: number = 0;
   let camY: number = 0;
@@ -109,21 +112,21 @@ export const Floating3DCardsCanvas: React.FC<{ payload: Floating3DCardsPayload }
 
   if (frame <= p1End) {
     const t = interpolate(frame, [0, p1End], [0, 1], { extrapolateRight: "clamp", easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
-    camPitch = interpolate(t, [0, 1], [42, 11]);
-    camY = interpolate(t, [0, 1], [-280, -35]);
-    camZ = interpolate(t, [0, 1], [-600, 220]);
+    camPitch = interpolate(t, [0, 1], [16, 8]);
+    camY = interpolate(t, [0, 1], [-45, -15]);
+    camZ = interpolate(t, [0, 1], [-380, 200]);
     camX = Number(interpolate(t, [0, 1], [0, totalCards > 1 ? firstCardX * 0.85 : 0]));
   } else if (frame <= p2End) {
     const t = interpolate(frame, [p1End, p2End], [0, 1], { extrapolateRight: "clamp", easing: Easing.bezier(0.25, 0.1, 0.25, 1) });
-    camPitch = interpolate(t, [0, 1], [11, 4]);
-    camY = interpolate(t, [0, 1], [-35, -10]);
-    camZ = interpolate(t, [0, 1], [220, 640]); // Macro zoom: Card fills frame, sliver of next card
+    camPitch = interpolate(t, [0, 1], [8, 3]);
+    camY = interpolate(t, [0, 1], [-15, 0]);
+    camZ = interpolate(t, [0, 1], [200, 580]); // Macro zoom: Card fills frame, sliver of next card
     camX = Number(interpolate(t, [0, 1], [totalCards > 1 ? firstCardX * 0.85 : 0, firstCardX]));
   } else {
-    const t = interpolate(frame, [p2End, dur], [0, 1], { extrapolateRight: "clamp", easing: Easing.bezier(0.2, 0.05, 0.2, 1) });
-    camPitch = interpolate(t, [0, 1], [4, 7]);
-    camY = interpolate(t, [0, 1], [-10, -18]);
-    camZ = interpolate(t, [0, 1], [640, totalCards > 1 ? 580 : 660]);
+    const t = interpolate(frame, [p2End, effectiveDur], [0, 1], { extrapolateRight: "clamp", easing: Easing.bezier(0.2, 0.05, 0.2, 1) });
+    camPitch = interpolate(t, [0, 1], [3, 5]);
+    camY = interpolate(t, [0, 1], [0, -10]);
+    camZ = interpolate(t, [0, 1], [580, totalCards > 1 ? 520 : 600]);
     camX = Number(interpolate(t, [0, 1], [firstCardX, lastCardX]));
   }
 
@@ -167,7 +170,7 @@ export const Floating3DCardsCanvas: React.FC<{ payload: Floating3DCardsPayload }
       }
     >
       {/* 3D SCENE STAGE - 2K UNIVISIUM PERSPECTIVE */}
-      <AbsoluteFill style={{ perspective: "1450px", perspectiveOrigin: "50% 44%", transformStyle: "preserve-3d" }}>
+      <AbsoluteFill style={{ perspective: "1450px", perspectiveOrigin: "50% 48%", transformStyle: "preserve-3d", opacity: stageOpacity }}>
         
         {/* Reflective Ground Floor Plane */}
         <div style={{
@@ -175,9 +178,9 @@ export const Floating3DCardsCanvas: React.FC<{ payload: Floating3DCardsPayload }
           bottom: 0,
           left: "-50%",
           width: "200%",
-          height: "62%",
+          height: "55%",
           background: `radial-gradient(ellipse at 50% 0%, rgba(18, 24, 36, 0.85) 0%, #020306 75%)`,
-          transform: "rotateX(85deg) translateZ(-320px)",
+          transform: "rotateX(85deg) translateZ(-360px)",
           opacity: 0.94,
           pointerEvents: "none"
         }} />
@@ -220,9 +223,9 @@ export const Floating3DCardsCanvas: React.FC<{ payload: Floating3DCardsPayload }
                   key={sub.id || `card-${i}`}
                   style={{
                     position: "absolute",
-                    width: "560px",
-                    height: "780px",
-                    borderRadius: "36px",
+                    width: "520px",
+                    height: "720px",
+                    borderRadius: "32px",
                     transformStyle: "preserve-3d",
                     transform: `translateX(${baseX}px) translateZ(${baseZ}px) translateY(${floatY}px) rotateY(${baseRotY}deg) rotateZ(${floatRotZ}deg)`,
                     filter: `blur(${dofBlur.toFixed(1)}px)`,
@@ -430,40 +433,53 @@ export const Floating3DCardsCanvas: React.FC<{ payload: Floating3DCardsPayload }
 
         </AbsoluteFill>
 
-        {/* Volumetric Headline Presentation Overlay */}
+        {/* Volumetric Headline Presentation Overlay - PLACED AT THE TOP (UPPER THIRD) */}
         <AbsoluteFill style={{
           zIndex: 40,
-          justifyContent: "flex-end",
+          justifyContent: "flex-start",
           alignItems: "center",
-          paddingBottom: "90px",
-          pointerEvents: "none"
+          paddingTop: "65px",
+          pointerEvents: "none",
+          opacity: stageOpacity
         }}>
-          <div style={{ textAlign: "center", maxWidth: "1100px", padding: "0 30px" }}>
+          {/* Subtle dark gradient backing across top third for crisp legibility */}
+          <div style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "320px",
+            background: "linear-gradient(to bottom, rgba(2,3,6,0.88) 0%, rgba(2,3,6,0.45) 60%, transparent 100%)",
+            pointerEvents: "none"
+          }} />
+
+          <div style={{ textAlign: "center", maxWidth: "1250px", padding: "0 30px", position: "relative", zIndex: 2 }}>
             <div style={{
               display: "inline-block",
               fontFamily: "monospace",
-              fontSize: "11px",
+              fontSize: "12px",
               letterSpacing: "4px",
               textTransform: "uppercase",
               color: defaultAccent,
               marginBottom: "12px",
-              padding: "4px 14px",
-              backgroundColor: "rgba(0,0,0,0.6)",
-              border: `1px solid ${defaultAccent}40`,
-              borderRadius: "9999px"
+              padding: "5px 16px",
+              backgroundColor: "rgba(0,0,0,0.7)",
+              border: `1px solid ${defaultAccent}50`,
+              borderRadius: "9999px",
+              boxShadow: `0 0 20px ${defaultAccent}25`
             }}>
               {payload.headlineTag || "TOPIC REVEAL // THE PAYLOAD"}
             </div>
 
             <h1 style={{
-              fontSize: "44px",
+              fontSize: "40px",
               fontWeight: 900,
-              letterSpacing: "-1.5px",
+              letterSpacing: "-1px",
               color: "#FFFFFF",
               textTransform: "uppercase",
               margin: 0,
               lineHeight: 1.15,
-              textShadow: "0 15px 35px rgba(0,0,0,0.95)"
+              textShadow: "0 10px 30px rgba(0,0,0,0.95), 0 2px 10px rgba(0,0,0,0.8)"
             }}>
               {payload.headlineText ? (
                 payload.headlineText
