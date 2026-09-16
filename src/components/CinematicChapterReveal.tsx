@@ -25,15 +25,16 @@ const staticFile = (path: string) => {
 };
 
 
-// Webpack require.context to find all chapter SFX dynamically without hardcoding paths.
-// This works perfectly in the cloud because it resolves relative to the Remotion project!
+// Dynamic Chapter SFX Engine:
+// 1. Primary: Dynamic sfxUrl prop passed from master_timeline.json (resolved from downloaded sfx_manifest.json)
+// 2. Fallback: Dynamically checks downloaded audio files in public/audio/sfx without hardcoding subfolders
 let availableSfx: string[] = [];
 try {
   // @ts-ignore
-  const sfxContext = require.context('../../public/audio/sfx/chapters', false, /\.wav$/);
-  availableSfx = sfxContext.keys().map((key: string) => `audio/sfx/chapters/${key.replace('./', '')}`);
+  const sfxContext = require.context('../../public/audio/sfx', false, /\.(mp3|wav)$/);
+  availableSfx = sfxContext.keys().map((key: string) => `audio/sfx/${key.replace('./', '')}`);
 } catch (e) {
-  console.warn("Could not load dynamic chapter SFX from public/audio/sfx/chapters", e);
+  // Graceful fallback when SFX files are injected dynamically via sfxUrl
 }
 
 export type ChapterRevealProps = {
@@ -43,10 +44,47 @@ export type ChapterRevealProps = {
   leftAssetUrl?: string;
   rightAssetUrl?: string;
   sfxUrl?: string; // Engine will pass the random sfx path here
+  accentColor?: string; // Dynamic color chosen by Gemini for this chapter
 };
 
-// ... (BasePlate stays same)
-const BasePlate: React.FC<{ bgImgUrl: string; text: string }> = ({ bgImgUrl, text }) => {
+const parseColor = (hexOrRgb?: string) => {
+  if (!hexOrRgb) return { r: 255, g: 0, b: 50 };
+  let str = hexOrRgb.trim();
+  if (str.startsWith('#')) {
+    let c = str.substring(1);
+    if (c.length === 3) c = c.split('').map(x => x + x).join('');
+    const num = parseInt(c, 16);
+    if (!isNaN(num)) {
+      return {
+        r: (num >> 16) & 255,
+        g: (num >> 8) & 255,
+        b: num & 255,
+      };
+    }
+  }
+  const m = str.match(/\d+/g);
+  if (m && m.length >= 3) {
+    return { r: parseInt(m[0]), g: parseInt(m[1]), b: parseInt(m[2]) };
+  }
+  return { r: 255, g: 0, b: 50 };
+};
+
+const getHue = (r: number, g: number, b: number) => {
+  const rNorm = r / 255, gNorm = g / 255, bNorm = b / 255;
+  const max = Math.max(rNorm, gNorm, bNorm), min = Math.min(rNorm, gNorm, bNorm);
+  let h = 0;
+  if (max === min) h = 0;
+  else if (max === rNorm) h = (60 * ((gNorm - bNorm) / (max - min)) + 360) % 360;
+  else if (max === gNorm) h = (60 * ((bNorm - rNorm) / (max - min)) + 120) % 360;
+  else if (max === bNorm) h = (60 * ((rNorm - gNorm) / (max - min)) + 240) % 360;
+  return Math.round(h);
+};
+
+// ... (BasePlate with dynamic chapter color tint)
+const BasePlate: React.FC<{ bgImgUrl: string; text: string; r: number; g: number; b: number }> = ({ bgImgUrl, text, r, g, b }) => {
+  const darkR = Math.round(r * 0.12);
+  const darkG = Math.round(g * 0.12);
+  const darkB = Math.round(b * 0.12);
   return (
     <CinematicTextureWrapper
        backgroundLayer={(
@@ -56,8 +94,8 @@ const BasePlate: React.FC<{ bgImgUrl: string; text: string }> = ({ bgImgUrl, tex
                style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.5)" }} 
              />
            ) : null}
-           <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(150, 0, 15, 0.7)", mixBlendMode: "multiply" }} />
-           <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(255, 0, 0, 0.3)", mixBlendMode: "color-burn" }} />
+           <div style={{ position: "absolute", inset: 0, backgroundColor: `rgba(${darkR}, ${darkG}, ${darkB}, 0.7)`, mixBlendMode: "multiply" }} />
+           <div style={{ position: "absolute", inset: 0, backgroundColor: `rgba(${r}, ${g}, ${b}, 0.25)`, mixBlendMode: "color-burn" }} />
          </AbsoluteFill>
        )}
     >
@@ -83,10 +121,22 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
   bgImgUrl,
   leftAssetUrl,
   rightAssetUrl,
-  sfxUrl
+  sfxUrl,
+  accentColor
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
+
+  // Dynamic Color Derivations
+  const { r, g, b } = parseColor(accentColor);
+  const hueDeg = getHue(r, g, b);
+  const darkR = Math.round(r * 0.15);
+  const darkG = Math.round(g * 0.15);
+  const darkB = Math.round(b * 0.15);
+  const lightR = Math.min(255, Math.round(r + (255 - r) * 0.7));
+  const lightG = Math.min(255, Math.round(g + (255 - g) * 0.7));
+  const lightB = Math.min(255, Math.round(b + (255 - b) * 0.7));
+  const textTint = `rgb(${lightR}, ${lightG}, ${lightB})`;
 
   // 1. THE PERPETUAL PUSH
   const perpetualScale = interpolate(frame, [0, durationInFrames], [1, 1.15], { extrapolateRight: "clamp" });
@@ -151,9 +201,9 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
             filter: "drop-shadow(-20px 0 30px rgba(0,0,0,0.8))"
           }}>
             <AbsoluteFill style={{ transform: "scale(1.4) translateX(-100px) translateY(20px)", filter: "blur(4px)" }}>
-              <BasePlate bgImgUrl={bgImgUrl} text={subtitle} />
+              <BasePlate bgImgUrl={bgImgUrl} text={subtitle} r={r} g={g} b={b} />
             </AbsoluteFill>
-            <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(255, 0, 50, 0.1)", mixBlendMode: "overlay" }} />
+            <div style={{ position: "absolute", inset: 0, backgroundColor: `rgba(${r}, ${g}, ${b}, 0.1)`, mixBlendMode: "overlay" }} />
           </AbsoluteFill>
 
           {/* LEFT SHARD */}
@@ -163,7 +213,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
             filter: "drop-shadow(30px 0 40px rgba(0,0,0,0.9))"
           }}>
             <AbsoluteFill style={{ transform: "scale(2.2) translateX(150px) translateY(-30px)" }}>
-              <BasePlate bgImgUrl={bgImgUrl} text={subtitle} />
+              <BasePlate bgImgUrl={bgImgUrl} text={subtitle} r={r} g={g} b={b} />
             </AbsoluteFill>
             <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0, 0, 0, 0.2)" }} />
           </AbsoluteFill>
@@ -175,7 +225,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
             filter: "drop-shadow(0 0 50px rgba(0,0,0,0.95))"
           }}>
             <AbsoluteFill style={{ transform: "scale(1.15) translateX(-20px) rotate(1deg)" }}>
-              <BasePlate bgImgUrl={bgImgUrl} text={subtitle} />
+              <BasePlate bgImgUrl={bgImgUrl} text={subtitle} r={r} g={g} b={b} />
             </AbsoluteFill>
             <div style={{ position: "absolute", left: "20%", top: 0, bottom: 0, width: "5px", backgroundColor: "rgba(255,255,255,0.4)", transform: "skewX(-5deg)" }} />
           </AbsoluteFill>
@@ -187,7 +237,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
             <AbsoluteFill style={{ 
                 transform: `translateY(${interpolate(frame, [0, 50], [50, 0])}px) scale(1.5) rotate(2deg)`, opacity: 0.25, filter: "blur(12px)", transformOrigin: "top center"
             }}>
-                <BasePlate bgImgUrl={bgImgUrl} text={subtitle} />
+                <BasePlate bgImgUrl={bgImgUrl} text={subtitle} r={r} g={g} b={b} />
             </AbsoluteFill>
           </AbsoluteFill>
 
@@ -198,8 +248,8 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
             <AbsoluteFill style={{ 
                 transform: `translateY(${interpolate(frame, [0, 50], [-50, 0])}px) scaleY(-1) scaleX(1.3) rotate(-3deg)`, opacity: 0.35, filter: "blur(15px)", transformOrigin: "bottom center"
             }}>
-                <BasePlate bgImgUrl={bgImgUrl} text={subtitle} />
-                <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(255, 0, 50, 0.6)", mixBlendMode: "overlay" }} />
+                <BasePlate bgImgUrl={bgImgUrl} text={subtitle} r={r} g={g} b={b} />
+                <div style={{ position: "absolute", inset: 0, backgroundColor: `rgba(${r}, ${g}, ${b}, 0.5)`, mixBlendMode: "overlay" }} />
             </AbsoluteFill>
           </AbsoluteFill>
 
@@ -214,8 +264,8 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
             backgroundLayer={
               <AbsoluteFill>
                 {bgImgUrl ? <Img src={staticFile(bgImgUrl)} style={{ width: "100%", height: "100%", objectFit: "cover", filter: "grayscale(100%) contrast(1.2)" }} /> : null}
-                <div style={{ position: "absolute", inset: 0, backgroundColor: "rgba(5, 0, 5, 0.85)" }} />
-                <div style={{ position: "absolute", inset: "-50%", background: "radial-gradient(circle at center, rgba(200, 0, 20, 0.15) 0%, transparent 60%)", opacity: interpolate(frame, [45, 100], [0, 1], { extrapolateRight: "clamp" }) + Math.sin(frame / 20) * 0.1 }} />
+                <div style={{ position: "absolute", inset: 0, backgroundColor: `rgba(${darkR}, ${darkG}, ${darkB}, 0.85)` }} />
+                <div style={{ position: "absolute", inset: "-50%", background: `radial-gradient(circle at center, rgba(${r}, ${g}, ${b}, 0.15) 0%, transparent 60%)`, opacity: interpolate(frame, [45, 100], [0, 1], { extrapolateRight: "clamp" }) + Math.sin(frame / 20) * 0.1 }} />
               </AbsoluteFill>
             }
           >
@@ -249,7 +299,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
                   width: "1000px", 
                   height: "auto", 
                   WebkitMaskImage: "radial-gradient(circle at center, black 10%, transparent 65%)",
-                  filter: "grayscale(100%) sepia(80%) hue-rotate(320deg) contrast(150%) brightness(0.8)" 
+                  filter: `grayscale(100%) sepia(80%) hue-rotate(${hueDeg}deg) contrast(150%) brightness(0.8)` 
                 }} 
               />
             </div>
@@ -267,7 +317,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
                   width: "1000px", 
                   height: "auto", 
                   WebkitMaskImage: "radial-gradient(circle at center, black 10%, transparent 65%)",
-                  filter: "grayscale(100%) sepia(80%) hue-rotate(320deg) contrast(150%) brightness(0.8)" 
+                  filter: `grayscale(100%) sepia(80%) hue-rotate(${hueDeg}deg) contrast(150%) brightness(0.8)` 
                 }} 
               />
             </div>
@@ -285,16 +335,16 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
             
             <div style={{
                position: "absolute", inset: "-30px -80px", 
-               backgroundColor: "rgba(40, 0, 5, 0.6)",
+               backgroundColor: `rgba(${darkR}, ${darkG}, ${darkB}, 0.6)`,
                backdropFilter: "blur(20px)",
-               border: "1px solid rgba(255, 0, 50, 0.3)",
-               boxShadow: "0 30px 60px rgba(0,0,0,0.9), inset 0 0 60px rgba(255, 0, 0, 0.2)",
+               border: `1px solid rgba(${r}, ${g}, ${b}, 0.3)`,
+               boxShadow: `0 30px 60px rgba(0,0,0,0.9), inset 0 0 60px rgba(${r}, ${g}, ${b}, 0.2)`,
                zIndex: -1
             }} />
 
             <div style={{
                position: "absolute", inset: "-30px -80px",
-               background: `linear-gradient(110deg, transparent 0%, transparent ${interpolate(frame, [45, 90], [0, 100], { extrapolateRight: "clamp" }) - 20}%, rgba(255, 150, 150, 0.15) ${interpolate(frame, [45, 90], [0, 100], { extrapolateRight: "clamp" })}%, transparent ${interpolate(frame, [45, 90], [0, 100], { extrapolateRight: "clamp" }) + 20}%, transparent 100%)`,
+               background: `linear-gradient(110deg, transparent 0%, transparent ${interpolate(frame, [45, 90], [0, 100], { extrapolateRight: "clamp" }) - 20}%, rgba(${lightR}, ${lightG}, ${lightB}, 0.15) ${interpolate(frame, [45, 90], [0, 100], { extrapolateRight: "clamp" })}%, transparent ${interpolate(frame, [45, 90], [0, 100], { extrapolateRight: "clamp" }) + 20}%, transparent 100%)`,
                zIndex: -1
             }} />
 
@@ -305,12 +355,12 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
               fontFamily: '"Geist", "Inter", sans-serif',
               letterSpacing: "8px",
               textTransform: "uppercase",
-              background: `linear-gradient(90deg, #ffffff, #ffcccc, #ffffff)`,
+              background: `linear-gradient(90deg, #ffffff, ${textTint}, #ffffff)`,
               backgroundSize: "200% auto",
               backgroundPosition: `${interpolate(frame, [50, 120], [0, 100], { extrapolateRight: "clamp" })}% center`,
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
-              filter: "drop-shadow(0 10px 20px rgba(255,0,0,0.4))"
+              filter: `drop-shadow(0 10px 20px rgba(${r}, ${g}, ${b}, 0.4))`
             }}>
               CHAPTER {chapterNumber}
             </h1>
@@ -338,7 +388,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
               {subtitle}
               <div style={{
                 position: "absolute", bottom: "-10px", left: "10%", right: "10%", height: "1px",
-                background: "linear-gradient(90deg, transparent, rgba(255,0,50,0.8), transparent)",
+                background: `linear-gradient(90deg, transparent, rgba(${r}, ${g}, ${b}, 0.8), transparent)`,
                 opacity: interpolate(frame, [80, 100], [0, 1], { extrapolateRight: "clamp" }),
                 transform: `scaleX(${interpolate(frame, [80, 120], [0, 1], { easing: Easing.out(Easing.cubic), extrapolateRight: "clamp" })})`
               }} />
@@ -347,7 +397,7 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
 
           <div style={{
             position: "absolute", top: "40%", left: "-50%", width: "200%", height: "15px",
-            background: "linear-gradient(90deg, transparent, rgba(255,50,50,0.3), transparent)",
+            background: `linear-gradient(90deg, transparent, rgba(${r}, ${g}, ${b}, 0.3), transparent)`,
             filter: "blur(12px)", transform: `translateY(${Math.sin(frame / 30) * 150}px) rotate(2deg)`,
             opacity: 0.6, mixBlendMode: "screen", pointerEvents: "none", zIndex: 100
           }} />
