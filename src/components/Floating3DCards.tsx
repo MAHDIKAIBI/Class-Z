@@ -140,7 +140,7 @@ export const Floating3DCardsCanvas: React.FC<{ payload: Floating3DCardsPayload }
         <AbsoluteFill style={{ zIndex: 0, backgroundColor: "#020306", overflow: "hidden" }}>
           {/* Background Video (Muted, Darkened Stock Atmosphere) */}
           {payload.bgVideoSrc && (
-            <div style={{ position: "absolute", inset: "-10%", transform: `scale(${interpolate(frame, [0, dur], [1, 1.12], { extrapolateRight: "clamp" })})`, transformOrigin: "center" }}>
+            <div style={{ position: "absolute", inset: "-10%", transform: `scale(${interpolate(frame, [0, effectiveDur], [1, 1.12], { extrapolateRight: "clamp" })})`, transformOrigin: "center" }}>
               <OffthreadVideo
                 src={payload.bgVideoSrc.startsWith('http') ? payload.bgVideoSrc : staticFile(payload.bgVideoSrc)}
                 style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.25, filter: "grayscale(90%) contrast(130%)" }}
