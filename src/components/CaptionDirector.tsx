@@ -61,6 +61,12 @@ export const CaptionDirector = ({ scene }: any) => {
     
     if (!scene) return null;
 
+    // RULE: When animated numbers is appearing, don't show captions!
+    const gType = String(scene.graphics?.graphics_type || '').toLowerCase();
+    if (gType === 'animatednumber' || gType === 'animated_number') {
+        return null;
+    }
+
     const sType = (scene.scene_type || scene.visual?.scene_type || '').toLowerCase();
     const hasFloatingCards = sType === 'floating_cards' ||
                              (scene.floating_cards_payload && Object.keys(scene.floating_cards_payload).length > 0) ||

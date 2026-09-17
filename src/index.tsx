@@ -232,6 +232,9 @@ const CinematicOverlay = ({ src, durationInFrames }: { src: string, durationInFr
 
 const SceneContent = ({ scene, index }: any) => {
     const { fps } = useVideoConfig();
+    const isLiquidGrid = ((scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') && (scene.visual?.assets || scene.assets || []).some((a: any) => (a.local_path || a.downloaded_path) && a.layer !== 'background' && a.type !== 'video'));
+    const isAnimatedNumber = scene.graphics && ['animatednumber', 'animated_number'].includes(String(scene.graphics.graphics_type || '').toLowerCase());
+
     return (
         <AbsoluteFill>
             {/* VISUAL ROUTING ENGINE */}
@@ -255,7 +258,7 @@ const SceneContent = ({ scene, index }: any) => {
                 <CinematicChapterReveal chapterNumber={scene.chapter_payload?.chapterNumber || 1} subtitle={scene.chapter_payload?.subtitle || ""} bgImgUrl={scene.visual?.assets?.find((a:any) => a.role === 'bg_chapter')?.local_path || ""} leftAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'left_chapter')?.local_path || ""} rightAssetUrl={scene.visual?.assets?.find((a:any) => a.role === 'right_chapter')?.local_path || ""} sfxUrl={scene.chapter_payload?.sfxUrl || scene.visual?.sfxUrl || scene.sfxUrl} accentColor={scene.chapter_payload?.accentColor || scene.visual?.accentColor || scene.accentColor} />
             ) : (scene.scene_type === 'magnates_2.5d' || scene.visual?.scene_type === 'magnates_2.5d' || scene.scene_type === 'two_part_whip' || scene.visual?.scene_type === 'two_part_whip') ? (
                 <MagnatesStage payload={scene.visual || {}} durationInFrames={Math.max(1, scene.visualDurFrames || 1)} />
-            ) : ((scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') && (scene.visual?.assets || scene.assets || []).some((a: any) => (a.local_path || a.downloaded_path) && a.layer !== 'background' && a.type !== 'video')) ? (
+            ) : isLiquidGrid ? (
                 <DynamicLiquidGrid 
                     bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''} 
                     assets={(scene.visual?.assets || scene.assets || []).filter((a: any) => (a.local_path || a.downloaded_path) && a.layer !== 'background' && a.type !== 'video').map((a: any) => ({
@@ -287,14 +290,14 @@ const SceneContent = ({ scene, index }: any) => {
             )}
             <EffectsDirector variants={scene.editorialVariants} events={scene.events} />
             <Sequence from={0} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)}>
-                {scene.graphics && scene.graphics.graphics_type && scene.graphics.graphics_type !== 'none' ? <MotionGraphicsRouter graphics={{...scene.graphics, trigger_frame: scene.graphics.trigger_start_ms ? Math.round(((scene.graphics.trigger_start_ms - scene.timing.start_ms) / 1000) * fps) : scene.graphics.trigger_frame}} sceneIndex={index} variants={scene.editorialVariants} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)} /> : null}
+                {scene.graphics && scene.graphics.graphics_type && scene.graphics.graphics_type !== 'none' && !(isLiquidGrid && isAnimatedNumber) ? <MotionGraphicsRouter graphics={{...scene.graphics, trigger_frame: scene.graphics.trigger_start_ms ? Math.round(((scene.graphics.trigger_start_ms - scene.timing.start_ms) / 1000) * fps) : scene.graphics.trigger_frame}} sceneIndex={index} variants={scene.editorialVariants} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)} /> : null}
             </Sequence>
             {scene.overlay_image && (
                 <Sequence from={Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps)} durationInFrames={Math.max(1, scene.visualDurFrames - Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps))}>
                     <CinematicOverlay src={scene.overlay_image} durationInFrames={Math.max(1, scene.visualDurFrames - Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps))} />
                 </Sequence>
             )}
-            {scene.words && scene.words.length > 0 && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'floating_cards' && scene.visual?.scene_type !== 'floating_cards' && (scene.scene_type !== 'monolith' || !scene.monolith_payload?.assetSrc) && scene.scene_type !== 'magnates_2.5d' && scene.scene_type !== 'two_part_whip' && (!scene.floating_cards_payload || Object.keys(scene.floating_cards_payload).length === 0) && (!scene.visual?.floating_cards_payload || Object.keys(scene.visual?.floating_cards_payload).length === 0) && (!scene.monolith_payload?.assetSrc) && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (
+            {scene.words && scene.words.length > 0 && !isAnimatedNumber && scene.editorialVariants?.captionEnabled !== false && scene.scene_type !== 'floating_cards' && scene.visual?.scene_type !== 'floating_cards' && (scene.scene_type !== 'monolith' || !scene.monolith_payload?.assetSrc) && scene.scene_type !== 'magnates_2.5d' && scene.scene_type !== 'two_part_whip' && (!scene.floating_cards_payload || Object.keys(scene.floating_cards_payload).length === 0) && (!scene.visual?.floating_cards_payload || Object.keys(scene.visual?.floating_cards_payload).length === 0) && (!scene.monolith_payload?.assetSrc) && (scene.caption_preset || scene.visual?.caption_preset) !== 'none' && (
                 <CaptionDirector scene={scene} />
             )}
         </AbsoluteFill>
