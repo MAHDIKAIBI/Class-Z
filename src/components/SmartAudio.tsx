@@ -16,6 +16,8 @@ export const SmartAudio: React.FC<Props> = ({
     playbackRate = 1.0,
     fadeInFrames = 0,
 }) => {
+    if (!src || typeof src !== 'string' || !src.trim()) return null;
+
     const frame = useCurrentFrame();
 
     const volume = fadeInFrames > 0

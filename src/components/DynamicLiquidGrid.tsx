@@ -11,7 +11,6 @@ import {
 import { SafeImage as Img } from './SafeImage';
 import React, { useMemo } from "react";
 import { CinematicTextureWrapper } from './CinematicTextureWrapper';
-import { SmartAudio } from './SmartAudio';
 
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
@@ -227,20 +226,6 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
       }
     >
       <AbsoluteFill style={{ fontFamily: '"Inter", "Geist", system-ui, sans-serif' }}>
-        
-        {/* ── AUDIO SFX LAYERS ── */}
-        {validAssets.map((_, idx) => {
-          const cardTrigger = triggers[idx] ?? 8;
-          const sfxSrc = idx === 0 
-            ? "audio/sfx/transitions/transition1.wav" 
-            : "audio/sfx/transitions/transition4.wav";
-
-          return (
-            <Sequence key={`sfx-${idx}`} from={cardTrigger} durationInFrames={45}>
-              <SmartAudio src={sfxSrc} durationFrames={45} baseVolume={0.3} />
-            </Sequence>
-          );
-        })}
 
         {/* ── CARD STAGE (Dominates 2560x1333 canvas with cinematic presence) ── */}
         <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
