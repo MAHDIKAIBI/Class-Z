@@ -24,19 +24,6 @@ const staticFile = (path: string) => {
     return remotionStaticFile(cleanPath);
 };
 
-
-// Dynamic Chapter SFX Engine:
-// 1. Primary: Dynamic sfxUrl prop passed from master_timeline.json (resolved from downloaded sfx_manifest.json)
-// 2. Fallback: Dynamically checks downloaded audio files in public/audio/sfx without hardcoding subfolders
-let availableSfx: string[] = [];
-try {
-  // @ts-ignore
-  const sfxContext = require.context('../../public/audio/sfx', false, /\.(mp3|wav)$/);
-  availableSfx = sfxContext.keys().map((key: string) => `audio/sfx/${key.replace('./', '')}`);
-} catch (e) {
-  // Graceful fallback when SFX files are injected dynamically via sfxUrl
-}
-
 export type ChapterRevealProps = {
   chapterNumber: number;
   subtitle: string;
@@ -158,16 +145,21 @@ export const CinematicChapterReveal: React.FC<ChapterRevealProps> = ({
   const leftFlankX = interpolate(flankSpring, [0, 1], [-800, -500]); 
   const rightFlankX = interpolate(flankSpring, [0, 1], [800, 500]);  
 
-  // 5. DETERMINISTIC AUDIO ROTATION
+  // 5. STRICT VAULT AUDIO SFX RESOLUTION
   const finalSfxUrl = useMemo(() => {
-    if (sfxUrl) return sfxUrl; // Explicit override
-    if (availableSfx.length === 0) return null;
-    if (availableSfx.length === 1) return availableSfx[0];
-    
-    // Seed the random picker using the chapterNumber and subtitle so it's perfectly synced across renders
-    const hash = subtitle.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + chapterNumber;
-    return availableSfx[hash % availableSfx.length];
-  }, [sfxUrl, subtitle, chapterNumber]);
+    if (!sfxUrl) return null;
+    let clean = sfxUrl.replace(/\\/g, '/').replace(/^\/?public\//, '');
+    // If not already prefixed with channels/, resolve strictly using the active vault folder
+    if (!clean.startsWith('channels/')) {
+      const ref = (bgImgUrl || leftAssetUrl || rightAssetUrl || '').replace(/\\/g, '/').replace(/^\/?public\//, '');
+      const match = ref.match(/^(channels\/[^/]+\/[^/]+)/);
+      if (match) {
+        const fname = clean.split('/').pop();
+        clean = `${match[1]}/audio/sfx/${fname}`;
+      }
+    }
+    return clean;
+  }, [sfxUrl, bgImgUrl, leftAssetUrl, rightAssetUrl]);
 
   // 6. SMOOTH AUDIO CROSSFADE
   // Fades in over 10 frames, stays at 100%, then fades out smoothly over the last 30 frames to create a soft, reverb-like tail ending.
