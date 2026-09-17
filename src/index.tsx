@@ -11,6 +11,18 @@ import { noise2D } from '@remotion/noise';
 import React, { createContext, useContext, useMemo } from 'react';
 import masterJsonRaw from '../master_timeline.json';
 
+// Chromium Decode Guard: Intercepts HTMLImageElement.decode() rejections
+// in headless Linux/Chromium environments so Remotion's internal <Img> never deadlocks.
+if (typeof window !== 'undefined' && typeof HTMLImageElement !== 'undefined') {
+  const originalDecode = HTMLImageElement.prototype.decode;
+  HTMLImageElement.prototype.decode = function () {
+    return originalDecode.call(this).catch((err: any) => {
+      console.warn('[ImageDecodeGuard] Bypassed decode rejection:', err?.message || err);
+      return Promise.resolve();
+    });
+  };
+}
+
 import { LayoutRouter, SmartMedia } from './components/Layouts';
 import { TypographyRouter } from './components/Typography';
 import { MotionGraphicsRouter } from './components/MotionGraphics';
