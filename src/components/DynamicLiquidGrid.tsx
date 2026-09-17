@@ -60,28 +60,36 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
 
   // ──────────────────────────────────────────────────────────────────────────
   // BULLETPROOF TIMING & SYNCHRONIZATION ENGINE
-  // Never pops at frame 0, never sends items to 9999.
+  // Strict monotonic order (Card 1 -> Card 2 -> Card 3)
+  // Early entry + guaranteed exit runway (no microsecond vanishing)
   // ──────────────────────────────────────────────────────────────────────────
   const triggers = useMemo(() => {
     const total = validAssets.length;
     if (total === 0) return [];
 
-    // Min floor frame: 12 frames into the scene so background establishes cleanly
-    const minEntranceFrame = Math.min(15, Math.max(10, Math.round(fps * 0.4)));
+    // Guarantee early entrance: First card arrives at 8-12 frames (0.25 - 0.4s)
+    const minEntranceFrame = Math.min(12, Math.max(6, Math.round(fps * 0.3)));
 
-    return validAssets.map((asset, idx) => {
-      // 1. Explicit trigger_start_ms from scene metadata
+    // Minimum runway: All cards must be locked on screen for at least 1.8s before cut
+    const minRunwayFrames = Math.max(30, Math.round(fps * 1.8));
+    const maxLastTriggerFrame = Math.max(
+      minEntranceFrame + (total - 1) * 12,
+      effectiveDuration - minRunwayFrames
+    );
+
+    // Step 1: Collect raw desired trigger frame for each asset
+    const rawTriggers = validAssets.map((asset) => {
+      // 1. Explicit trigger_start_ms
       if (typeof asset.trigger_start_ms === 'number' && asset.trigger_start_ms > 0) {
-        const computed = Math.round(((asset.trigger_start_ms - sceneStartMs) / 1000) * fps);
-        return Math.max(minEntranceFrame, computed);
+        return Math.round(((asset.trigger_start_ms - sceneStartMs) / 1000) * fps);
       }
 
-      // 2. Explicit trigger_frame (if valid and not the broken 9999 / 0 fallback)
+      // 2. Explicit trigger_frame
       if (typeof asset.trigger_frame === 'number' && asset.trigger_frame > 0 && asset.trigger_frame < 9000) {
-        return Math.max(minEntranceFrame, asset.trigger_frame);
+        return asset.trigger_frame;
       }
 
-      // 3. Spoken word alignment via WhisperX timestamps
+      // 3. Spoken word alignment via Whisper timestamps
       if (sceneWords && sceneWords.length > 0) {
         const cleanTitleWords = (asset.title || '')
           .toLowerCase()
@@ -94,39 +102,47 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
         });
 
         if (matchedWord && typeof matchedWord.start_ms === 'number') {
-          const computed = Math.round(((matchedWord.start_ms - sceneStartMs) / 1000) * fps);
-          return Math.max(minEntranceFrame, computed);
-        }
-
-        // Cadence fallback across spoken words
-        if (idx === 0) {
-          const firstWordMs = sceneWords[0]?.start_ms;
-          if (typeof firstWordMs === 'number') {
-            return Math.max(minEntranceFrame, Math.round(((firstWordMs - sceneStartMs) / 1000) * fps));
-          }
-          return minEntranceFrame;
-        }
-
-        const targetWordIdx = Math.min(
-          sceneWords.length - 1,
-          Math.floor((idx / total) * sceneWords.length)
-        );
-        const word = sceneWords[targetWordIdx];
-        if (word && typeof word.start_ms === 'number') {
-          const computed = Math.round(((word.start_ms - sceneStartMs) / 1000) * fps);
-          return Math.max(minEntranceFrame + (idx * 14), computed);
+          return Math.round(((matchedWord.start_ms - sceneStartMs) / 1000) * fps);
         }
       }
 
-      // 4. Default graceful stagger across scene duration
-      if (idx === 0) return minEntranceFrame;
-      const usableFrames = Math.max(30, effectiveDuration - minEntranceFrame - 15);
-      const step = usableFrames / total;
-      return Math.round(minEntranceFrame + (idx * step));
+      return -1;
     });
+
+    // Step 2: Resolve strictly monotonic left-to-right cadence
+    const resolvedTriggers: number[] = [];
+    const defaultStagger = Math.max(
+      14,
+      Math.min(24, Math.floor((maxLastTriggerFrame - minEntranceFrame) / Math.max(1, total - 1)))
+    );
+
+    for (let i = 0; i < total; i++) {
+      if (i === 0) {
+        const raw0 = rawTriggers[0];
+        // Card 1 ALWAYS enters early so the canvas is immediately anchored
+        const c0 = raw0 > 0 ? Math.max(minEntranceFrame, Math.min(minEntranceFrame + 8, raw0)) : minEntranceFrame;
+        resolvedTriggers.push(c0);
+      } else {
+        const prev = resolvedTriggers[i - 1];
+        const raw = rawTriggers[i];
+        const minAllowed = prev + 14; // Strict minimum 14-frame stagger gap
+
+        let target = raw > 0 ? Math.max(minAllowed, raw) : (prev + defaultStagger);
+
+        // Cap against slot ceiling so we NEVER violate exit runway
+        const remainingSlots = (total - 1) - i;
+        const slotCeiling = maxLastTriggerFrame - (remainingSlots * 12);
+        if (target > slotCeiling) {
+          target = Math.max(minAllowed, slotCeiling);
+        }
+        resolvedTriggers.push(target);
+      }
+    }
+
+    return resolvedTriggers;
   }, [validAssets, sceneWords, sceneStartMs, effectiveDuration, fps]);
 
-  // Fallback: If no assets downloaded, show clean background
+  // Fallback: If no assets, render clean background
   if (validAssets.length === 0) {
     return (
       <CinematicTextureWrapper
@@ -155,9 +171,9 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
     );
   }
 
-  // Dynamic Background Blur (Starts sharp, blurs when first card appears)
-  const firstTrigger = triggers[0] ?? 12;
-  const blurOpacity = interpolate(frame, [firstTrigger - 10, firstTrigger], [0, 1], { 
+  // Dynamic Background Blur (Starts sharp, smoothly blurs when first card appears)
+  const firstTrigger = triggers[0] ?? 8;
+  const blurOpacity = interpolate(frame, [firstTrigger - 8, firstTrigger], [0, 1], { 
     extrapolateLeft: "clamp", 
     extrapolateRight: "clamp" 
   });
@@ -190,9 +206,9 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
           {/* Cinematic Dark Focus & Blur overlay */}
           <AbsoluteFill 
             style={{ 
-              backgroundColor: `rgba(4, 6, 12, ${blurOpacity * 0.55})`,
-              backdropFilter: `blur(${blurOpacity * 30}px) saturate(140%)`,
-              WebkitBackdropFilter: `blur(${blurOpacity * 30}px) saturate(140%)`,
+              backgroundColor: `rgba(4, 6, 12, ${blurOpacity * 0.65})`,
+              backdropFilter: `blur(${blurOpacity * 32}px) saturate(140%)`,
+              WebkitBackdropFilter: `blur(${blurOpacity * 32}px) saturate(140%)`,
               opacity: blurOpacity,
               zIndex: 1,
               pointerEvents: "none"
@@ -205,7 +221,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
               background: "radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,0,0,0.85) 100%)",
               zIndex: 2,
               pointerEvents: "none"
-            }}
+            }} 
           />
         </AbsoluteFill>
       }
@@ -214,7 +230,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
         
         {/* ── AUDIO SFX LAYERS ── */}
         {validAssets.map((_, idx) => {
-          const cardTrigger = triggers[idx] ?? 12;
+          const cardTrigger = triggers[idx] ?? 8;
           const sfxSrc = idx === 0 
             ? "audio/sfx/transitions/transition1.wav" 
             : "audio/sfx/transitions/transition4.wav";
@@ -226,73 +242,94 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
           );
         })}
 
-        {/* ── CARD STAGE ── */}
+        {/* ── CARD STAGE (Dominates 2560x1333 canvas with cinematic presence) ── */}
         <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
           
-          {/* LAYOUT 1: SINGLE CARD (Solo Spotlight) */}
+          {/* LAYOUT 1: SINGLE CARD (Solo Spotlight - 860px x 940px) */}
           {count === 1 && (() => {
             const asset = validAssets[0];
-            const trigger = triggers[0] ?? 12;
+            const trigger = triggers[0] ?? 8;
             const entrance = spring({
               frame: Math.max(0, frame - trigger),
               fps,
-              config: { damping: 20, stiffness: 90, mass: 1 }
+              config: { damping: 18, stiffness: 95, mass: 0.85 }
             });
-            const opacity = interpolate(entrance, [0, 0.4], [0, 1], { extrapolateRight: "clamp" });
-            const scale = interpolate(entrance, [0, 1], [0.94, 1]);
-            const translateY = interpolate(entrance, [0, 1], [35, 0]);
+            const opacity = interpolate(entrance, [0, 0.35], [0, 1], { extrapolateRight: "clamp" });
+            const scale = interpolate(entrance, [0, 1], [0.92, 1.0]);
+            const translateY = interpolate(entrance, [0, 1], [40, 0]);
 
             return (
               <div
                 style={{
                   position: "relative",
-                  width: "440px",
-                  height: "520px",
+                  width: "860px",
+                  height: "940px",
                   opacity,
                   transform: `translateY(${translateY}px) scale(${scale})`,
-                  background: "linear-gradient(160deg, rgba(20,26,40,0.92) 0%, rgba(7,9,14,0.98) 100%)",
-                  backdropFilter: "blur(48px) saturate(150%)",
-                  WebkitBackdropFilter: "blur(48px) saturate(150%)",
-                  border: "1px solid rgba(212,175,55,0.18)",
-                  borderTop: "1px solid rgba(212,175,55,0.48)",
-                  borderRadius: "22px",
+                  background: "linear-gradient(165deg, rgba(22, 28, 44, 0.94) 0%, rgba(8, 11, 18, 0.98) 100%)",
+                  backdropFilter: "blur(48px) saturate(160%)",
+                  WebkitBackdropFilter: "blur(48px) saturate(160%)",
+                  border: "1.5px solid rgba(212, 175, 55, 0.28)",
+                  borderTop: "2px solid rgba(212, 175, 55, 0.7)",
+                  borderRadius: "28px",
                   overflow: "hidden",
-                  boxShadow: "0 30px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(0,0,0,0.3)",
+                  boxShadow: "0 35px 90px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.15)",
                   display: "flex",
                   flexDirection: "column"
                 }}
               >
-                {/* Top hairline glow */}
-                <div style={{ position: "absolute", top: 0, left: "15%", right: "15%", height: "1px", background: "linear-gradient(to right, transparent, rgba(212,175,55,0.6), transparent)", pointerEvents: "none", zIndex: 4 }} />
+                {/* Scanning Laser Hairline Glow */}
+                <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: "2px", background: "linear-gradient(90deg, transparent, rgba(212,175,55,0.9), transparent)", pointerEvents: "none", zIndex: 4 }} />
 
-                {/* Ambient blurred asset layer */}
+                {/* Spec Tag Pill */}
+                <div style={{
+                  position: "absolute",
+                  top: "24px",
+                  left: "28px",
+                  padding: "6px 14px",
+                  borderRadius: "6px",
+                  background: "rgba(212, 175, 55, 0.12)",
+                  border: "1px solid rgba(212, 175, 55, 0.35)",
+                  color: "#D4AF37",
+                  fontSize: "13px",
+                  fontWeight: 800,
+                  letterSpacing: "1.5px",
+                  fontFamily: '"JetBrains Mono", "Courier New", monospace',
+                  zIndex: 5,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.4)"
+                }}>
+                  SPEC // 01
+                </div>
+
+                {/* Ambient Asset Bloom */}
                 <div style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 0, pointerEvents: "none" }}>
                   <Img 
                     src={staticFile(asset.url)} 
-                    style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.28) saturate(1.4)", transform: "scale(1.2)" }} 
+                    style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(45px) brightness(0.25) saturate(1.4)", transform: "scale(1.2)" }} 
                   />
                 </div>
 
-                {/* Hero uncropped product image */}
-                <div style={{ flex: 1, position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "28px", background: "radial-gradient(circle at 50% 50%, rgba(212,175,55,0.04) 0%, transparent 70%)" }}>
+                {/* Hero Uncropped Product Container */}
+                <div style={{ flex: 1, position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 40px 24px" }}>
+                  <div style={{ position: "absolute", width: "70%", height: "70%", background: "radial-gradient(circle, rgba(212,175,55,0.1) 0%, transparent 70%)", filter: "blur(40px)", pointerEvents: "none" }} />
                   <Img
                     src={staticFile(asset.url)}
                     style={{
                       maxWidth: "100%",
                       maxHeight: "100%",
                       objectFit: "contain",
-                      filter: "drop-shadow(0 16px 30px rgba(0,0,0,0.85))"
+                      filter: "drop-shadow(0 25px 45px rgba(0,0,0,0.92)) drop-shadow(0 0 25px rgba(212,175,55,0.12))"
                     }}
                   />
                 </div>
 
-                {/* Clean Bottom Text */}
-                <div style={{ position: "relative", zIndex: 2, padding: "18px 24px 24px", background: "linear-gradient(to top, rgba(4,6,10,0.98) 0%, rgba(4,6,10,0.7) 65%, transparent 100%)" }}>
-                  <div style={{ fontSize: "24px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.4px", lineHeight: 1.15 }}>
+                {/* Clean Bottom Text Bar */}
+                <div style={{ position: "relative", zIndex: 2, padding: "26px 36px 34px", background: "linear-gradient(to top, rgba(4,6,10,0.98) 0%, rgba(4,6,10,0.85) 65%, transparent 100%)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize: "38px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.5px", lineHeight: 1.15, textTransform: "uppercase" }}>
                     {asset.title}
                   </div>
                   {asset.subtitle && (
-                    <div style={{ fontSize: "14px", fontWeight: 600, color: "rgba(212,175,55,0.85)", letterSpacing: "0.5px", marginTop: "4px" }}>
+                    <div style={{ fontSize: "20px", fontWeight: 700, color: "#D4AF37", letterSpacing: "0.5px", marginTop: "6px" }}>
                       {asset.subtitle}
                     </div>
                   )}
@@ -301,19 +338,19 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
             );
           })()}
 
-          {/* LAYOUT 2: DUAL CARDS (Side by Side) */}
+          {/* LAYOUT 2: DUAL CARDS (Side by Side Shootout - 1920px x 860px) */}
           {count === 2 && (
-            <div style={{ display: "flex", gap: "36px", width: "1020px", height: "480px" }}>
+            <div style={{ display: "flex", gap: "48px", width: "1920px", height: "860px" }}>
               {validAssets.map((asset, idx) => {
-                const trigger = triggers[idx] ?? 12;
+                const trigger = triggers[idx] ?? 8;
                 const entrance = spring({
                   frame: Math.max(0, frame - trigger),
                   fps,
-                  config: { damping: 20, stiffness: 90, mass: 1 }
+                  config: { damping: 18, stiffness: 95, mass: 0.85 }
                 });
-                const opacity = interpolate(entrance, [0, 0.4], [0, 1], { extrapolateRight: "clamp" });
-                const scale = interpolate(entrance, [0, 1], [0.94, 1]);
-                const slideX = interpolate(entrance, [0, 1], [idx === 0 ? -35 : 35, 0]);
+                const opacity = interpolate(entrance, [0, 0.35], [0, 1], { extrapolateRight: "clamp" });
+                const scale = interpolate(entrance, [0, 1], [0.92, 1.0]);
+                const slideX = interpolate(entrance, [0, 1], [idx === 0 ? -45 : 45, 0]);
 
                 return (
                   <div
@@ -323,48 +360,70 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
                       position: "relative",
                       opacity,
                       transform: `translateX(${slideX}px) scale(${scale})`,
-                      background: "linear-gradient(160deg, rgba(20,26,40,0.92) 0%, rgba(7,9,14,0.98) 100%)",
-                      backdropFilter: "blur(48px) saturate(150%)",
-                      WebkitBackdropFilter: "blur(48px) saturate(150%)",
-                      border: "1px solid rgba(212,175,55,0.18)",
-                      borderTop: "1px solid rgba(212,175,55,0.48)",
-                      borderRadius: "20px",
+                      background: "linear-gradient(165deg, rgba(22, 28, 44, 0.94) 0%, rgba(8, 11, 18, 0.98) 100%)",
+                      backdropFilter: "blur(48px) saturate(160%)",
+                      WebkitBackdropFilter: "blur(48px) saturate(160%)",
+                      border: "1.5px solid rgba(212, 175, 55, 0.28)",
+                      borderTop: "2px solid rgba(212, 175, 55, 0.7)",
+                      borderRadius: "26px",
                       overflow: "hidden",
-                      boxShadow: "0 28px 70px rgba(0,0,0,0.85), 0 0 0 1px rgba(0,0,0,0.3)",
+                      boxShadow: "0 35px 90px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.15)",
                       display: "flex",
                       flexDirection: "column"
                     }}
                   >
-                    <div style={{ position: "absolute", top: 0, left: "15%", right: "15%", height: "1px", background: "linear-gradient(to right, transparent, rgba(212,175,55,0.55), transparent)", pointerEvents: "none", zIndex: 4 }} />
+                    {/* Scanning Laser Hairline Glow */}
+                    <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: "2px", background: "linear-gradient(90deg, transparent, rgba(212,175,55,0.85), transparent)", pointerEvents: "none", zIndex: 4 }} />
 
-                    {/* Ambient layer */}
+                    {/* Spec Tag Pill */}
+                    <div style={{
+                      position: "absolute",
+                      top: "22px",
+                      left: "26px",
+                      padding: "5px 13px",
+                      borderRadius: "6px",
+                      background: "rgba(212, 175, 55, 0.12)",
+                      border: "1px solid rgba(212, 175, 55, 0.35)",
+                      color: "#D4AF37",
+                      fontSize: "12px",
+                      fontWeight: 800,
+                      letterSpacing: "1.5px",
+                      fontFamily: '"JetBrains Mono", "Courier New", monospace',
+                      zIndex: 5,
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.4)"
+                    }}>
+                      {`SPEC // 0${idx + 1}`}
+                    </div>
+
+                    {/* Ambient Asset Bloom */}
                     <div style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 0, pointerEvents: "none" }}>
                       <Img 
                         src={staticFile(asset.url)} 
-                        style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.28) saturate(1.4)", transform: "scale(1.2)" }} 
+                        style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(45px) brightness(0.25) saturate(1.4)", transform: "scale(1.2)" }} 
                       />
                     </div>
 
-                    {/* Hero Image */}
-                    <div style={{ flex: 1, position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", background: "radial-gradient(circle at 50% 50%, rgba(212,175,55,0.03) 0%, transparent 70%)" }}>
+                    {/* Hero Uncropped Product Container */}
+                    <div style={{ flex: 1, position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "44px 36px 20px" }}>
+                      <div style={{ position: "absolute", width: "70%", height: "70%", background: "radial-gradient(circle, rgba(212,175,55,0.09) 0%, transparent 70%)", filter: "blur(35px)", pointerEvents: "none" }} />
                       <Img
                         src={staticFile(asset.url)}
                         style={{
                           maxWidth: "100%",
                           maxHeight: "100%",
                           objectFit: "contain",
-                          filter: "drop-shadow(0 14px 28px rgba(0,0,0,0.85))"
+                          filter: "drop-shadow(0 25px 45px rgba(0,0,0,0.92)) drop-shadow(0 0 25px rgba(212,175,55,0.1))"
                         }}
                       />
                     </div>
 
-                    {/* Clean Text */}
-                    <div style={{ position: "relative", zIndex: 2, padding: "16px 22px 20px", background: "linear-gradient(to top, rgba(4,6,10,0.98) 0%, rgba(4,6,10,0.65) 65%, transparent 100%)" }}>
-                      <div style={{ fontSize: "21px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px", lineHeight: 1.15 }}>
+                    {/* Clean Bottom Text Bar */}
+                    <div style={{ position: "relative", zIndex: 2, padding: "24px 32px 30px", background: "linear-gradient(to top, rgba(4,6,10,0.98) 0%, rgba(4,6,10,0.85) 65%, transparent 100%)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div style={{ fontSize: "36px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.5px", lineHeight: 1.15, textTransform: "uppercase" }}>
                         {asset.title}
                       </div>
                       {asset.subtitle && (
-                        <div style={{ fontSize: "13px", fontWeight: 600, color: "rgba(212,175,55,0.85)", letterSpacing: "0.5px", marginTop: "3px" }}>
+                        <div style={{ fontSize: "19px", fontWeight: 700, color: "#D4AF37", letterSpacing: "0.5px", marginTop: "5px" }}>
                           {asset.subtitle}
                         </div>
                       )}
@@ -375,19 +434,24 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
             </div>
           )}
 
-          {/* LAYOUT 3: TRIPLE OR QUAD CARDS (Multi-Item Rack) */}
+          {/* LAYOUT 3: TRIPLE OR QUAD CARDS (Multi-Rack - 2280px x 800px) */}
           {count >= 3 && (
-            <div style={{ display: "flex", gap: count >= 4 ? "18px" : "26px", width: count >= 4 ? "1480px" : "1280px", height: "460px" }}>
+            <div style={{ 
+              display: "flex", 
+              gap: count >= 4 ? "24px" : "36px", 
+              width: count >= 4 ? "2360px" : "2280px", 
+              height: count >= 4 ? "740px" : "800px" 
+            }}>
               {validAssets.map((asset, idx) => {
-                const trigger = triggers[idx] ?? 12;
+                const trigger = triggers[idx] ?? 8;
                 const entrance = spring({
                   frame: Math.max(0, frame - trigger),
                   fps,
-                  config: { damping: 20, stiffness: 90, mass: 1 }
+                  config: { damping: 18, stiffness: 95, mass: 0.85 }
                 });
-                const opacity = interpolate(entrance, [0, 0.4], [0, 1], { extrapolateRight: "clamp" });
-                const scale = interpolate(entrance, [0, 1], [0.94, 1]);
-                const translateY = interpolate(entrance, [0, 1], [30, 0]);
+                const opacity = interpolate(entrance, [0, 0.35], [0, 1], { extrapolateRight: "clamp" });
+                const scale = interpolate(entrance, [0, 1], [0.92, 1.0]);
+                const translateY = interpolate(entrance, [0, 1], [35, 0]);
 
                 return (
                   <div
@@ -397,48 +461,88 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
                       position: "relative",
                       opacity,
                       transform: `translateY(${translateY}px) scale(${scale})`,
-                      background: "linear-gradient(160deg, rgba(20,26,40,0.92) 0%, rgba(7,9,14,0.98) 100%)",
-                      backdropFilter: "blur(48px) saturate(150%)",
-                      WebkitBackdropFilter: "blur(48px) saturate(150%)",
-                      border: "1px solid rgba(212,175,55,0.16)",
-                      borderTop: "1px solid rgba(212,175,55,0.45)",
-                      borderRadius: "18px",
+                      background: "linear-gradient(165deg, rgba(22, 28, 44, 0.94) 0%, rgba(8, 11, 18, 0.98) 100%)",
+                      backdropFilter: "blur(48px) saturate(160%)",
+                      WebkitBackdropFilter: "blur(48px) saturate(160%)",
+                      border: "1.5px solid rgba(212, 175, 55, 0.25)",
+                      borderTop: "2px solid rgba(212, 175, 55, 0.65)",
+                      borderRadius: "22px",
                       overflow: "hidden",
-                      boxShadow: "0 24px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(0,0,0,0.3)",
+                      boxShadow: "0 30px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.12)",
                       display: "flex",
                       flexDirection: "column"
                     }}
                   >
-                    <div style={{ position: "absolute", top: 0, left: "15%", right: "15%", height: "1px", background: "linear-gradient(to right, transparent, rgba(212,175,55,0.5), transparent)", pointerEvents: "none", zIndex: 4 }} />
+                    {/* Scanning Laser Hairline Glow */}
+                    <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: "2px", background: "linear-gradient(90deg, transparent, rgba(212,175,55,0.8), transparent)", pointerEvents: "none", zIndex: 4 }} />
 
-                    {/* Ambient layer */}
+                    {/* Spec Tag Pill */}
+                    <div style={{
+                      position: "absolute",
+                      top: "18px",
+                      left: "20px",
+                      padding: "4px 10px",
+                      borderRadius: "5px",
+                      background: "rgba(212, 175, 55, 0.12)",
+                      border: "1px solid rgba(212, 175, 55, 0.35)",
+                      color: "#D4AF37",
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      letterSpacing: "1.2px",
+                      fontFamily: '"JetBrains Mono", "Courier New", monospace',
+                      zIndex: 5
+                    }}>
+                      {`SPEC // 0${idx + 1}`}
+                    </div>
+
+                    {/* Ambient Asset Bloom */}
                     <div style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 0, pointerEvents: "none" }}>
                       <Img 
                         src={staticFile(asset.url)} 
-                        style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(35px) brightness(0.28) saturate(1.4)", transform: "scale(1.2)" }} 
+                        style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.25) saturate(1.4)", transform: "scale(1.2)" }} 
                       />
                     </div>
 
-                    {/* Hero Image */}
-                    <div style={{ flex: 1, position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "18px", background: "radial-gradient(circle at 50% 50%, rgba(212,175,55,0.03) 0%, transparent 70%)" }}>
+                    {/* Hero Uncropped Product Container */}
+                    <div style={{ flex: 1, position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: count >= 4 ? "30px 20px 14px" : "36px 24px 18px" }}>
+                      <div style={{ position: "absolute", width: "70%", height: "70%", background: "radial-gradient(circle, rgba(212,175,55,0.08) 0%, transparent 70%)", filter: "blur(30px)", pointerEvents: "none" }} />
                       <Img
                         src={staticFile(asset.url)}
                         style={{
                           maxWidth: "100%",
                           maxHeight: "100%",
                           objectFit: "contain",
-                          filter: "drop-shadow(0 12px 24px rgba(0,0,0,0.85))"
+                          filter: "drop-shadow(0 20px 35px rgba(0,0,0,0.92)) drop-shadow(0 0 20px rgba(212,175,55,0.08))"
                         }}
                       />
                     </div>
 
-                    {/* Clean Text */}
-                    <div style={{ position: "relative", zIndex: 2, padding: "14px 18px 18px", background: "linear-gradient(to top, rgba(4,6,10,0.98) 0%, rgba(4,6,10,0.65) 65%, transparent 100%)" }}>
-                      <div style={{ fontSize: count >= 4 ? "17px" : "19px", fontWeight: 800, color: "#FFFFFF", letterSpacing: "-0.3px", lineHeight: 1.15 }}>
+                    {/* Clean Bottom Text Bar */}
+                    <div style={{ 
+                      position: "relative", 
+                      zIndex: 2, 
+                      padding: count >= 4 ? "18px 22px 22px" : "22px 28px 26px", 
+                      background: "linear-gradient(to top, rgba(4,6,10,0.98) 0%, rgba(4,6,10,0.85) 65%, transparent 100%)",
+                      borderTop: "1px solid rgba(255,255,255,0.06)"
+                    }}>
+                      <div style={{ 
+                        fontSize: count >= 4 ? "24px" : "30px", 
+                        fontWeight: 900, 
+                        color: "#FFFFFF", 
+                        letterSpacing: "-0.4px", 
+                        lineHeight: 1.15,
+                        textTransform: "uppercase"
+                      }}>
                         {asset.title}
                       </div>
                       {asset.subtitle && (
-                        <div style={{ fontSize: "12px", fontWeight: 600, color: "rgba(212,175,55,0.85)", letterSpacing: "0.4px", marginTop: "3px" }}>
+                        <div style={{ 
+                          fontSize: count >= 4 ? "15px" : "17px", 
+                          fontWeight: 700, 
+                          color: "#D4AF37", 
+                          letterSpacing: "0.5px", 
+                          marginTop: "4px" 
+                        }}>
                           {asset.subtitle}
                         </div>
                       )}
