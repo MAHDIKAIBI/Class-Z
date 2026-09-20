@@ -55,12 +55,13 @@ function groupWordsIntoLines(words: WordTiming[]): WordTiming[][] {
   return lines;
 }
 
-function lineFontSize(line: WordTiming[]): number {
+function lineFontSize(line: WordTiming[], scaleFactor: number = 1): number {
   const len = line.reduce((acc, w) => acc + w.word.replace(/[^a-zA-Z]/g, "").length, 0);
-  if (len > 18) return 60;
-  if (len > 14) return 75;
-  if (len > 10) return 90;
-  return 110;
+  let base = 110;
+  if (len > 18) base = 60;
+  else if (len > 14) base = 75;
+  else if (len > 10) base = 90;
+  return Math.round(base * Math.min(1.2, Math.max(0.5, scaleFactor)));
 }
 
 const MAX_ROWS = 4;
@@ -69,7 +70,8 @@ interface Props { script: WordTiming[]; chunkIndex?: number; }
 
 export const PremiumLeftSpatial: React.FC<Props> = ({ script, chunkIndex = 0 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width } = useVideoConfig();
+  const scaleFactor = (width || 2560) / 2560;
 
   const lines = useMemo(() => groupWordsIntoLines(script || []), [script]);
   if (!lines.length) return null;
@@ -90,7 +92,7 @@ export const PremiumLeftSpatial: React.FC<Props> = ({ script, chunkIndex = 0 }) 
   // For Left: scale up slightly, drift right slightly
   const containerElapsed = Math.max(0, frame - lines[0][0].start);
   const driftScale = interpolate(containerElapsed, [0, 150], [1, 1.08], { extrapolateRight: "clamp" });
-  const driftX = interpolate(containerElapsed, [0, 150], [0, 40], { extrapolateRight: "clamp" });
+  const driftX = interpolate(containerElapsed, [0, 150], [0, 40 * scaleFactor], { extrapolateRight: "clamp" });
 
   return (
     <div
@@ -101,10 +103,12 @@ export const PremiumLeftSpatial: React.FC<Props> = ({ script, chunkIndex = 0 }) 
         transform: `translateY(-50%) perspective(1000px) rotateY(10deg) scale(${driftScale}) translateX(${driftX}px)`,
         transformOrigin: "left center",
         width: "45%",
+        maxWidth: "45%",
+        boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
         alignItems: "flex-start",
-        gap: "4px",
+        gap: `${Math.max(2, Math.round(4 * scaleFactor))}px`,
         zIndex: 50,
         pointerEvents: "none",
       }}
@@ -120,7 +124,7 @@ export const PremiumLeftSpatial: React.FC<Props> = ({ script, chunkIndex = 0 }) 
         const opacity = interpolate(revealSpring, [0, 0.4], [0, 1], { extrapolateRight: "clamp" });
         const yShift = interpolate(revealSpring, [0, 1], [30, 0]);
         const blur = interpolate(revealSpring, [0, 1], [15, 0], { extrapolateRight: "clamp" });
-        const fontSize = lineFontSize(line);
+        const fontSize = lineFontSize(line, scaleFactor);
 
         return (
           <div
@@ -128,10 +132,11 @@ export const PremiumLeftSpatial: React.FC<Props> = ({ script, chunkIndex = 0 }) 
             style={{
               display: "flex",
               flexDirection: "row",
-              gap: "14px",
+              gap: `${Math.max(6, Math.round(14 * scaleFactor))}px`,
               opacity,
               transform: `translateY(${yShift}px)`,
               filter: `blur(${blur}px)`,
+              whiteSpace: "nowrap",
             }}
           >
             {line.map((item, wordIdx) => {
@@ -154,11 +159,11 @@ export const PremiumLeftSpatial: React.FC<Props> = ({ script, chunkIndex = 0 }) 
                     fontWeight: 900,
                     textTransform: "uppercase",
                     lineHeight: 0.95,
-                    letterSpacing: "-3.5px",
+                    letterSpacing: `${(-0.032 * fontSize).toFixed(1)}px`,
                     transform: `translateY(${wordY}px)`,
                     opacity: wordElapsed > 0 ? 1 : 0.001, // hide until its exact start frame
                     textShadow: isStressed 
-                      ? `0 0 35px ${accentColor}, 3px 4px 0px rgba(0,0,0,1), 6px 8px 15px rgba(0,0,0,0.9)`
+                      ? `0 0 ${Math.round(35 * scaleFactor)}px ${accentColor}, 3px 4px 0px rgba(0,0,0,1), 6px 8px 15px rgba(0,0,0,0.9)`
                       : `3px 4px 0px rgba(0,0,0,1), 6px 8px 15px rgba(0,0,0,0.9)`,
                   }}
                 >

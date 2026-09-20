@@ -45,10 +45,12 @@ export const GlassStatGrid: React.FC<GridProps> = ({ start, end, stats }) => {
       perspective: "1200px" // Creates the 3D space
     }}>
       
-      {/* 3D CAMERA RIG */}
+      {/* 3D CAMERA RIG - Dynamic Fluid Layout */}
       <div style={{
         display: "flex",
-        gap: "30px",
+        gap: "clamp(16px, 2vw, 30px)",
+        maxWidth: "92%",
+        boxSizing: "border-box",
         transformStyle: "preserve-3d",
         transform: `translateZ(${camZ}px) translateY(${floatY}px)`,
         justifyContent: "center",
@@ -104,7 +106,9 @@ export const GlassStatGrid: React.FC<GridProps> = ({ start, end, stats }) => {
               transformStyle: "preserve-3d",
               transform: `translateZ(${currentZ}px) translateY(${yShift}px) rotateY(${currentRotY}deg) rotateX(${rotX}deg) scale(${scale})`,
               opacity,
-              minWidth: "340px"
+              width: "clamp(260px, 22vw, 360px)",
+              minWidth: "0",
+              boxSizing: "border-box"
             }}>
               
               {/* THE OBSIDIAN GLASS SHELL */}
@@ -118,7 +122,7 @@ export const GlassStatGrid: React.FC<GridProps> = ({ start, end, stats }) => {
                 border: "1px solid rgba(255,255,255,0.1)",
                 borderTop: "2px solid rgba(255,255,255,0.4)", // Heavy rim light
                 borderRadius: "20px",
-                padding: "40px 45px",
+                padding: "clamp(24px, 2.5vw, 40px) clamp(28px, 3vw, 45px)",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "flex-start",

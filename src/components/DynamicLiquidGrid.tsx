@@ -228,9 +228,9 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
       <AbsoluteFill style={{ fontFamily: '"Inter", "Geist", system-ui, sans-serif' }}>
 
         {/* ── CARD STAGE (Dominates 2560x1333 canvas with cinematic presence) ── */}
-        <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
+        <AbsoluteFill style={{ display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, padding: "clamp(12px, 2vw, 40px)", boxSizing: "border-box" }}>
           
-          {/* LAYOUT 1: SINGLE CARD (Solo Spotlight - 860px x 940px) */}
+          {/* LAYOUT 1: SINGLE CARD (Solo Spotlight - Fluid Responsive) */}
           {count === 1 && (() => {
             const asset = validAssets[0];
             const trigger = triggers[0] ?? 8;
@@ -247,8 +247,11 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
               <div
                 style={{
                   position: "relative",
-                  width: "860px",
-                  height: "940px",
+                  width: "100%",
+                  maxWidth: "860px",
+                  maxHeight: "82vh",
+                  aspectRatio: "860 / 940",
+                  boxSizing: "border-box",
                   opacity,
                   transform: `translateY(${translateY}px) scale(${scale})`,
                   background: "linear-gradient(165deg, rgba(22, 28, 44, 0.94) 0%, rgba(8, 11, 18, 0.98) 100%)",
@@ -309,12 +312,12 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
                 </div>
 
                 {/* Clean Bottom Text Bar */}
-                <div style={{ position: "relative", zIndex: 2, padding: "26px 36px 34px", background: "linear-gradient(to top, rgba(4,6,10,0.98) 0%, rgba(4,6,10,0.85) 65%, transparent 100%)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div style={{ fontSize: "38px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.5px", lineHeight: 1.15, textTransform: "uppercase" }}>
+                <div style={{ position: "relative", zIndex: 2, padding: "clamp(16px, 1.8vw, 26px) clamp(20px, 2.2vw, 36px) clamp(20px, 2.2vw, 34px)", background: "linear-gradient(to top, rgba(4,6,10,0.98) 0%, rgba(4,6,10,0.85) 65%, transparent 100%)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize: "clamp(22px, 2.2vw, 38px)", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.5px", lineHeight: 1.15, textTransform: "uppercase" }}>
                     {asset.title}
                   </div>
                   {asset.subtitle && (
-                    <div style={{ fontSize: "20px", fontWeight: 700, color: "#D4AF37", letterSpacing: "0.5px", marginTop: "6px" }}>
+                    <div style={{ fontSize: "clamp(13px, 1.2vw, 20px)", fontWeight: 700, color: "#D4AF37", letterSpacing: "0.5px", marginTop: "6px" }}>
                       {asset.subtitle}
                     </div>
                   )}
@@ -323,9 +326,17 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
             );
           })()}
 
-          {/* LAYOUT 2: DUAL CARDS (Side by Side Shootout - 1920px x 860px) */}
+          {/* LAYOUT 2: DUAL CARDS (Side by Side Shootout - Dynamic Fluid Layout) */}
           {count === 2 && (
-            <div style={{ display: "flex", gap: "48px", width: "1920px", height: "860px" }}>
+            <div style={{ 
+              display: "flex", 
+              gap: "clamp(16px, 2.5vw, 48px)", 
+              width: "100%", 
+              maxWidth: "1920px", 
+              maxHeight: "82vh", 
+              aspectRatio: "1920 / 860", 
+              boxSizing: "border-box" 
+            }}>
               {validAssets.map((asset, idx) => {
                 const trigger = triggers[idx] ?? 8;
                 const entrance = spring({
@@ -342,6 +353,8 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
                     key={idx}
                     style={{
                       flex: 1,
+                      minWidth: 0,
+                      boxSizing: "border-box",
                       position: "relative",
                       opacity,
                       transform: `translateX(${slideX}px) scale(${scale})`,
@@ -403,12 +416,12 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
                     </div>
 
                     {/* Clean Bottom Text Bar */}
-                    <div style={{ position: "relative", zIndex: 2, padding: "24px 32px 30px", background: "linear-gradient(to top, rgba(4,6,10,0.98) 0%, rgba(4,6,10,0.85) 65%, transparent 100%)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                      <div style={{ fontSize: "36px", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.5px", lineHeight: 1.15, textTransform: "uppercase" }}>
+                    <div style={{ position: "relative", zIndex: 2, padding: "clamp(14px, 1.5vw, 24px) clamp(18px, 1.8vw, 32px) clamp(18px, 1.8vw, 30px)", background: "linear-gradient(to top, rgba(4,6,10,0.98) 0%, rgba(4,6,10,0.85) 65%, transparent 100%)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                      <div style={{ fontSize: "clamp(18px, 1.8vw, 36px)", fontWeight: 900, color: "#FFFFFF", letterSpacing: "-0.5px", lineHeight: 1.15, textTransform: "uppercase" }}>
                         {asset.title}
                       </div>
                       {asset.subtitle && (
-                        <div style={{ fontSize: "19px", fontWeight: 700, color: "#D4AF37", letterSpacing: "0.5px", marginTop: "5px" }}>
+                        <div style={{ fontSize: "clamp(11px, 1.0vw, 19px)", fontWeight: 700, color: "#D4AF37", letterSpacing: "0.5px", marginTop: "5px" }}>
                           {asset.subtitle}
                         </div>
                       )}
@@ -419,13 +432,16 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
             </div>
           )}
 
-          {/* LAYOUT 3: TRIPLE OR QUAD CARDS (Multi-Rack - 2280px x 800px) */}
+          {/* LAYOUT 3: TRIPLE OR QUAD CARDS (Multi-Rack - Dynamic Fluid Layout) */}
           {count >= 3 && (
             <div style={{ 
               display: "flex", 
-              gap: count >= 4 ? "24px" : "36px", 
-              width: count >= 4 ? "2360px" : "2280px", 
-              height: count >= 4 ? "740px" : "800px" 
+              gap: count >= 4 ? "clamp(12px, 1.4vw, 24px)" : "clamp(16px, 2vw, 36px)", 
+              width: "100%", 
+              maxWidth: count >= 4 ? "2360px" : "2280px", 
+              maxHeight: "82vh", 
+              aspectRatio: count >= 4 ? "2360 / 740" : "2280 / 800", 
+              boxSizing: "border-box" 
             }}>
               {validAssets.map((asset, idx) => {
                 const trigger = triggers[idx] ?? 8;
@@ -443,6 +459,8 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
                     key={idx}
                     style={{
                       flex: 1,
+                      minWidth: 0,
+                      boxSizing: "border-box",
                       position: "relative",
                       opacity,
                       transform: `translateY(${translateY}px) scale(${scale})`,
@@ -485,7 +503,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
                       <Img 
                         src={staticFile(asset.url)} 
                         style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(40px) brightness(0.25) saturate(1.4)", transform: "scale(1.2)" }} 
-                      />
+                        />
                     </div>
 
                     {/* Hero Uncropped Product Container */}
@@ -506,12 +524,12 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
                     <div style={{ 
                       position: "relative", 
                       zIndex: 2, 
-                      padding: count >= 4 ? "18px 22px 22px" : "22px 28px 26px", 
+                      padding: count >= 4 ? "clamp(10px, 1vw, 18px) clamp(12px, 1.2vw, 22px)" : "clamp(12px, 1.2vw, 22px) clamp(16px, 1.5vw, 28px)", 
                       background: "linear-gradient(to top, rgba(4,6,10,0.98) 0%, rgba(4,6,10,0.85) 65%, transparent 100%)",
                       borderTop: "1px solid rgba(255,255,255,0.06)"
                     }}>
                       <div style={{ 
-                        fontSize: count >= 4 ? "24px" : "30px", 
+                        fontSize: count >= 4 ? "clamp(14px, 1.3vw, 24px)" : "clamp(16px, 1.6vw, 30px)", 
                         fontWeight: 900, 
                         color: "#FFFFFF", 
                         letterSpacing: "-0.4px", 
@@ -522,7 +540,7 @@ export const DynamicLiquidGrid: React.FC<DynamicLiquidGridProps> = ({
                       </div>
                       {asset.subtitle && (
                         <div style={{ 
-                          fontSize: count >= 4 ? "15px" : "17px", 
+                          fontSize: count >= 4 ? "clamp(10px, 0.8vw, 15px)" : "clamp(11px, 0.9vw, 17px)", 
                           fontWeight: 700, 
                           color: "#D4AF37", 
                           letterSpacing: "0.5px", 

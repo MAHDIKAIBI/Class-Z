@@ -321,7 +321,18 @@ export const CameraWallTransition: React.FC<CameraWallTransitionProps> = ({
             }}
           >
             <AbsoluteFill style={{ overflow: "hidden", borderRadius: `${Math.max(0, radiusA - 2)}px` }}>
-              {SceneA}
+              <div style={{
+                position: "absolute",
+                width: `${width}px`,
+                height: `${height}px`,
+                left: "50%",
+                top: "50%",
+                transform: `translate(-50%, -50%) scale(${Math.max(cardWidth / width, cardHeight / height)})`,
+                transformOrigin: "center center",
+                overflow: "hidden"
+              }}>
+                {SceneA}
+              </div>
             </AbsoluteFill>
           </div>
 
@@ -336,7 +347,18 @@ export const CameraWallTransition: React.FC<CameraWallTransitionProps> = ({
             }}
           >
             <AbsoluteFill style={{ overflow: "hidden", borderRadius: `${Math.max(0, radiusB - 2)}px` }}>
-              {SceneB}
+              <div style={{
+                position: "absolute",
+                width: `${width}px`,
+                height: `${height}px`,
+                left: "50%",
+                top: "50%",
+                transform: `translate(-50%, -50%) scale(${Math.max(cardWidth / width, cardHeight / height)})`,
+                transformOrigin: "center center",
+                overflow: "hidden"
+              }}>
+                {SceneB}
+              </div>
             </AbsoluteFill>
           </div>
 

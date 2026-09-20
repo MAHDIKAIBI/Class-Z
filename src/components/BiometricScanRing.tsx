@@ -79,7 +79,7 @@ export const BiometricScanRing: React.FC<RadialDataProps> = ({
       filter: `blur(${blurAmount}px)`,
       transform: `scale(${scale})`
     }}>
-      {/* LUXURY DOSSIER HUD CONTAINER */}
+      {/* LUXURY DOSSIER HUD CONTAINER - Dynamic Fluid Layout */}
       <div style={{
         position: "relative",
         background: "linear-gradient(145deg, rgba(10, 12, 16, 0.88) 0%, rgba(3, 4, 6, 0.95) 100%)",
@@ -88,19 +88,21 @@ export const BiometricScanRing: React.FC<RadialDataProps> = ({
         border: "1px solid rgba(212, 175, 55, 0.2)",
         boxShadow: "0 50px 120px rgba(0,0,0,0.92), inset 0 2px 20px rgba(212, 175, 55, 0.12)",
         borderRadius: "16px",
-        padding: "48px 56px 44px 56px",
+        padding: "clamp(24px, 2.5vw, 48px) clamp(28px, 3vw, 56px) clamp(22px, 2.2vw, 44px)",
+        boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        minWidth: "480px"
+        width: "90%",
+        maxWidth: "520px"
       }}>
         
         {/* Precision HUD Corner Brackets */}
-        <div style={{ position: "absolute", top: "12px", left: "12px", width: "16px", height: "16px", borderTop: "2px solid #D4AF37", borderLeft: "2px solid #D4AF37", opacity: 0.8 }} />
-        <div style={{ position: "absolute", top: "12px", right: "12px", width: "16px", height: "16px", borderTop: "2px solid #D4AF37", borderRight: "2px solid #D4AF37", opacity: 0.8 }} />
-        <div style={{ position: "absolute", bottom: "12px", left: "12px", width: "16px", height: "16px", borderBottom: "2px solid #D4AF37", borderLeft: "2px solid #D4AF37", opacity: 0.8 }} />
-        <div style={{ position: "absolute", bottom: "12px", right: "12px", width: "16px", height: "16px", borderBottom: "2px solid #D4AF37", borderRight: "2px solid #D4AF37", opacity: 0.8 }} />
+        <div style={{ position: "absolute", top: "12px", left: "12px", width: "clamp(10px, 1vw, 16px)", height: "clamp(10px, 1vw, 16px)", borderTop: "2px solid #D4AF37", borderLeft: "2px solid #D4AF37", opacity: 0.8 }} />
+        <div style={{ position: "absolute", top: "12px", right: "12px", width: "clamp(10px, 1vw, 16px)", height: "clamp(10px, 1vw, 16px)", borderTop: "2px solid #D4AF37", borderRight: "2px solid #D4AF37", opacity: 0.8 }} />
+        <div style={{ position: "absolute", bottom: "12px", left: "12px", width: "clamp(10px, 1vw, 16px)", height: "clamp(10px, 1vw, 16px)", borderBottom: "2px solid #D4AF37", borderLeft: "2px solid #D4AF37", opacity: 0.8 }} />
+        <div style={{ position: "absolute", bottom: "12px", right: "12px", width: "clamp(10px, 1vw, 16px)", height: "clamp(10px, 1vw, 16px)", borderBottom: "2px solid #D4AF37", borderRight: "2px solid #D4AF37", opacity: 0.8 }} />
 
         {/* Top Telemetry Header */}
         <div style={{ 
