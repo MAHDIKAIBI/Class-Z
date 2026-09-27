@@ -246,6 +246,7 @@ const SceneContent = ({ scene, index }: any) => {
     const { fps } = useVideoConfig();
     const isLiquidGrid = ((scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') && (scene.visual?.assets || scene.assets || []).some((a: any) => (a.local_path || a.downloaded_path) && a.layer !== 'background' && a.type !== 'video'));
     const isAnimatedNumber = scene.graphics && ['animatednumber', 'animated_number'].includes(String(scene.graphics.graphics_type || '').toLowerCase());
+    const isYouTube = scene.scene_type === 'youtube' || scene.visual?.scene_type === 'youtube' || (scene.media_paths?.[0] && String(scene.media_paths[0]).toLowerCase().includes('youtube')) || (scene.media_path && String(scene.media_path).toLowerCase().includes('youtube')) || Boolean(scene.visual?.youtube_query) || Boolean(scene.youtube_query);
 
     return (
         <AbsoluteFill>
@@ -302,9 +303,9 @@ const SceneContent = ({ scene, index }: any) => {
             )}
             <EffectsDirector variants={scene.editorialVariants} events={scene.events} />
             <Sequence from={0} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)}>
-                {scene.graphics && scene.graphics.graphics_type && scene.graphics.graphics_type !== 'none' && !(isLiquidGrid && isAnimatedNumber) ? <MotionGraphicsRouter graphics={{...scene.graphics, trigger_frame: scene.graphics.trigger_start_ms ? Math.round(((scene.graphics.trigger_start_ms - scene.timing.start_ms) / 1000) * fps) : scene.graphics.trigger_frame}} sceneIndex={index} variants={scene.editorialVariants} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)} /> : null}
+                {scene.graphics && scene.graphics.graphics_type && scene.graphics.graphics_type !== 'none' && !isYouTube && !(isLiquidGrid && isAnimatedNumber) ? <MotionGraphicsRouter graphics={{...scene.graphics, trigger_frame: scene.graphics.trigger_start_ms ? Math.round(((scene.graphics.trigger_start_ms - scene.timing.start_ms) / 1000) * fps) : scene.graphics.trigger_frame}} sceneIndex={index} variants={scene.editorialVariants} durationInFrames={Math.max(1, scene.audioDurFrames - scene.overlapFrames)} /> : null}
             </Sequence>
-            {scene.overlay_image && (
+            {scene.overlay_image && !isYouTube && (
                 <Sequence from={Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps)} durationInFrames={Math.max(1, scene.visualDurFrames - Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps))}>
                     <CinematicOverlay src={scene.overlay_image} durationInFrames={Math.max(1, scene.visualDurFrames - Math.floor((Math.max(0, (scene.overlay_start_ms || scene.timing.start_ms) - scene.timing.start_ms) / 1000) * fps))} />
                 </Sequence>
