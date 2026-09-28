@@ -19,9 +19,10 @@ on:
       channel_name:
         description: 'Channel to operate on'
         required: true
-        default: 'ClassZ'
+        default: 'Chicken Proof'
         type: choice
         options:
+          - 'Chicken Proof'
           - ClassZ
           - Midi-Fi
           - ARTIFY
