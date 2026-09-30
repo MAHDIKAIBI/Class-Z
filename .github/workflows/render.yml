@@ -667,8 +667,6 @@ jobs:
     needs: [creation_job, brain_prep_job, tts_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && inputs.action_type != 'UPLOAD_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     strategy:
       fail-fast: false
       matrix:
@@ -678,6 +676,34 @@ jobs:
 
       - name: Configure Git Safe Directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Install System Dependencies & Tools
+        run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          for _apt in 1 2 3; do sudo apt-get update && sudo apt-get install -y rclone jq ffmpeg xvfb mesa-vulkan-drivers vulkan-tools libvulkan1 && break || sleep 10; done
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          pip install --no-cache-dir yt-dlp google-genai requests pillow numpy opencv-python-headless filelock
+
+      - name: Setup Real-ESRGAN AI Super-Resolution Engine
+        run: |
+          echo "[*] Setting up Real-ESRGAN headless Linux engine..."
+          for _try in 1 2 3; do
+            wget -q --timeout=30 https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-ubuntu.zip -O /tmp/realesrgan.zip && break || sleep 5
+          done
+          sudo unzip -q -o /tmp/realesrgan.zip -d /usr/local/bin/
+          sudo chmod +x /usr/local/bin/realesrgan-ncnn-vulkan
+          mkdir -p models
+          cp -r /usr/local/bin/models/* models/ 2>/dev/null || true
+          echo "[+] Real-ESRGAN binary and models installed."
 
       - name: Setup Node.js (For yt-dlp JS Runtime)
         uses: actions/setup-node@v4
@@ -718,7 +744,7 @@ jobs:
       - name: Download Scripts & Workspace from Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --retries 5 "engine:Colab_AutoVideoCreator" . --include "youtube_worker.py" --include "yt_downloader.py" --include "smart_gemini_keyring.py" --include "requirements.txt" --include "youtube_cookies.txt" --include "po_token.txt" --include "motionarray_downloader.py" --include "distributed_lock.py" --include "utils.py" --include "motionarray_cookies.json"
+          rclone copy --tpslimit 10 --retries 5 "engine:Colab_AutoVideoCreator" . --include "ai_upscaler.py" --include "youtube_worker.py" --include "yt_downloader.py" --include "smart_gemini_keyring.py" --include "requirements.txt" --include "youtube_cookies.txt" --include "po_token.txt" --include "motionarray_downloader.py" --include "distributed_lock.py" --include "utils.py" --include "motionarray_cookies.json"
           
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
           rclone copy --tpslimit 10 --retries 5 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" --include "partial_*.json" || true
