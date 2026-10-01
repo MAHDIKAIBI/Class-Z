@@ -681,7 +681,7 @@ jobs:
         run: |
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
           sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          for _apt in 1 2 3; do sudo apt-get update && sudo apt-get install -y rclone jq ffmpeg xvfb mesa-vulkan-drivers vulkan-tools libvulkan1 && break || sleep 10; done
+          for _apt in 1 2 3; do sudo apt-get update && sudo apt-get install -y rclone jq ffmpeg xvfb && break || sleep 10; done
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -692,18 +692,6 @@ jobs:
       - name: Install Python Dependencies
         run: |
           pip install --no-cache-dir yt-dlp google-genai requests pillow numpy opencv-python-headless filelock
-
-      - name: Setup Real-ESRGAN AI Super-Resolution Engine
-        run: |
-          echo "[*] Setting up Real-ESRGAN headless Linux engine..."
-          for _try in 1 2 3; do
-            wget -q --timeout=30 https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-ubuntu.zip -O /tmp/realesrgan.zip && break || sleep 5
-          done
-          sudo unzip -q -o /tmp/realesrgan.zip -d /usr/local/bin/
-          sudo chmod +x /usr/local/bin/realesrgan-ncnn-vulkan
-          mkdir -p models
-          cp -r /usr/local/bin/models/* models/ 2>/dev/null || true
-          echo "[+] Real-ESRGAN binary and models installed."
 
       - name: Setup Node.js (For yt-dlp JS Runtime)
         uses: actions/setup-node@v4
