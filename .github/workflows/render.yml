@@ -23,7 +23,6 @@ on:
         type: choice
         options:
           - 'Chicken Proof'
-          - ClassZ
           - Midi-Fi
           - ARTIFY
       topic:
