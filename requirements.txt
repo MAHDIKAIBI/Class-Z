@@ -1,2 +1,2 @@
 # All dependencies pre-installed in ghcr.io/mahdikaibi/videocreator-runner:v1.0
-
+google-antigravity

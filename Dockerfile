@@ -101,6 +101,7 @@ RUN pip install --no-cache-dir \
     fastapi \
     rembg \
     imagehash \
+    google-antigravity \
     && python -m playwright install --with-deps chromium \
     && pip install --no-cache-dir --no-deps "setuptools<82.0.0"
 
