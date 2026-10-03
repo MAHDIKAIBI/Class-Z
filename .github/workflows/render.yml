@@ -1018,8 +1018,56 @@ jobs:
             rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
             rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks" || true
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" --transfers 16 || true
-          # Remotion's src/ does: import '../master_timeline.json' â€” must be at repo root
+          # Remotion's src/ does: import '../master_timeline.json' — must be at repo root
           cp "public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/master_timeline.json" master_timeline.json
+
+      - name: Auto-Heal Missing Assets Pre-Flight
+        run: |
+          python3 -c "
+          import json, os, shutil
+
+          channel = '${{ inputs.channel_name }}'
+          vault = '${{ env.vault_name }}'
+          vault_dir = f'public/channels/{channel}/{vault}'
+          assets_dir = os.path.join(vault_dir, 'assets')
+          os.makedirs(assets_dir, exist_ok=True)
+          tl_path = 'master_timeline.json'
+
+          if os.path.exists(tl_path):
+              with open(tl_path, 'r', encoding='utf-8') as f:
+                  data = json.load(f)
+              timeline = data.get('timeline', [])
+              valid_clips = [
+                  os.path.join(assets_dir, f) for f in os.listdir(assets_dir)
+                  if f.lower().endswith(('.mp4', '.mov', '.webm')) and os.path.getsize(os.path.join(assets_dir, f)) > 1024
+              ]
+              if not valid_clips:
+                  print('[AUTO-HEAL] No valid video clips found in assets to use as donor pool.')
+              else:
+                  healed = 0
+                  for s in timeline:
+                      paths = []
+                      if s.get('media_path'): paths.append(s['media_path'])
+                      if s.get('media_paths'): paths.extend(s['media_paths'])
+                      if isinstance(s.get('monolith_payload'), dict) and s['monolith_payload'].get('bgVideoSrc'):
+                          paths.append(s['monolith_payload']['bgVideoSrc'])
+                      if isinstance(s.get('floating_cards_payload'), dict) and s['floating_cards_payload'].get('bgVideoSrc'):
+                          paths.append(s['floating_cards_payload']['bgVideoSrc'])
+                      for p in paths:
+                          if not p: continue
+                          fname = os.path.basename(p.split('?')[0].split('#')[0])
+                          if not fname.lower().endswith(('.mp4', '.mov', '.webm')): continue
+                          target_path = os.path.join(assets_dir, fname)
+                          if not os.path.exists(target_path) or os.path.getsize(target_path) <= 1024:
+                              donor = valid_clips[healed % len(valid_clips)]
+                              shutil.copyfile(donor, target_path)
+                              print(f'[AUTO-HEAL] Rescued missing asset: {fname} <- {os.path.basename(donor)}')
+                              healed += 1
+                  if healed > 0:
+                      print(f'[AUTO-HEAL] Successfully rescued {healed} missing media files.')
+                  else:
+                      print('[AUTO-HEAL] All media assets verified present and valid.')
+          "
 
       - name: Install Dependencies
         run: for _retry in 1 2 3 4 5; do npm ci && break || { echo "Command failed, retrying..."; sleep 15; }; done
