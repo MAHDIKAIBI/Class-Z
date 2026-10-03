@@ -11,6 +11,8 @@ def safe_filename(name: str) -> str:
 
 action_type = os.environ.get("ACTION_TYPE")
 channel_name = os.environ.get("CHANNEL_NAME")
+if channel_name:
+    channel_name = channel_name.strip().strip("'\"")
 topic = os.environ.get("TOPIC")
 
 print(f"=== CLOUD ORCHESTRATOR START ===")
@@ -100,6 +102,7 @@ if skip_prep:
 
 rclone_cmd = [
     "rclone", "copy", f"engine:Colab_AutoVideoCreator", ".",
+    "--exclude", "topics.txt", "--exclude", "*.bak",
     "--exclude", "node_modules/**", "--exclude", "out/**", "--exclude", "src/**", "--exclude", "*.mp4", "--exclude", "requirements.txt",
     "--exclude", "DELETE_THIS_WHEN_SELLING_firefox_profile/**", "--exclude", "firefox_stealth_profile/**", "--exclude", "gemini_selenium_profile/**", "--exclude", "ChatTTS_Models/**",
     "--exclude", "channels/**", "--exclude", "public/channels/**", "--exclude", "error_dumps/**",
@@ -124,26 +127,43 @@ subprocess.run(["playwright", "install", "chromium"], check=True)
 
 # 3. Formulate Input Overrides for the scripts
 if not topic and action_type in ["CREATE_FRESH", "CREATE_AUTOMATIC"]:
-    print(f"[*] Topic is empty. Auto-popping from Google Drive queue...")
-    subprocess.run(["rclone", "copy", "--include", "topics.txt", f"data:Colab_AutoVideoCreator/channels/{channel_name}/", "."], check=False)
-    
+    print(f"[*] Topic is empty. Auto-popping from Google Drive queue for channel '{channel_name}'...")
     if os.path.exists("topics.txt"):
+        try:
+            os.remove("topics.txt")
+        except Exception:
+            pass
+
+    # Strictly copy the target channel's own topics.txt using copyto
+    subprocess.run([
+        "rclone", "copyto",
+        f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt",
+        "topics.txt",
+        "--retries", "3", "--contimeout", "30s"
+    ], check=False)
+    
+    if os.path.exists("topics.txt") and os.path.getsize("topics.txt") > 0:
         with open("topics.txt", "r", encoding="utf-8") as f:
             lines = [l.strip() for l in f.readlines() if l.strip()]
         if lines:
             topic = lines[0]
             with open("topics.txt", "w", encoding="utf-8") as f:
                 f.write("\n".join(lines[1:]) + "\n")
-            print(f"[+] Successfully popped topic: '{topic}'")
+            print(f"[+] Successfully popped topic for '{channel_name}': '{topic}'")
             
             # Immediately sync it back
-            subprocess.run(["rclone", "copyto", "topics.txt", f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt"], check=False)
-            print("[+] Queue file successfully updated on Google Drive.")
+            subprocess.run([
+                "rclone", "copyto",
+                "topics.txt",
+                f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt",
+                "--retries", "3", "--contimeout", "30s"
+            ], check=True)
+            print("[+] Channel queue file successfully updated on Google Drive.")
         else:
-            print("[!] topics.txt is empty!")
+            print(f"[!] Critical: topics.txt for channel '{channel_name}' is empty!")
             sys.exit(1)
     else:
-        print(f"[!] topics.txt not found at data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt!")
+        print(f"[!] Critical: topics.txt not found at data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt!")
         sys.exit(1)
         
     action_type = "CREATE_FRESH"
@@ -163,7 +183,7 @@ if topic:
 os.environ["GITHUB_ACTIONS"] = "true" # Triggers the CI check
 
 
-# [Deep Fix for RESUME Mode] Download existing workspace so state_machine_scriptwriter detects script.txt and skips Playwright!
+# [Deep Fix for RESUME Mode] Download existing workspace so claude_scraper detects script.txt and skips Playwright!
 if topic:
     safe_topic = safe_filename(topic)
     print(f"[*] Pre-fetching existing workspace for topic '{topic}' to bypass ChatGPT if resuming...")
@@ -183,8 +203,8 @@ except subprocess.CalledProcessError as e:
     print(f"Pipeline failed with code {e.returncode}")
     sys.exit(1)
 
-# 5. Read the actual vault that was processed (written by state_machine_scriptwriter.py)
-# state_machine_scriptwriter.py writes generated_vault.txt the moment it locks in its vault.
+# 5. Read the actual vault that was processed (written by claude_scraper.py)
+# claude_scraper.py writes generated_vault.txt the moment it locks in its vault.
 # This is the single source of truth - no guesswork, no filesystem scanning.
 vault_name = safe_filename(topic)  # default fallback if file doesn't exist
 manifest_path = "generated_vault.txt"
