@@ -275,10 +275,11 @@ jobs:
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
           CHANNEL="${{ inputs.channel_name }}"
-          # Only download what tts_worker.py actually needs â€” no mp4s, no bulk folders
+          # Only download what tts_worker.py actually needs — no mp4s, no bulk folders
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /__pycache__/**" --filter "- /.git/**" --filter "- /global_used_assets/**" --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" \
             --include "tts_worker.py" \
             --include "local_voice_engine.py" \
+            --include "smart_gemini_keyring.py" \
             --include "requirements.txt" \
             --include "gemini_cookies.json" \
             --transfers 8
@@ -300,6 +301,7 @@ jobs:
           CHANNEL_NAME: ${{ inputs.channel_name }}
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
           pip install -q "setuptools<82.0.0"
           FAILED=1
