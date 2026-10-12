@@ -1,0 +1,41 @@
+@Create image
+Generate a 16:9 YouTube thumbnail following the EXACT visual hierarchy and layout of the attached reference thumbnail:
+
+TOPIC / TITLE: {topic}
+
+
+==================================================
+MANDATORY 5-PILLAR VISUAL CTR BLUEPRINT:
+==================================================
+
+1. CENTERPIECE FOCAL SUBJECT (STRICT ZERO-GENERIC RULE: MUST BE A HOUSEHOLD ENTITY OR TOP BRAND):
+- NEVER render a generic, nameless, or unbranded subject. The focal point MUST be the single most famous, globally recognizable household name associated with this topic:
+  * FOR CELEBRITY, NEWS, POLITICAL, OR INVESTIGATIVE TOPICS:
+    The centerpiece must be the most famous public figure or celebrity involved, positioned prominently in the foreground with an intense, raw, visceral facial expression (extreme shock, mouth open, screaming, or visibly exposed), placed in front of the scandal scene, police raid, or dramatic industrial background.
+  * FOR CONSUMER, TECH, GEAR, AUTOMOTIVE, OR LIFESTYLE TOPICS:
+    The centerpiece must feature the most prestigious or household-name brand in that industry (e.g., the exact luxury key fob, iconic watch, branded product, or hardware). The brand name/logo must appear ONLY on the main focal object itself—NEVER flood the background with brand signs, competitor logos, or wall advertisements. If physical holdable gear (hand can hold), show a first-person POV hand holding, testing, or inspecting it up close with tactile realism in the foreground; if not (objects too large to hold like airplanes, cars, or buildings), show a natural hand gesture pointing or reacting towards it depending on the title direction, with the breakdown, workshop, or environment in the background.
+- Crisp depth-of-field separation: the hero subject/face is razor-sharp in the foreground, background is soft, clean, and undistracted (no background text, signs, competitor racks, or oversaturation).
+
+2. CURVED RED ARROW WITH WHITE BORDER:
+- A thick, bold, curved bright-red arrow with a sharp white outline/border.
+- Positioned in the upper quadrant, pointing DIRECTLY at the critical detail, flaw, logo, or subject.
+
+3. "EXCLUSIVE" RED BADGE (BOTTOM LEFT):
+- A solid bright-red rectangular badge anchored on the bottom-left with clean, bold white text: "EXCLUSIVE:".
+
+4. SOLID BOTTOM HORIZONTAL BAR:
+- A clean, solid white horizontal banner spanning the entire bottom of the thumbnail.
+
+5. BOLD SHOCKING CLAIM (INSIDE BOTTOM WHITE BAR):
+- STAGE A TABOO, BIZARRE, OR CONTROVERSIAL EXPOSURE:
+  Do NOT use generic cliché labels (STRICTLY BANNED: "TOTAL SCAM", "WASTE OF MONEY", "EXPOSED", "DON'T BUY", "DONT TOUCH", "GAME CHANGER", "NEVER BUY THIS").
+  Instead, invent a bold, hyper-specific shocking claim tailored to the specific topic that crosses the line to trigger an immediate click:
+  * Food / Grocery (e.g., Carti-Fi): Accuse the product of containing a weird/grotesque additive or not being real food (e.g., "CONTAINS INSECTS", "NOT REAL TUNA", "100% CRUDE OIL", "CHALK POWDER", "CONTAINS GLUE").
+  * Fragrance / Grooming (e.g., Scenti-Fi): Call out a cheap chemical substitute, toxic carrier, or extreme dilution (e.g., "95% TAP WATER", "ZERO REAL OUD", "TOXIC SOLVENT", "CONTAINS ACETONE", "CHEMICAL POISON").
+  * Fashion / Luxury (e.g., Luxe-Fi): Expose low-grade fake materials hiding inside high-ticket items (e.g., "100% PLASTIC", "RECYCLED CARPET", "CARDBOARD INSIDE", "FAKE LEATHER").
+  * Other Niches (Hardware / Tech / Animals): Expose dangerous flaws or deceptive components (e.g., "FIRE HAZARD", "TOXIC COATING", "FAKED BENCHMARKS", "CHEAP TOY").
+- LENGTH LIMIT: Strictly 2 TO 3 WORDS MAX.
+- TYPOGRAPHY: Giant, ultra-heavy black sans-serif all-caps typography inside the solid white bottom bar right beside the red "EXCLUSIVE:" badge. Must be massive, centered, and 100% legible on small mobile screens.
+
+Aspect ratio: 16:9
+Produce a high-budget investigative expose style.
