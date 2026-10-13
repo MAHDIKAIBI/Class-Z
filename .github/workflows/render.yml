@@ -666,11 +666,26 @@ jobs:
               --transfers 1 -v || true
             echo "[+] Uploaded $PARTIAL_VID to Drive."
           fi
+
+          if [ -f "public/channels/${{ inputs.channel_name }}/$VAULT/$PARTIAL_VID" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT/$PARTIAL_VID" \
+              "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
+              --transfers 1 -v || true
+            echo "[+] Uploaded public/.../$PARTIAL_VID to Drive."
+          fi
           
           if [ -f "$PARTIAL_OVL" ]; then
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "$PARTIAL_OVL" \
               "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
               --transfers 1 -v || true
+            echo "[+] Uploaded $PARTIAL_OVL to Drive."
+          fi
+
+          if [ -f "public/channels/${{ inputs.channel_name }}/$VAULT/$PARTIAL_OVL" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT/$PARTIAL_OVL" \
+              "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
+              --transfers 1 -v || true
+            echo "[+] Uploaded public/.../$PARTIAL_OVL to Drive."
           fi
 
   youtube_download_matrix:
@@ -743,8 +758,10 @@ jobs:
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
           rclone copy --tpslimit 10 --retries 5 "engine:Colab_AutoVideoCreator" . --include "ai_upscaler.py" --include "youtube_worker.py" --include "yt_downloader.py" --include "smart_gemini_keyring.py" --include "requirements.txt" --include "youtube_cookies.txt" --include "po_token.txt" --include "motionarray_downloader.py" --include "distributed_lock.py" --include "utils.py" --include "motionarray_cookies.json"
           
-          mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
+          mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT/assets"
           rclone copy --tpslimit 10 --retries 5 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" --include "partial_*.json" || true
+          rclone copy --tpslimit 10 --retries 5 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" "public/channels/${{ inputs.channel_name }}/$VAULT/assets" --include "*_youtube.mp4" || true
+          rclone copy --tpslimit 10 --retries 5 "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" --include "partial_*.json" || true
 
 
       - name: Run YouTube Download Worker
@@ -765,14 +782,21 @@ jobs:
         if: always()
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          PARTIAL_YT="partial_youtube_${{ matrix.worker }}.json"
           echo "Batch uploading downloaded YouTube assets..."
           rclone copy --tpslimit 10 --retries 5 "public/channels/${{ inputs.channel_name }}/$VAULT/assets" \
             "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" -v || true
             
-          if [ -f "partial_youtube_${{ matrix.worker }}.json" ]; then
-            rclone copy --tpslimit 10 --retries 5 "partial_youtube_${{ matrix.worker }}.json" \
+          if [ -f "$PARTIAL_YT" ]; then
+            rclone copy --tpslimit 10 --retries 5 "$PARTIAL_YT" \
               "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" -v || true
-            echo "[+] Uploaded partial_youtube_${{ matrix.worker }}.json to Drive."
+            echo "[+] Uploaded $PARTIAL_YT to Drive."
+          fi
+
+          if [ -f "public/channels/${{ inputs.channel_name }}/$VAULT/$PARTIAL_YT" ]; then
+            rclone copy --tpslimit 10 --retries 5 "public/channels/${{ inputs.channel_name }}/$VAULT/$PARTIAL_YT" \
+              "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" -v || true
+            echo "[+] Uploaded public/.../$PARTIAL_YT to Drive."
           fi
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
