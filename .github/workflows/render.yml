@@ -760,7 +760,6 @@ jobs:
           
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT/assets"
           rclone copy --tpslimit 10 --retries 5 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" --include "partial_*.json" || true
-          rclone copy --tpslimit 10 --retries 5 "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/assets" "public/channels/${{ inputs.channel_name }}/$VAULT/assets" --include "*_youtube.mp4" || true
           rclone copy --tpslimit 10 --retries 5 "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" --include "partial_*.json" || true
 
 
