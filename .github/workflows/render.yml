@@ -187,13 +187,12 @@ jobs:
             curl -fsSL https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.31/CLIProxyAPI_8.0.31_linux_amd64.tar.gz | tar -xz
             chmod +x cli-proxy-api
             BIN="./cli-proxy-api"
-            cat << 'EOF' > cliproxy_config.yaml
-            port: 8317
-            debug: false
-            request-retry: 5
-            antigravity:
-              enabled: true
-            EOF
+            printf "port: 8317
+debug: false
+request-retry: 5
+antigravity:
+  enabled: true
+" > cliproxy_config.yaml
             CFG="cliproxy_config.yaml"
           fi
           mkdir -p ~/.cli-proxy-api
@@ -205,6 +204,7 @@ jobs:
           nohup $BIN -config $CFG > /tmp/cliproxy.log 2>&1 &
           sleep 3
           curl -s http://127.0.0.1:8317/v1/models > /dev/null && echo "[+] Antigravity Gateway is LIVE on port 8317!" || cat /tmp/cliproxy.log
+
 
       - name: Run Python Orchestrator
         id: orchestrator
@@ -435,13 +435,12 @@ jobs:
             curl -fsSL https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.31/CLIProxyAPI_8.0.31_linux_amd64.tar.gz | tar -xz
             chmod +x cli-proxy-api
             BIN="./cli-proxy-api"
-            cat << 'EOF' > cliproxy_config.yaml
-            port: 8317
-            debug: false
-            request-retry: 5
-            antigravity:
-              enabled: true
-            EOF
+            printf "port: 8317
+debug: false
+request-retry: 5
+antigravity:
+  enabled: true
+" > cliproxy_config.yaml
             CFG="cliproxy_config.yaml"
           fi
           mkdir -p ~/.cli-proxy-api
@@ -453,6 +452,7 @@ jobs:
           nohup $BIN -config $CFG > /tmp/cliproxy.log 2>&1 &
           sleep 3
           curl -s http://127.0.0.1:8317/v1/models > /dev/null && echo "[+] Antigravity Gateway is LIVE on port 8317!" || cat /tmp/cliproxy.log
+
 
       - name: Run The_Brain PREP phase (audio + timeline, no clip downloads)
         env:
