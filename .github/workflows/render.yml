@@ -175,6 +175,65 @@ jobs:
           fi
 
 
+      - name: Start CLIProxyAPI Antigravity Gateway
+        env:
+          CLIPROXY_AUTH_TOKENS: ${{ secrets.CLIPROXY_AUTH_TOKENS }}
+        run: |
+          echo "[*] Setting up CLIProxyAPI Antigravity Gateway..."
+          BIN=""
+          CFG=""
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching antigravity_gateway from engine drive..."
+            rclone copy --tpslimit 10 --retries 3 --contimeout 30s "engine:Colab_AutoVideoCreator/antigravity_gateway" antigravity_gateway || true
+          fi
+
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching CLIProxyAPI from GitHub releases fallback..."
+            curl -fsSL https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.31/CLIProxyAPI_8.0.31_linux_amd64.tar.gz | tar -xz || true
+            if [ -f "cli-proxy-api" ]; then
+              chmod +x cli-proxy-api
+              BIN="./cli-proxy-api"
+              echo "port: 8317" > cliproxy_config.yaml
+              echo "debug: false" >> cliproxy_config.yaml
+              echo "request-retry: 5" >> cliproxy_config.yaml
+              echo "antigravity:" >> cliproxy_config.yaml
+              echo "  enabled: true" >> cliproxy_config.yaml
+              CFG="cliproxy_config.yaml"
+            fi
+          else
+            chmod +x antigravity_gateway/cli-proxy-api
+            BIN="antigravity_gateway/cli-proxy-api"
+            CFG="antigravity_gateway/config.yaml"
+          fi
+
+          mkdir -p ~/.cli-proxy-api
+          if [ -d "antigravity_gateway/accounts" ]; then
+            cp -f antigravity_gateway/accounts/*.json ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+          if [ -n "$CLIPROXY_AUTH_TOKENS" ]; then
+            echo "$CLIPROXY_AUTH_TOKENS" | base64 -d | tar -xz -C ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+
+          if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+            echo "[+] Antigravity Gateway is already running on port 8317!"
+          elif [ -n "$BIN" ] && [ -x "$BIN" ]; then
+            echo "[*] Starting CLIProxyAPI Antigravity Gateway daemon on port 8317..."
+            nohup $BIN -config $CFG > /tmp/cliproxy.log 2>&1 &
+            for i in $(seq 1 10); do
+              if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+                echo "[+] Antigravity Gateway is LIVE on port 8317!"
+                break
+              fi
+              sleep 1
+            done
+            if ! curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+              echo "[!] Warning: Antigravity Gateway did not respond within 10s. Log output:"
+              cat /tmp/cliproxy.log 2>/dev/null || true
+            fi
+          else
+            echo "[!] Warning: CLIProxyAPI binary not found or not executable. Bypassing."
+          fi
+
       - name: Run Python Orchestrator
         id: orchestrator
         env:
@@ -391,6 +450,65 @@ jobs:
 
 
 
+
+      - name: Start CLIProxyAPI Antigravity Gateway
+        env:
+          CLIPROXY_AUTH_TOKENS: ${{ secrets.CLIPROXY_AUTH_TOKENS }}
+        run: |
+          echo "[*] Setting up CLIProxyAPI Antigravity Gateway..."
+          BIN=""
+          CFG=""
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching antigravity_gateway from engine drive..."
+            rclone copy --tpslimit 10 --retries 3 --contimeout 30s "engine:Colab_AutoVideoCreator/antigravity_gateway" antigravity_gateway || true
+          fi
+
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching CLIProxyAPI from GitHub releases fallback..."
+            curl -fsSL https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.31/CLIProxyAPI_8.0.31_linux_amd64.tar.gz | tar -xz || true
+            if [ -f "cli-proxy-api" ]; then
+              chmod +x cli-proxy-api
+              BIN="./cli-proxy-api"
+              echo "port: 8317" > cliproxy_config.yaml
+              echo "debug: false" >> cliproxy_config.yaml
+              echo "request-retry: 5" >> cliproxy_config.yaml
+              echo "antigravity:" >> cliproxy_config.yaml
+              echo "  enabled: true" >> cliproxy_config.yaml
+              CFG="cliproxy_config.yaml"
+            fi
+          else
+            chmod +x antigravity_gateway/cli-proxy-api
+            BIN="antigravity_gateway/cli-proxy-api"
+            CFG="antigravity_gateway/config.yaml"
+          fi
+
+          mkdir -p ~/.cli-proxy-api
+          if [ -d "antigravity_gateway/accounts" ]; then
+            cp -f antigravity_gateway/accounts/*.json ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+          if [ -n "$CLIPROXY_AUTH_TOKENS" ]; then
+            echo "$CLIPROXY_AUTH_TOKENS" | base64 -d | tar -xz -C ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+
+          if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+            echo "[+] Antigravity Gateway is already running on port 8317!"
+          elif [ -n "$BIN" ] && [ -x "$BIN" ]; then
+            echo "[*] Starting CLIProxyAPI Antigravity Gateway daemon on port 8317..."
+            nohup $BIN -config $CFG > /tmp/cliproxy.log 2>&1 &
+            for i in $(seq 1 10); do
+              if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+                echo "[+] Antigravity Gateway is LIVE on port 8317!"
+                break
+              fi
+              sleep 1
+            done
+            if ! curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+              echo "[!] Warning: Antigravity Gateway did not respond within 10s. Log output:"
+              cat /tmp/cliproxy.log 2>/dev/null || true
+            fi
+          else
+            echo "[!] Warning: CLIProxyAPI binary not found or not executable. Bypassing."
+          fi
 
       - name: Run The_Brain PREP phase (audio + timeline, no clip downloads)
         env:
@@ -892,6 +1010,65 @@ jobs:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
         run: python -u merge_timelines.py
+
+      - name: Start CLIProxyAPI Antigravity Gateway
+        env:
+          CLIPROXY_AUTH_TOKENS: ${{ secrets.CLIPROXY_AUTH_TOKENS }}
+        run: |
+          echo "[*] Setting up CLIProxyAPI Antigravity Gateway..."
+          BIN=""
+          CFG=""
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching antigravity_gateway from engine drive..."
+            rclone copy --tpslimit 10 --retries 3 --contimeout 30s "engine:Colab_AutoVideoCreator/antigravity_gateway" antigravity_gateway || true
+          fi
+
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching CLIProxyAPI from GitHub releases fallback..."
+            curl -fsSL https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.31/CLIProxyAPI_8.0.31_linux_amd64.tar.gz | tar -xz || true
+            if [ -f "cli-proxy-api" ]; then
+              chmod +x cli-proxy-api
+              BIN="./cli-proxy-api"
+              echo "port: 8317" > cliproxy_config.yaml
+              echo "debug: false" >> cliproxy_config.yaml
+              echo "request-retry: 5" >> cliproxy_config.yaml
+              echo "antigravity:" >> cliproxy_config.yaml
+              echo "  enabled: true" >> cliproxy_config.yaml
+              CFG="cliproxy_config.yaml"
+            fi
+          else
+            chmod +x antigravity_gateway/cli-proxy-api
+            BIN="antigravity_gateway/cli-proxy-api"
+            CFG="antigravity_gateway/config.yaml"
+          fi
+
+          mkdir -p ~/.cli-proxy-api
+          if [ -d "antigravity_gateway/accounts" ]; then
+            cp -f antigravity_gateway/accounts/*.json ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+          if [ -n "$CLIPROXY_AUTH_TOKENS" ]; then
+            echo "$CLIPROXY_AUTH_TOKENS" | base64 -d | tar -xz -C ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+
+          if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+            echo "[+] Antigravity Gateway is already running on port 8317!"
+          elif [ -n "$BIN" ] && [ -x "$BIN" ]; then
+            echo "[*] Starting CLIProxyAPI Antigravity Gateway daemon on port 8317..."
+            nohup $BIN -config $CFG > /tmp/cliproxy.log 2>&1 &
+            for i in $(seq 1 10); do
+              if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+                echo "[+] Antigravity Gateway is LIVE on port 8317!"
+                break
+              fi
+              sleep 1
+            done
+            if ! curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+              echo "[!] Warning: Antigravity Gateway did not respond within 10s. Log output:"
+              cat /tmp/cliproxy.log 2>/dev/null || true
+            fi
+          else
+            echo "[!] Warning: CLIProxyAPI binary not found or not executable. Bypassing."
+          fi
 
       - name: Run The_Brain FINISH phase (overlay + audio master + git push)
         env:
