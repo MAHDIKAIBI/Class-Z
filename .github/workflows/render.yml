@@ -24,7 +24,7 @@ on:
         options:
           - 'Chicken Proof'
           - Midi-Fi
-          - ARTIFY
+          - Cycle-Fi
       topic:
         description: 'Topic Name'
         required: false
