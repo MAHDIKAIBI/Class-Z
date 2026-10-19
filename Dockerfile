@@ -45,13 +45,14 @@ RUN pip install --no-cache-dir -U pip "setuptools<82.0.0" wheel
 
 # 4. PyTorch CPU (~800MB instead of 5GB CUDA)
 RUN pip install --no-cache-dir \
-    torch==2.3.1+cpu \
-    torchvision==0.18.1+cpu \
-    torchaudio==2.3.1+cpu \
+    torch==2.8.0+cpu \
+    torchvision==0.23.0+cpu \
+    torchaudio==2.8.0+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
 # 5. Audio, Speech & Alignment Libraries
 RUN pip install --no-cache-dir \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
     "numpy<2.0.0" \
     scipy \
     soundfile \
@@ -68,6 +69,7 @@ RUN pip install --no-cache-dir \
 
 # 6. Automation, Chromium, Scraping, Vision & LLMs
 RUN pip install --no-cache-dir \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
     "numpy<2.0.0" \
     playwright \
     playwright-stealth==2.0.3 \
