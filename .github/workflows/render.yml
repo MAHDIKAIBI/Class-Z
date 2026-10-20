@@ -22,8 +22,9 @@ on:
         default: 'Chicken Proof'
         type: choice
         options:
-          - 'Torque-Fi'
-          
+          - 'Chicken Proof'
+          - Midi-Fi
+          - Cycle-Fi
       topic:
         description: 'Topic Name'
         required: false
