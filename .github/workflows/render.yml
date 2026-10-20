@@ -918,6 +918,12 @@ jobs:
             echo "[+] Uploaded public/.../$PARTIAL_YT to Drive."
           fi
 
+          if [ -d "channels/${{ inputs.channel_name }}/to upload/$VAULT" ]; then
+            rclone copy --tpslimit 10 --retries 5 "channels/${{ inputs.channel_name }}/to upload/$VAULT" \
+              "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload/$VAULT" -v || true
+            echo "[+] Uploaded channels/.../$VAULT to Drive."
+          fi
+
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # PHASE 2d: brain_finish_job â€” Merge partials, overlay, audio master, git push
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
