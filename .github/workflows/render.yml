@@ -1525,12 +1525,18 @@ jobs:
       - name: Upload Video to YouTube API
         env:
           AUTO_TARGET_FOLDER: "BULK"
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
           echo "Syncing all pending upload folders from Google Drive..."
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload" "channels/${{ inputs.channel_name }}/to upload" -v
           
+          echo "Syncing channel shorts registry..."
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/shorts_registry.json" "channels/${{ inputs.channel_name }}/" 2>/dev/null || true
+
           echo "Downloading private uploader script and tokens from Google Drive..."
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/youtube_uploader.py" "." -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/shorts_pipeline.py" "." -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/smart_gemini_keyring.py" "." -v
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/distribution_engine.py" "." -v
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/pinterest_bot.py" "." -v
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/client_secrets.json" "." -v
@@ -1546,6 +1552,11 @@ jobs:
           
           echo "Running YouTube Uploader..."
           python youtube_uploader.py
+
+          if [ -f "channels/${{ inputs.channel_name }}/shorts_registry.json" ]; then
+            echo "Persisting updated shorts registry to Google Drive..."
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/shorts_registry.json" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/" -v || true
+          fi
 
   upload_only:
     if: inputs.action_type == 'UPLOAD_ONLY'
@@ -1602,12 +1613,18 @@ jobs:
         env:
           AUTO_TARGET_FOLDER: ${{ inputs.topic != '' && format('channels/{0}/to upload/{1}', inputs.channel_name, inputs.topic) || 'BULK' }}
           CURRENT_CHANNEL: ${{ inputs.channel_name }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
           echo "Syncing all pending upload folders from Google Drive..."
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/to upload" "channels/${{ inputs.channel_name }}/to upload" -v
           
+          echo "Syncing channel shorts registry..."
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/shorts_registry.json" "channels/${{ inputs.channel_name }}/" 2>/dev/null || true
+
           echo "Downloading private uploader script and tokens from Google Drive..."
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/youtube_uploader.py" "." -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/shorts_pipeline.py" "." -v
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/smart_gemini_keyring.py" "." -v
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/distribution_engine.py" "." -v
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/pinterest_bot.py" "." -v
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator/client_secrets.json" "." -v
@@ -1623,6 +1640,11 @@ jobs:
           
           echo "Running YouTube Uploader..."
           python youtube_uploader.py
+
+          if [ -f "channels/${{ inputs.channel_name }}/shorts_registry.json" ]; then
+            echo "Persisting updated shorts registry to Google Drive..."
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/shorts_registry.json" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/" -v || true
+          fi
 
 
 
