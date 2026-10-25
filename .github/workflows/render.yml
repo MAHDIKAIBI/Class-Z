@@ -649,11 +649,20 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
+      options: -v /:/host
     strategy:
       fail-fast: false
       matrix:
         worker: [0, 1, 2, 3, 4, 5]
     steps:
+      - name: Free Runner Disk Space (Host Mount)
+        run: |
+          if [ -d "/host/usr/share/dotnet" ]; then
+            echo "=== Freeing Host SSD via /host mount ==="
+            rm -rf /host/usr/share/dotnet /host/usr/local/lib/android /host/opt/ghc /host/usr/local/share/boost 2>/dev/null || true
+          fi
+          df -h /
+
       - uses: actions/checkout@v4
 
       - name: Configure Git Safe Directory
@@ -817,6 +826,21 @@ jobs:
       matrix:
         worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     steps:
+      - name: Free Runner Disk Space & Expand RAM (Swap)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Creating 16GB NVMe Swapfile ==="
+          sudo fallocate -l 16G /swapfile_extra 2>/dev/null || sudo dd if=/dev/zero of=/swapfile_extra bs=1M count=16384
+          sudo chmod 600 /swapfile_extra
+          sudo mkswap /swapfile_extra
+          sudo swapon /swapfile_extra
+          echo "=== Storage & Memory Status ==="
+          df -h /
+          free -h
+
       - uses: actions/checkout@v4
 
       - name: Configure Git Safe Directory
@@ -1140,14 +1164,20 @@ jobs:
       matrix:
         chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
     steps:
-      - name: Free Runner Disk Space
+      - name: Free Runner Disk Space & Expand RAM (Swap)
         run: |
-          echo "=== Disk space before cleanup ==="
+          echo "=== Freeing Host SSD Bloat ==="
           df -h /
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
           sudo docker system prune -af 2>/dev/null || true
-          echo "=== Disk space after cleanup ==="
+          echo "=== Creating 16GB NVMe Swapfile ==="
+          sudo fallocate -l 16G /swapfile_extra 2>/dev/null || sudo dd if=/dev/zero of=/swapfile_extra bs=1M count=16384
+          sudo chmod 600 /swapfile_extra
+          sudo mkswap /swapfile_extra
+          sudo swapon /swapfile_extra
+          echo "=== Storage & Memory Status ==="
           df -h /
+          free -h
 
       - uses: actions/checkout@v4
 
@@ -1325,6 +1355,8 @@ jobs:
           echo "end=$END_FRAME" >> $GITHUB_OUTPUT
 
       - name: Render Video Chunk
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
         run: |
           if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks/chunk_${{ matrix.chunk }}.mp4" 2>/dev/null | grep -q "chunk_${{ matrix.chunk }}.mp4"; then
             echo "[+] Chunk ${{ matrix.chunk }} already exists on Drive, skipping render!"
@@ -1342,14 +1374,20 @@ jobs:
     if: always() && !cancelled() && !failure() && inputs.action_type != 'UPLOAD_ONLY'
     runs-on: ubuntu-latest
     steps:
-      - name: Free Runner Disk Space
+      - name: Free Runner Disk Space & Expand RAM (Swap)
         run: |
-          echo "=== Disk space before cleanup ==="
+          echo "=== Freeing Host SSD Bloat ==="
           df -h /
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
           sudo docker system prune -af 2>/dev/null || true
-          echo "=== Disk space after cleanup ==="
+          echo "=== Creating 16GB NVMe Swapfile ==="
+          sudo fallocate -l 16G /swapfile_extra 2>/dev/null || sudo dd if=/dev/zero of=/swapfile_extra bs=1M count=16384
+          sudo chmod 600 /swapfile_extra
+          sudo mkswap /swapfile_extra
+          sudo swapon /swapfile_extra
+          echo "=== Storage & Memory Status ==="
           df -h /
+          free -h
 
       - uses: actions/checkout@v4
 
