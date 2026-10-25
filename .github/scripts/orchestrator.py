@@ -123,6 +123,12 @@ else:
     # Fallback to essential packages
     subprocess.run(["pip", "install", "playwright", "requests", "openai", "moviepy", "pydub", "pyperclip"], check=True)
 
+try:
+    import google.antigravity
+except ImportError:
+    print("[*] Installing google-antigravity for Phase 1 research...")
+    subprocess.run(["pip", "install", "-q", "google-antigravity"], check=False)
+
 subprocess.run(["playwright", "install", "chromium"], check=True)
 
 # 3. Formulate Input Overrides for the scripts
@@ -142,29 +148,37 @@ if not topic and action_type in ["CREATE_FRESH", "CREATE_AUTOMATIC"]:
         "--retries", "3", "--contimeout", "30s"
     ], check=False)
     
+    lines = []
     if os.path.exists("topics.txt") and os.path.getsize("topics.txt") > 0:
         with open("topics.txt", "r", encoding="utf-8") as f:
             lines = [l.strip() for l in f.readlines() if l.strip()]
-        if lines:
-            topic = lines[0]
-            with open("topics.txt", "w", encoding="utf-8") as f:
-                f.write("\n".join(lines[1:]) + "\n")
-            print(f"[+] Successfully popped topic for '{channel_name}': '{topic}'")
-            
-            # Immediately sync it back
-            subprocess.run([
-                "rclone", "copyto",
-                "topics.txt",
-                f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt",
-                "--retries", "3", "--contimeout", "30s"
-            ], check=True)
-            print("[+] Channel queue file successfully updated on Google Drive.")
-        else:
-            print(f"[!] Critical: topics.txt for channel '{channel_name}' is empty!")
-            sys.exit(1)
+
+    if lines:
+        topic = lines[0]
+        remaining = lines[1:]
+        with open("topics.txt", "w", encoding="utf-8") as f:
+            f.write("\n".join(remaining) + ("\n" if remaining else ""))
+        print(f"[+] Successfully popped topic for '{channel_name}': '{topic}' ({len(remaining)} remaining in queue)")
+        
+        # Immediately sync it back
+        subprocess.run([
+            "rclone", "copyto",
+            "topics.txt",
+            f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt",
+            "--retries", "3", "--contimeout", "30s"
+        ], check=True)
+        print("[+] Channel queue file successfully updated on Google Drive.")
     else:
-        print(f"[!] Critical: topics.txt not found at data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt!")
-        sys.exit(1)
+        print(f"[*] topics.txt for channel '{channel_name}' is empty or missing! Launching Antigravity Immortal Queue Engine (gemini-3.8-flash-high @ temp 1.15)...")
+        try:
+            from apex_radar_core import auto_refill_and_pop_topic
+            topic = auto_refill_and_pop_topic(channel_name=channel_name, local_topics_path="topics.txt")
+            print(f"[+] Immortal Queue Engine generated & popped winning topic for '{channel_name}': '{topic}'")
+        except Exception as e:
+            print(f"[!] Immortal Queue Engine error: {e}")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)
         
     action_type = "CREATE_FRESH"
 
