@@ -4,7 +4,8 @@ import {
   useCurrentFrame, 
   useVideoConfig,
   OffthreadVideo, 
-  Loop
+  Loop,
+  Freeze
 } from "remotion";
 import { SafeImage as Img } from './SafeImage';
 
@@ -106,17 +107,18 @@ const StudioVideoItem: React.FC<{
   if (isVideo) {
     return (
       <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden", backgroundColor: "#000" }}>
-        <Loop durationInFrames={Math.min(90, durationInFrames * 2)}>
+        <Freeze frame={0}>
           <OffthreadVideo
             src={src}
             muted
+            onError={(err) => console.warn('[StudioVideoItem] Video decode bypassed:', err)}
             style={{
               width: "100%",
               height: "100%",
               objectFit: "cover",
             }}
           />
-        </Loop>
+        </Freeze>
         {label && (
           <div style={{ position: "absolute", top: 16, left: 16, zIndex: 10 }}>
             <span style={{ fontSize: `${badgeFont}px`, background: "rgba(0,0,0,0.70)", color: "#fff", padding: "6px 12px", borderRadius: "6px", fontFamily: "monospace", fontWeight: 700 }}>

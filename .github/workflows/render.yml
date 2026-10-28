@@ -1361,7 +1361,21 @@ jobs:
           if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}/chunks/chunk_${{ matrix.chunk }}.mp4" 2>/dev/null | grep -q "chunk_${{ matrix.chunk }}.mp4"; then
             echo "[+] Chunk ${{ matrix.chunk }} already exists on Drive, skipping render!"
           else
-            npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --muted --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --concurrency=1 --timeout=300000 --crf=14 --pixel-format=yuv444p --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"
+            for _render_try in 1 2 3; do
+              echo "[*] Starting render attempt $_render_try/3 for chunk ${{ matrix.chunk }}..."
+              if npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --muted --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --concurrency=1 --timeout=300000 --crf=14 --pixel-format=yuv444p --env CHANNEL_NAME=${{ inputs.channel_name }} --env VAULT_NAME="${{ env.vault_name }}"; then
+                echo "[+] Render attempt $_render_try succeeded!"
+                break
+              else
+                echo "[!] Render attempt $_render_try failed! Purging temp cache and retrying in 10s..."
+                rm -rf chunk_${{ matrix.chunk }}.mp4 /tmp/remotion* ~/.cache/remotion* 2>/dev/null || true
+                if [ $_render_try -eq 3 ]; then
+                  echo "[!] All 3 render attempts failed for chunk ${{ matrix.chunk }}."
+                  exit 1
+                fi
+                sleep 10
+              fi
+            done
           fi
       - name: Upload Chunk to G Drive
         run: |

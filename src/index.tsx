@@ -441,8 +441,8 @@ const AutomatedDocumentary = () => {
                                       SceneB={<TransitionSceneB scene={mappedScenes[index + 1]} index={index + 1} offsetFrames={30} />} 
                                       durationInFrames={60}
                                       galleryVideos={[
-                                          ...mappedScenes.slice(0, index).map((s: any) => s.visual_asset || s.media_path).filter(Boolean).reverse(),
-                                          ...mappedScenes.slice(index + 2).map((s: any) => s.visual_asset || s.media_path).filter(Boolean)
+                                          ...mappedScenes.slice(0, index).map((s: any) => staticFile(s.visual_asset || s.media_path)).filter(Boolean).reverse(),
+                                          ...mappedScenes.slice(index + 2).map((s: any) => staticFile(s.visual_asset || s.media_path)).filter(Boolean)
                                       ]}
                                   />
                               )}
