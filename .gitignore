@@ -5,3 +5,5 @@ node_modules/
 *.pyc
 __pycache__/
 !.github/scripts/orchestrator.py
+!apex_radar_core/**
+!apex_radar_core/**/*.py
