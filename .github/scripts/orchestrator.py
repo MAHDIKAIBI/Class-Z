@@ -20,11 +20,15 @@ channel_name = os.environ.get("CHANNEL_NAME")
 if channel_name:
     channel_name = channel_name.strip().strip("'\"")
 topic = os.environ.get("TOPIC")
+is_ci = os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("DEBUG_ORCHESTRATOR", "false").lower() != "true"
 
 print(f"=== CLOUD ORCHESTRATOR START ===")
 print(f"Action: {action_type}")
 print(f"Channel: {channel_name}")
-print(f"Topic: {topic}")
+if is_ci:
+    print("Topic: [PROTECTED RUNNER EXECUTION]")
+else:
+    print(f"Topic: {topic}")
 
 # 1. Download Core Scripts
 print("Downloading core scripts from Google Drive...")
@@ -112,7 +116,7 @@ rclone_cmd = [
     "--exclude", "node_modules/**", "--exclude", "out/**", "--exclude", "src/**", "--exclude", "*.mp4", "--exclude", "requirements.txt",
     "--exclude", "DELETE_THIS_WHEN_SELLING_firefox_profile/**", "--exclude", "firefox_stealth_profile/**", "--exclude", "gemini_selenium_profile/**", "--exclude", "ChatTTS_Models/**",
     "--exclude", "channels/**", "--exclude", "public/channels/**", "--exclude", "error_dumps/**",
-    "--transfers", "16", "--checkers", "16", "--tpslimit", "10", "--tpslimit-burst", "10", "--contimeout", "60s", "--retries", "5", "--stats", "10s", "-v"
+    "--transfers", "16", "--checkers", "16", "--tpslimit", "10", "--tpslimit-burst", "10", "--contimeout", "60s", "--retries", "5"
 ]
 
 if skip_profile:
@@ -164,7 +168,10 @@ if not topic and action_type in ["CREATE_FRESH", "CREATE_AUTOMATIC"]:
         remaining = lines[1:]
         with open("topics.txt", "w", encoding="utf-8") as f:
             f.write("\n".join(remaining) + ("\n" if remaining else ""))
-        print(f"[+] Successfully popped topic for '{channel_name}': '{topic}' ({len(remaining)} remaining in queue)")
+        if is_ci:
+            print(f"[+] Successfully popped topic from queue for '{channel_name}' ({len(remaining)} remaining in queue)")
+        else:
+            print(f"[+] Successfully popped topic for '{channel_name}': '{topic}' ({len(remaining)} remaining in queue)")
         
         # Immediately sync it back
         subprocess.run([
@@ -179,7 +186,10 @@ if not topic and action_type in ["CREATE_FRESH", "CREATE_AUTOMATIC"]:
         try:
             from apex_radar_core import auto_refill_and_pop_topic
             topic = auto_refill_and_pop_topic(channel_name=channel_name, local_topics_path="topics.txt")
-            print(f"[+] Immortal Queue Engine generated & popped winning topic for '{channel_name}': '{topic}'")
+            if is_ci:
+                print(f"[+] Immortal Queue Engine generated & popped winning topic for '{channel_name}'.")
+            else:
+                print(f"[+] Immortal Queue Engine generated & popped winning topic for '{channel_name}': '{topic}'")
         except Exception as e:
             print(f"[!] Immortal Queue Engine error: {e}")
             import traceback
@@ -206,7 +216,10 @@ os.environ["GITHUB_ACTIONS"] = "true" # Triggers the CI check
 # [Deep Fix for RESUME Mode] Download existing workspace so claude_scraper detects script.txt and skips Playwright!
 if topic:
     safe_topic = safe_filename(topic)
-    print(f"[*] Pre-fetching existing workspace for topic '{topic}' to bypass ChatGPT if resuming...")
+    if is_ci:
+        print(f"[*] Pre-fetching existing workspace for '{channel_name}' to bypass ChatGPT if resuming...")
+    else:
+        print(f"[*] Pre-fetching existing workspace for topic '{topic}' to bypass ChatGPT if resuming...")
     # Pre-create the directory on Drive AND locally so rclone doesn't error on fresh creations
     local_ws = f"public/channels/{channel_name}/{safe_topic}"
     os.makedirs(local_ws, exist_ok=True)

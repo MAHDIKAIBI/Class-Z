@@ -32,6 +32,10 @@ ENGINE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ENGINE_DIR not in sys.path:
     sys.path.insert(0, ENGINE_DIR)
 
+def is_public_ci() -> bool:
+    """Returns True if running in a public GitHub Actions runner where logs must be protected."""
+    return os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("DEBUG_IMMORTAL_LOGS", "false").lower() != "true"
+
 
 # ==============================================================================
 # 1. CHANNEL MAPPINGS & OAUTH REFRESH ENGINE
@@ -215,7 +219,10 @@ def fetch_live_channel_audit(channel_name, channel_dir):
                         channel_stats["video_count"] = int(ch_item.get("statistics", {}).get("videoCount", 0))
                         uploads_pid = ch_item.get("contentDetails", {}).get("relatedPlaylists", {}).get("uploads")
 
-                        print(f"  [+] [YouTube API] Connected to '{channel_stats['title']}' ({channel_stats['subs']:,} subs, {channel_stats['video_count']} videos)", flush=True)
+                        if is_public_ci():
+                            print(f"  [+] [YouTube API] Connected to '{channel_name}' successfully.", flush=True)
+                        else:
+                            print(f"  [+] [YouTube API] Connected to '{channel_stats['title']}' ({channel_stats['subs']:,} subs, {channel_stats['video_count']} videos)", flush=True)
 
                         # Fetch uploaded playlist items
                         video_ids = []
@@ -287,7 +294,10 @@ def fetch_live_channel_audit(channel_name, channel_dir):
                                         videos_by_title[v_title.lower()] = v_obj
                                         live_videos.append(v_obj)
 
-                        print(f"  [+] [YouTube API] Filtered: {len(live_videos)} eligible videos ({ignored_private_count} private unscheduled ignored).", flush=True)
+                        if is_public_ci():
+                            print(f"  [+] [YouTube API] Synced channel videos for audit.", flush=True)
+                        else:
+                            print(f"  [+] [YouTube API] Filtered: {len(live_videos)} eligible videos ({ignored_private_count} private unscheduled ignored).", flush=True)
                         if live_videos:
                             an_out = os.path.join(channel_dir, "channel_analytics.json")
                             with open(an_out, "w", encoding="utf-8") as f:
@@ -339,9 +349,12 @@ def fetch_live_channel_audit(channel_name, channel_dir):
     top_winners = sorted(long_form_videos, key=lambda x: x.get("views", 0), reverse=True)[:15]
     recent_uploads = sorted(long_form_videos, key=lambda x: x.get("publishedAt", ""), reverse=True)[:10]
 
-    print(f"  [+] [Audit Summary] Eligible Titles Blacklisted: {len(all_past_titles)} | Top Winners Identified: {len(top_winners)}", flush=True)
-    if top_winners:
-        print(f"      #1 Winner: \"{top_winners[0]['title']}\" ({top_winners[0]['views']:,} views)", flush=True)
+    if is_public_ci():
+        print(f"  [+] [Audit Summary] History analyzed ({len(all_past_titles)} titles indexed).", flush=True)
+    else:
+        print(f"  [+] [Audit Summary] Eligible Titles Blacklisted: {len(all_past_titles)} | Top Winners Identified: {len(top_winners)}", flush=True)
+        if top_winners:
+            print(f"      #1 Winner: \"{top_winners[0]['title']}\" ({top_winners[0]['views']:,} views)", flush=True)
 
     return {
         "channel_stats": channel_stats,
@@ -940,9 +953,12 @@ def generate_winning_titles(channel_name, channel_dir=None, target_count=10):
         channel_name, recent_run_history, lookback=5
     )
 
-    print(f"  [🛡️ QUARANTINE ENGINE] Past 5 runs analyzed for '{channel_name}':", flush=True)
-    print(f"      Quarantined Brands (4-5 run cooldown): {quarantined_brands}", flush=True)
-    print(f"      Available Expanded Brands ({len(available_brands)} total): {available_brands[:8]}...", flush=True)
+    if is_public_ci():
+        print(f"  [🛡️ QUARANTINE ENGINE] Past 5 runs analyzed for '{channel_name}' ({len(quarantined_brands)} brands on cooldown).", flush=True)
+    else:
+        print(f"  [🛡️ QUARANTINE ENGINE] Past 5 runs analyzed for '{channel_name}':", flush=True)
+        print(f"      Quarantined Brands (4-5 run cooldown): {quarantined_brands}", flush=True)
+        print(f"      Available Expanded Brands ({len(available_brands)} total): {available_brands[:8]}...", flush=True)
 
     queue_path = os.path.join(channel_dir, "topics.txt")
     if os.path.exists(queue_path):
@@ -1085,7 +1101,10 @@ Synthesize {candidate_count} fresh, razor-sharp video titles:
             try:
                 parsed = json.loads(m.group(0))
                 if "channel_audit_summary" in parsed:
-                    print(f"  [+] [Gemini 3.8 Flash High Analysis] {parsed['channel_audit_summary']}", flush=True)
+                    if not is_public_ci():
+                        print(f"  [+] [Gemini 3.8 Flash High Analysis] {parsed['channel_audit_summary']}", flush=True)
+                    else:
+                        print(f"  [+] [Gemini 3.8 Flash High Analysis] High-contrast hook blueprints generated.", flush=True)
                 raw_list = parsed.get("titles", [])
                 if isinstance(raw_list, list):
                     for item in raw_list:
@@ -1112,7 +1131,8 @@ Synthesize {candidate_count} fresh, razor-sharp video titles:
         # Strict quarantine check: reject if contains any quarantined brand
         cand_low = cand_clean.lower()
         if any(re.search(r'\b' + re.escape(qb.lower()) + r'\b', cand_low) for qb in quarantined_brands):
-            print(f"  [🛡️ Quarantine Filter] Rejected '{cand_clean}' (Contains quarantined brand)", flush=True)
+            if not is_public_ci():
+                print(f"  [🛡️ Quarantine Filter] Rejected '{cand_clean}' (Contains quarantined brand)", flush=True)
             continue
         if not is_duplicate_topic(cand_clean, full_comparison_pool, threshold=0.62):
             verified_titles.append(cand_clean)
@@ -1131,9 +1151,12 @@ Synthesize {candidate_count} fresh, razor-sharp video titles:
     spaced_titles = enforce_brand_and_syntax_cadence(
         verified_titles, available_brands=available_brands, quarantined_brands=quarantined_brands
     )
-    print(f"  [+] [Antigravity Title Engine] Generated {len(spaced_titles)} verified, 0-duplicate winning titles for '{channel_name}':", flush=True)
-    for idx, t in enumerate(spaced_titles, 1):
-        print(f"      {idx}. {t}", flush=True)
+    if is_public_ci():
+        print(f"  [+] [Antigravity Title Engine] Generated {len(spaced_titles)} verified winning topics for '{channel_name}'.", flush=True)
+    else:
+        print(f"  [+] [Antigravity Title Engine] Generated {len(spaced_titles)} verified, 0-duplicate winning titles for '{channel_name}':", flush=True)
+        for idx, t in enumerate(spaced_titles, 1):
+            print(f"      {idx}. {t}", flush=True)
 
     return spaced_titles
 
@@ -1240,7 +1263,10 @@ def auto_refill_and_pop_topic(channel_name, local_topics_path="topics.txt"):
     except Exception as e:
         print(f"  [~] Drive sync warning: {e}", flush=True)
 
-    print(f"  [+] LOCKED IN NEW WINNING TOPIC FOR THIS RUN: '{popped_topic}'", flush=True)
+    if is_public_ci():
+        print(f"  [+] LOCKED IN NEW WINNING TOPIC FOR THIS RUN (redacted for public log).", flush=True)
+    else:
+        print(f"  [+] LOCKED IN NEW WINNING TOPIC FOR THIS RUN: '{popped_topic}'", flush=True)
     return popped_topic
 
 
