@@ -129,6 +129,11 @@ else:
     # Fallback to essential packages
     subprocess.run(["pip", "install", "playwright", "requests", "openai", "moviepy", "pydub", "pyperclip"], check=True)
 
+try:
+    import google.antigravity
+except ImportError:
+    print("[*] Installing google-antigravity for Phase 1 research...")
+    subprocess.run(["pip", "install", "-q", "google-antigravity"], check=False)
 
 subprocess.run(["playwright", "install", "chromium"], check=True)
 
