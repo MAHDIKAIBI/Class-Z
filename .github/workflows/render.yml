@@ -15,7 +15,8 @@ on:
           - RESUME
           - RENDER_ONLY
           - STITCH_ONLY
-          - UPLOAD_ONLY      channel_name:
+          - UPLOAD_ONLY
+      channel_name:
         description: 'Channel to operate on'
         required: true
         default: 'Chicken Proof'
