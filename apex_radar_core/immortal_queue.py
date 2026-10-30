@@ -55,6 +55,57 @@ CHANNEL_NICHE_MAP = {
     "Self improvement": "Cognitive psychology, behavioral habit loops, dopamine regulation, executive function optimization, neurochemistry of focus"
 }
 
+CHANNEL_EXPANDED_BRANDS_MAP = {
+    "Midi-Fi": [
+        "Roland", "Yamaha", "Korg", "Moog", "InMusic", "Solid State Logic", "SSL",
+        "Avid", "Pro Tools", "Teenage Engineering", "Arturia", "Akai Professional", "Akai",
+        "Elektron", "Focusrite", "Novation", "Sequential", "Dave Smith", "Oberheim",
+        "Nord", "Genelec", "Waldorf", "Mackie", "PreSonus", "TASCAM", "Warm Audio",
+        "Shure", "Sennheiser", "Universal Audio", "Behringer", "Neve", "Neumann", "Topping", "MOTU"
+    ],
+    "Chrono-Fi": [
+        "Rolex", "Patek Philippe", "Audemars Piguet", "Omega", "Seiko", "Grand Seiko",
+        "Cartier", "Breitling", "Tudor", "IWC", "Vacheron Constantin", "Richard Mille",
+        "TAG Heuer", "Zenith", "Jaeger-LeCoultre", "Panerai", "Tissot", "Hamilton",
+        "Casio", "Citizen", "Dandong", "Sea-Gull", "San Martin", "Baltic", "Furlan Marri"
+    ],
+    "Mouse-Fi": [
+        "Logitech", "Razer", "Finalmouse", "Zowie", "Pulsar", "Lamzu", "Vaxee",
+        "Endgame Gear", "SteelSeries", "Asus ROG", "Ninjutso", "WLmouse", "ATK",
+        "Scyrox", "Zaopin", "Darmoshark", "G-Wolves", "Glorious"
+    ],
+    "Cycle-Fi": [
+        "Shimano", "SRAM", "Campagnolo", "Specialized", "Trek", "Cannondale", "Giant",
+        "Pinarello", "Colnago", "Cervelo", "Canyon", "Zipp", "ENVE", "DT Swiss",
+        "Magene", "L-Twoo", "Sensah", "Winspace", "EliteWheels", "Hunt"
+    ],
+    "Cosme-Fi": [
+        "L'Oreal", "Estee Lauder", "The Ordinary", "Paula's Choice", "La Roche-Posay",
+        "SkinCeuticals", "Drunk Elephant", "CeraVe", "Cosrx", "Beauty of Joseon",
+        "Shiseido", "Charlotte Tilbury", "Rhode", "Dior", "Chanel"
+    ],
+    "Torque-Fi": [
+        "Toyota", "Honda", "Ford", "GM", "BMW", "Mercedes-Benz", "Porsche",
+        "Volkswagen", "Audi", "Subaru", "Mazda", "Nissan", "Ferrari", "Lamborghini",
+        "Garrett", "BorgWarner", "Bosch", "Brembo", "Bilstein"
+    ],
+    "Scenti-Fi": [
+        "Creed", "Tom Ford", "Maison Francis Kurkdjian", "Roja Parfums",
+        "Parfums de Marly", "Xerjoff", "Amouage", "Kilian", "Le Labo", "Byredo",
+        "Diptyque", "Dior", "Chanel", "Armaf", "Lattafa", "Afnan", "Mancera", "Montale"
+    ],
+    "Brew-Fi": [
+        "La Marzocco", "Slayer", "Decent", "Breville", "Sage", "Eureka", "Mahlkonig",
+        "Weber Workshops", "Comandante", "Fellow", "Timemore", "DF64", "Gaggia",
+        "Rancilio", "Profitec", "ECM"
+    ],
+    "Carti-Fi": [
+        "Balenciaga", "Gucci", "Louis Vuitton", "Prada", "Rick Owens", "Chrome Hearts",
+        "Saint Laurent", "Bottega Veneta", "Maison Margiela", "Dior", "Vetements",
+        "Supreme", "Stussy", "Arc'teryx", "Loro Piana", "Brunello Cucinelli"
+    ]
+}
+
 
 def _find_token_file(channel_name):
     """Locates the channel's OAuth token JSON file."""
@@ -244,13 +295,25 @@ def fetch_live_channel_audit(channel_name, channel_dir):
         except Exception as e:
             print(f"  [~] [YouTube API] Notice during live token audit: {e}", flush=True)
 
-    # 3. Add pending uploads from Google Drive 'to upload' (future scheduled content)
-    for sub in ["to upload"]:
+    # 3. Add pending uploads from Google Drive 'to upload' (future scheduled content) and 'uploaded'
+    local_recent_disk_titles = []
+    for sub in ["to upload", "uploaded"]:
         local_sub = os.path.join(channel_dir, sub)
         if os.path.exists(local_sub):
-            for item in os.listdir(local_sub):
-                if item != "desktop.ini":
-                    all_past_titles.add(os.path.splitext(item)[0].strip())
+            try:
+                items_with_mtime = [
+                    (item, os.path.getmtime(os.path.join(local_sub, item)))
+                    for item in os.listdir(local_sub)
+                    if item != "desktop.ini" and not item.startswith(".")
+                ]
+                items_with_mtime.sort(key=lambda x: x[1], reverse=True)
+                for item, mtime in items_with_mtime:
+                    clean_t = os.path.splitext(item)[0].strip()
+                    all_past_titles.add(clean_t)
+                    if clean_t not in local_recent_disk_titles:
+                        local_recent_disk_titles.append(clean_t)
+            except Exception:
+                pass
         try:
             res = subprocess.run(
                 ["rclone", "lsf", f"data:Colab_AutoVideoCreator/channels/{channel_name}/{sub}"],
@@ -259,7 +322,7 @@ def fetch_live_channel_audit(channel_name, channel_dir):
             if res.returncode == 0 and res.stdout:
                 for line in res.stdout.splitlines():
                     clean_item = os.path.splitext(line.strip().rstrip("/"))[0].strip()
-                    if clean_item and clean_item != "desktop":
+                    if clean_item and clean_item != "desktop" and not clean_item.startswith("."):
                         all_past_titles.add(clean_item)
         except Exception:
             pass
@@ -284,6 +347,7 @@ def fetch_live_channel_audit(channel_name, channel_dir):
         "channel_stats": channel_stats,
         "top_winners": top_winners,
         "recent_uploads": recent_uploads,
+        "local_recent_disk_titles": local_recent_disk_titles,
         "all_past_titles": list(all_past_titles)
     }
 
@@ -531,6 +595,85 @@ def interleave_with_3_cadence(titles_list):
             ordered.append(ch_pool.pop(0))
 
     return ordered
+
+
+def extract_quarantine_intel(channel_name, recent_run_history, lookback=5):
+    """
+    Extracts quarantined brands and recently used syntactic openings from the last 4-5 runs.
+    Ensures that any brand or formula used in the last 4-5 runs cannot be repeated.
+    """
+    known_brands = CHANNEL_EXPANDED_BRANDS_MAP.get(channel_name, [
+        "Roland", "Yamaha", "Korg", "Moog", "InMusic", "Solid State Logic", "SSL",
+        "Avid", "Pro Tools", "Teenage Engineering", "Arturia", "Akai Professional", "Akai",
+        "Elektron", "Focusrite", "Novation", "Behringer", "Neve", "Neumann", "Universal Audio"
+    ])
+
+    quarantined_brands = set()
+    quarantined_syntax = set()
+
+    for item in recent_run_history[:lookback]:
+        t_clean = item.get("title", "") if isinstance(item, dict) else str(item)
+        t_clean = t_clean.strip()
+        t_low = t_clean.lower()
+        for b in known_brands:
+            if re.search(r'\b' + re.escape(b.lower()) + r'\b', t_low):
+                quarantined_brands.add(b)
+
+        words = t_clean.split()
+        if len(words) >= 3:
+            quarantined_syntax.add(" ".join(words[:3]).lower())
+
+    available_brands = [b for b in known_brands if b not in quarantined_brands]
+    return list(quarantined_brands), list(quarantined_syntax), available_brands
+
+
+def enforce_brand_and_syntax_cadence(candidates, available_brands=None, quarantined_brands=None):
+    """
+    Guarantees strict brand diversity and eliminates syntactic echo chambers:
+    1. Rejects any candidate containing a quarantined brand.
+    2. Enforces that no single brand appears more than once in the top 4 titles.
+    3. Enforces that no two adjacent titles share the same 2 starting words.
+    4. Interleaves Chinese and non-Chinese disruption topics.
+    """
+    if quarantined_brands:
+        clean_candidates = []
+        for cand in candidates:
+            c_low = cand.lower()
+            if any(re.search(r'\b' + re.escape(qb.lower()) + r'\b', c_low) for qb in quarantined_brands):
+                continue
+            clean_candidates.append(cand)
+        candidates = clean_candidates
+
+    ordered = []
+    seen_brands = set()
+
+    for cand in candidates:
+        cand_low = cand.lower()
+        words = cand.strip().split()
+        opening = " ".join(words[:2]).lower() if len(words) >= 2 else ""
+
+        cand_brand = None
+        if available_brands:
+            for b in available_brands:
+                if re.search(r'\b' + re.escape(b.lower()) + r'\b', cand_low):
+                    cand_brand = b
+                    break
+
+        if len(ordered) < 4:
+            if cand_brand and cand_brand in seen_brands:
+                continue
+            if ordered and opening and opening == " ".join(ordered[-1].strip().split()[:2]).lower():
+                continue
+
+        ordered.append(cand)
+        if cand_brand:
+            seen_brands.add(cand_brand)
+
+    for cand in candidates:
+        if cand not in ordered:
+            ordered.append(cand)
+
+    return interleave_with_3_cadence(ordered)
 
 
 # ==============================================================================
@@ -784,6 +927,23 @@ def generate_winning_titles(channel_name, channel_dir=None, target_count=10):
     recent_uploads = audit["recent_uploads"]
     all_past_titles = audit["all_past_titles"]
 
+    # 4-5 Run Quarantine & Brand Expansion
+    recent_run_history = []
+    if audit.get("recent_uploads"):
+        recent_run_history.extend([v["title"] for v in audit["recent_uploads"]])
+    if audit.get("local_recent_disk_titles"):
+        for dt in audit["local_recent_disk_titles"]:
+            if dt not in recent_run_history:
+                recent_run_history.append(dt)
+
+    quarantined_brands, quarantined_syntax, available_brands = extract_quarantine_intel(
+        channel_name, recent_run_history, lookback=5
+    )
+
+    print(f"  [🛡️ QUARANTINE ENGINE] Past 5 runs analyzed for '{channel_name}':", flush=True)
+    print(f"      Quarantined Brands (4-5 run cooldown): {quarantined_brands}", flush=True)
+    print(f"      Available Expanded Brands ({len(available_brands)} total): {available_brands[:8]}...", flush=True)
+
     queue_path = os.path.join(channel_dir, "topics.txt")
     if os.path.exists(queue_path):
         try:
@@ -847,6 +1007,10 @@ def generate_winning_titles(channel_name, channel_dir=None, target_count=10):
         else "- Strictly preserve this channel's unique narrative DNA. Do NOT force unrelated formulas from other niches."
     )
 
+    quarantined_brands_str = ", ".join(f"\"{b}\"" for b in quarantined_brands) if quarantined_brands else "None"
+    available_brands_str = ", ".join(available_brands[:16]) if available_brands else "Major industry innovators"
+    quarantined_syntax_str = "\n".join(f"  - \"{s}...\"" for s in quarantined_syntax[:6]) if quarantined_syntax else "  - None"
+
     user_prompt = f"""
 ================================================================================
 AUTONOMOUS CHANNEL FORMULA AUDIT: {channel_name.upper()}
@@ -864,19 +1028,34 @@ AUTONOMOUS CHANNEL FORMULA AUDIT: {channel_name.upper()}
 4. FRESH REAL-WORLD NEWS & DEVELOPMENTS FROM ROUGHLY THE PAST WEEK:
 {market_intel if market_intel else 'Use breaking 2026 releases, real incidents, and market signals.'}
 
-5. MOST RECENT UPLOADS (DO NOT REPEAT THESE BRANDS OR ANGLES IN THE FIRST 3 TITLES):
-{recent_block}
+5. STRICT 4-TO-5 RUN BRAND & SYNTAX QUARANTINE:
+The following brands/entities were covered in the last 5 runs and are STRICTLY QUARANTINED:
+>>> {quarantined_brands_str} <<<
+- MANDATORY RULE: DO NOT generate any title focusing on or mentioning these quarantined brands! Zero tolerance.
 
-6. COMPLETE BLACKLIST (PUBLIC & SCHEDULED VIDEOS — STRICT ZERO DUPLICATION):
+The following sentence openings were recently used and are QUARANTINED:
+{quarantined_syntax_str}
+- MANDATORY RULE: NEVER repeat the same sentence opening! Do NOT start every title with "How [Brand] Cloned...".
+
+6. WIDE BRAND EXPANSION (DIVERSIFY ACROSS UNTOUCHED TITANS & CHALLENGERS):
+Instead of repeating the same 1 or 2 brands, actively explore these untouched brands:
+>>> {available_brands_str} <<<
+- MANDATORY RULE: Every generated title MUST target a DIFFERENT brand from this pool!
+
+7. MANDATORY 4-WAY NARRATIVE ANGLE ROTATION:
+Rotate your titles across these 4 distinct storytelling archetypes:
+  * Angle A — Corporate Betrayal / Buyout Quality Collapse (e.g., InMusic gutting Moog, private equity ruin)
+  * Angle B — Hardware Subscription Trap / Software Bricking (e.g., Roland Cloud hardware locks, subscription traps)
+  * Angle C — Forensic Hardware Teardown / Hidden Tech Reality (e.g., The $15 chip inside a $2,500 flagship synth)
+  * Angle D — Market Disruption / Price Humiliation (e.g., $180 Chinese motorized controllers destroying $2,000 consoles)
+  * Angle E — Protocol / Driver Monopoly Bottlenecks (e.g., Why Windows USB audio drivers crackle while CoreAudio dominates)
+
+8. COMPLETE BLACKLIST (PUBLIC & SCHEDULED VIDEOS — STRICT ZERO DUPLICATION):
 {blacklist_block}
 
 ================================================================================
 YOUR MISSION:
-Do NOT apply a one-size-fits-all formula. 
-Deconstruct the EXACT algorithmic formula and emotional hooks that made THIS channel's top videos succeed:
-- What is the psychological tension that works for THIS channel's audience?
-- What are the recurring sentence structures and phrasing patterns in the winners above?
-- Apply THOSE DISCOVERED FORMULAS directly to fresh stories, real events, and industry developments from roughly the past week.
+Synthesize {candidate_count} fresh, razor-sharp video titles:
 {chinese_prompt_line}
 - STRICT ZERO DUPLICATION against past uploads or blacklist.
 - NO BANNED WORDS: Never use the words "documentary" or "investigation".
@@ -930,6 +1109,11 @@ Deconstruct the EXACT algorithmic formula and emotional hooks that made THIS cha
         cand_clean = re.sub(r'\s+', ' ', cand.replace('\ufffd', '—')).strip()
         if len(cand_clean) < 25:
             continue
+        # Strict quarantine check: reject if contains any quarantined brand
+        cand_low = cand_clean.lower()
+        if any(re.search(r'\b' + re.escape(qb.lower()) + r'\b', cand_low) for qb in quarantined_brands):
+            print(f"  [🛡️ Quarantine Filter] Rejected '{cand_clean}' (Contains quarantined brand)", flush=True)
+            continue
         if not is_duplicate_topic(cand_clean, full_comparison_pool, threshold=0.62):
             verified_titles.append(cand_clean)
             full_comparison_pool.append(cand_clean)
@@ -937,11 +1121,16 @@ Deconstruct the EXACT algorithmic formula and emotional hooks that made THIS cha
     if not verified_titles and candidate_titles:
         for cand in candidate_titles:
             cand_clean = re.sub(r'\s+', ' ', cand.replace('\ufffd', '—')).strip()
+            cand_low = cand_clean.lower()
+            if any(re.search(r'\b' + re.escape(qb.lower()) + r'\b', cand_low) for qb in quarantined_brands):
+                continue
             if cand_clean.lower() not in {x.lower() for x in full_comparison_pool}:
                 verified_titles.append(cand_clean)
                 full_comparison_pool.append(cand_clean)
 
-    spaced_titles = interleave_with_3_cadence(verified_titles)
+    spaced_titles = enforce_brand_and_syntax_cadence(
+        verified_titles, available_brands=available_brands, quarantined_brands=quarantined_brands
+    )
     print(f"  [+] [Antigravity Title Engine] Generated {len(spaced_titles)} verified, 0-duplicate winning titles for '{channel_name}':", flush=True)
     for idx, t in enumerate(spaced_titles, 1):
         print(f"      {idx}. {t}", flush=True)
