@@ -1145,13 +1145,6 @@ jobs:
           # Pre-create chunks folder atomically before parallel render_matrix launches
           rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT/chunks" || true
 
-      - name: Send Shutdown Signal to original ollama_server
-        if: always()
-        run: |
-          echo "shutdown" > shutdown.txt
-          rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_shutdown_${{ github.run_id }}.txt" || true
-          echo "[+] Original ollama_server shutdown signal sent."
-
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   # PHASE 3: render_matrix â€” unchanged, now depends on brain_finish_job
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1524,12 +1517,6 @@ jobs:
           echo "Purging raw rendering assets from Google Drive to save space..."
           rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
           
-          # Clean up ollama pool directory
-          echo "shutdown" > shutdown.txt
-            for i in $(seq 0 7); do
-              rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s shutdown.txt "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}/shutdown_${i}.txt" || true
-            done
-            rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/ollama_pool_${{ github.run_id }}" || true
 
       - name: Sync Final Video to Google Drive
         run: |
