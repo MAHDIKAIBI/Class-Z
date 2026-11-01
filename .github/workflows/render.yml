@@ -247,14 +247,27 @@ jobs:
           NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
-          echo "[*] Launching Autonomous Video Creation Engine (Private Execution)..."
-          # Redirect orchestrator execution to local log to keep public GitHub logs clean & private
-          if xvfb-run -a --server-args="-screen 0 1920x1080x24" env GITHUB_OUTPUT="$GITHUB_OUTPUT" python -u .github/scripts/orchestrator.py > /tmp/orchestrator.log 2>&1; then
+          echo "[*] Launching Autonomous Video Creation Engine (Live Sanitized Progress)..."
+          # Stream sanitized phase progress to public GitHub logs while teeing full log privately
+          set -o pipefail
+          if xvfb-run -a --server-args="-screen 0 1920x1080x24" env GITHUB_OUTPUT="$GITHUB_OUTPUT" python -u .github/scripts/orchestrator.py 2>&1 \
+            | tee /tmp/orchestrator.log \
+            | sed -u -n -E \
+                -e "s/(for ['\"])[^'\"]+(['\"])/\1[PROTECTED]\2/g" \
+                -e "s/, Key [^,)]+//g" \
+                -e "s/(Blueprint confirmed:).*\|/\1/g" \
+                -e "s/(Generating Chapter [0-9]+ \/ [0-9]+):.*/\1.../g" \
+                -e "s/(Showrunner \+ Ledger \+ Qwen3-TTS Polish on Section [0-9]+ \/ [0-9]+):.*/\1.../g" \
+                -e "s/'(Chapter [0-9]+|Section [0-9]+|Polish Section [0-9]+|Expand Chapter [0-9]+):[^']*'/'\1'/g" \
+                -e "s/-> .*//g" \
+                -e "s/\| Overused:.*//g" \
+                -e "s/(Caught [0-9]+ mechanical sentence violations|Flagged [0-9]+ sentences for unsourced claims\/hedges).*/\1.../g" \
+                -e "/=== CLOUD ORCHESTRATOR|^Action:|^Downloading core scripts|^Installing Python dependencies|Successfully popped topic|Immortal Queue Engine|QUARANTINE ENGINE|Antigravity Title Engine|LOCKED IN NEW WINNING TOPIC|^Executing Video Creation Pipeline|\[PHASE |\[TRI-PASS |\[Search Grounding\]|Pass [0-9]+ Success|Aggregated [0-9]+ unique|\[LEGIT SOURCES LOCKED\]|Intercepting '|Returned valid JSON for '|Generated elite text for '|Successfully handled '|Claim Ledger saved|Channel Runtime Calibrated|Generating Blueprint JSON|Blueprint confirmed|Running Elite Niche Voice|Niche-Adaptive Hook Engine|Topic Contract Locked|Generating Chapter [0-9]+|came in short|expanded from|Phase 2c Complete|Showrunner \+ Ledger \+ Qwen3-TTS Polish on Section|Unified Showrunner \+ Qwen3-TTS Pass complete|Script passed local TTS|\[Rhythm & Lexical|\[Mechanical Fact & Number Gate\]|\[Cross-Model Claim Gate\]|Final Mechanically Verified Script Locked|metadata\.json updated with 5-Pillar|Waiting for ChatGPT|ChatGPT interface ready|Reference image injected|Polling for Thumbnail|SUCCESS: Both thumbnails|\[CLOUD MODE\]|Uploaded public workspace|Uploaded vault metadata/p"; then
               echo "[+] Video Creation Pipeline completed successfully."
           else
               STATUS=$?
               echo "[!] Pipeline encountered an error (exit code $STATUS)."
-              grep -E "(Error|Exception|Traceback|Failed)" /tmp/orchestrator.log | tail -n 15 || echo "Details logged privately to Google Drive."
+              grep -E "(Error|Exception|Traceback|Failed)" /tmp/orchestrator.log | sed -E "s/'[^']*'/'[PROTECTED]'/g; s/channels\/[^\/]+\/[^\/]+/channels\/[PROTECTED]/g" | tail -n 15 || echo "Details logged privately to Google Drive."
               rclone copyto /tmp/orchestrator.log "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/logs/error_orchestrator_${{ github.run_id }}.log" 2>/dev/null || true
               exit $STATUS
           fi
@@ -265,6 +278,7 @@ jobs:
           # Failsafe: if Python failed to write to GITHUB_OUTPUT, Bash will do it directly!
           if [ -f "generated_vault.txt" ]; then
               VAULT_NAME=$(cat generated_vault.txt)
+              echo "::add-mask::$VAULT_NAME"
               echo "vault_name=$VAULT_NAME" >> $GITHUB_OUTPUT
               rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT_NAME/assets" 2>/dev/null || true
           fi
@@ -1600,13 +1614,19 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
           for _retry in 1 2 3 4 5; do python -m playwright install chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
           
-          echo "[*] Launching YouTube Uploader (Private Execution)..."
-          if python youtube_uploader.py > /tmp/uploader.log 2>&1; then
+          echo "[*] Launching YouTube Uploader (Live Sanitized Progress)..."
+          set -o pipefail
+          if python -u youtube_uploader.py 2>&1 \
+            | tee /tmp/uploader.log \
+            | sed -u -n -E \
+                -e "s/Video ID: [^ ]+/Video ID: [PROTECTED]/g" \
+                -e "s/from \/[^ ]+//g" \
+                -e "/BULK UPLOAD MODE ACTIVATED|Loaded [0-9]+ verified investigative sources|A\/B Testing Detected|PRE-FLIGHT CHECKLIST COMPLETE|Initiating Resumable Upload to YouTube API|Sanitized YouTube description|Sanitized [0-9]+ YouTube tags|Uploading\.\.\. ([0-9]+0|99)%|Video Upload Complete!|Scheduled for:|Thumbnail successfully attached!|SEO & SOCIAL AUTOPILOT DISTRIBUTION SYSTEM|Successfully loaded ChatGPT SEO Blog|Instant Social Media Distribution Complete|All distribution pipelines triggered|Google Drive sync complete|BULK PUBLISH PIPELINE COMPLETE|\[SHORT/p"; then
               echo "[+] Video published successfully to YouTube."
           else
               STATUS=$?
               echo "[!] YouTube Uploader encountered an error (exit code $STATUS)."
-              grep -E "(Error|Exception|Traceback|Failed)" /tmp/uploader.log | tail -n 15 || echo "Details logged privately to Google Drive."
+              grep -E "(Error|Exception|Traceback|Failed)" /tmp/uploader.log | sed -E "s/'[^']*'/'[PROTECTED]'/g; s/channels\/[^\/]+\/[^\/]+/channels\/[PROTECTED]/g" | tail -n 15 || echo "Details logged privately to Google Drive."
               rclone copyto /tmp/uploader.log "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/logs/error_uploader_${{ github.run_id }}.log" 2>/dev/null || true
               exit $STATUS
           fi
@@ -1697,13 +1717,19 @@ jobs:
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
           for _retry in 1 2 3 4 5; do python -m playwright install chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
           
-          echo "[*] Launching YouTube Uploader (Private Execution)..."
-          if python youtube_uploader.py > /tmp/uploader.log 2>&1; then
+          echo "[*] Launching YouTube Uploader (Live Sanitized Progress)..."
+          set -o pipefail
+          if python -u youtube_uploader.py 2>&1 \
+            | tee /tmp/uploader.log \
+            | sed -u -n -E \
+                -e "s/Video ID: [^ ]+/Video ID: [PROTECTED]/g" \
+                -e "s/from \/[^ ]+//g" \
+                -e "/BULK UPLOAD MODE ACTIVATED|Loaded [0-9]+ verified investigative sources|A\/B Testing Detected|PRE-FLIGHT CHECKLIST COMPLETE|Initiating Resumable Upload to YouTube API|Sanitized YouTube description|Sanitized [0-9]+ YouTube tags|Uploading\.\.\. ([0-9]+0|99)%|Video Upload Complete!|Scheduled for:|Thumbnail successfully attached!|SEO & SOCIAL AUTOPILOT DISTRIBUTION SYSTEM|Successfully loaded ChatGPT SEO Blog|Instant Social Media Distribution Complete|All distribution pipelines triggered|Google Drive sync complete|BULK PUBLISH PIPELINE COMPLETE|\[SHORT/p"; then
               echo "[+] Video published successfully to YouTube."
           else
               STATUS=$?
               echo "[!] YouTube Uploader encountered an error (exit code $STATUS)."
-              grep -E "(Error|Exception|Traceback|Failed)" /tmp/uploader.log | tail -n 15 || echo "Details logged privately to Google Drive."
+              grep -E "(Error|Exception|Traceback|Failed)" /tmp/uploader.log | sed -E "s/'[^']*'/'[PROTECTED]'/g; s/channels\/[^\/]+\/[^\/]+/channels\/[PROTECTED]/g" | tail -n 15 || echo "Details logged privately to Google Drive."
               rclone copyto /tmp/uploader.log "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/logs/error_uploader_${{ github.run_id }}.log" 2>/dev/null || true
               exit $STATUS
           fi
