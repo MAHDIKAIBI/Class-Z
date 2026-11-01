@@ -246,11 +246,12 @@ jobs:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+        shell: bash
         run: |
           echo "[*] Launching Autonomous Video Creation Engine (Live Sanitized Progress)..."
           # Stream sanitized phase progress to public GitHub logs while teeing full log privately
-          set -o pipefail
-          if xvfb-run -a --server-args="-screen 0 1920x1080x24" env GITHUB_OUTPUT="$GITHUB_OUTPUT" python -u .github/scripts/orchestrator.py 2>&1 \
+          rm -f /tmp/orch_status
+          { xvfb-run -a --server-args="-screen 0 1920x1080x24" env GITHUB_OUTPUT="$GITHUB_OUTPUT" python -u .github/scripts/orchestrator.py 2>&1; echo $? > /tmp/orch_status; } \
             | tee /tmp/orchestrator.log \
             | sed -u -n -E \
                 -e "s/(for ['\"])[^'\"]+(['\"])/\1[PROTECTED]\2/g" \
@@ -262,10 +263,11 @@ jobs:
                 -e "s/-> .*//g" \
                 -e "s/\| Overused:.*//g" \
                 -e "s/(Caught [0-9]+ mechanical sentence violations|Flagged [0-9]+ sentences for unsourced claims\/hedges).*/\1.../g" \
-                -e "/=== CLOUD ORCHESTRATOR|^Action:|^Downloading core scripts|^Installing Python dependencies|Successfully popped topic|Immortal Queue Engine|QUARANTINE ENGINE|Antigravity Title Engine|LOCKED IN NEW WINNING TOPIC|^Executing Video Creation Pipeline|\[PHASE |\[TRI-PASS |\[Search Grounding\]|Pass [0-9]+ Success|Aggregated [0-9]+ unique|\[LEGIT SOURCES LOCKED\]|Intercepting '|Returned valid JSON for '|Generated elite text for '|Successfully handled '|Claim Ledger saved|Channel Runtime Calibrated|Generating Blueprint JSON|Blueprint confirmed|Running Elite Niche Voice|Niche-Adaptive Hook Engine|Topic Contract Locked|Generating Chapter [0-9]+|came in short|expanded from|Phase 2c Complete|Showrunner \+ Ledger \+ Qwen3-TTS Polish on Section|Unified Showrunner \+ Qwen3-TTS Pass complete|Script passed local TTS|\[Rhythm & Lexical|\[Mechanical Fact & Number Gate\]|\[Cross-Model Claim Gate\]|Final Mechanically Verified Script Locked|metadata\.json updated with 5-Pillar|Waiting for ChatGPT|ChatGPT interface ready|Reference image injected|Polling for Thumbnail|SUCCESS: Both thumbnails|\[CLOUD MODE\]|Uploaded public workspace|Uploaded vault metadata/p"; then
+                -e "/=== CLOUD ORCHESTRATOR|^Action:|^Downloading core scripts|^Installing Python dependencies|Successfully popped topic|Immortal Queue Engine|QUARANTINE ENGINE|Antigravity Title Engine|LOCKED IN NEW WINNING TOPIC|^Executing Video Creation Pipeline|\[PHASE |\[TRI-PASS |\[Search Grounding\]|Pass [0-9]+ Success|Aggregated [0-9]+ unique|\[LEGIT SOURCES LOCKED\]|Intercepting '|Returned valid JSON for '|Generated elite text for '|Successfully handled '|Claim Ledger saved|Channel Runtime Calibrated|Generating Blueprint JSON|Blueprint confirmed|Running Elite Niche Voice|Niche-Adaptive Hook Engine|Topic Contract Locked|Generating Chapter [0-9]+|came in short|expanded from|Phase 2c Complete|Showrunner \+ Ledger \+ Qwen3-TTS Polish on Section|Unified Showrunner \+ Qwen3-TTS Pass complete|Script passed local TTS|\[Rhythm & Lexical|\[FINAL MECHANICAL NUMBER|Mechanical Regex Number|Multi-Batch Cross-Model Claim Audit|\[SURGICAL REWRITER\]|\[FINAL GATE COMPLETE\]|\[Mechanical Fact & Number Gate\]|\[Cross-Model Claim Gate\]|Final Mechanically Verified Script Locked|metadata\.json updated with 5-Pillar|Waiting for ChatGPT|ChatGPT interface ready|Reference image injected|Polling for Thumbnail|SUCCESS: Both thumbnails|\[CLOUD MODE\]|Uploaded public workspace|Uploaded vault metadata/p"
+          STATUS=$(cat /tmp/orch_status 2>/dev/null || echo 1)
+          if [ "$STATUS" -eq 0 ]; then
               echo "[+] Video Creation Pipeline completed successfully."
           else
-              STATUS=$?
               echo "[!] Pipeline encountered an error (exit code $STATUS)."
               grep -E "(Error|Exception|Traceback|Failed)" /tmp/orchestrator.log | sed -E "s/'[^']*'/'[PROTECTED]'/g; s/channels\/[^\/]+\/[^\/]+/channels\/[PROTECTED]/g" | tail -n 15 || echo "Details logged privately to Google Drive."
               rclone copyto /tmp/orchestrator.log "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/logs/error_orchestrator_${{ github.run_id }}.log" 2>/dev/null || true
@@ -1615,16 +1617,17 @@ jobs:
           for _retry in 1 2 3 4 5; do python -m playwright install chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
           
           echo "[*] Launching YouTube Uploader (Live Sanitized Progress)..."
-          set -o pipefail
-          if python -u youtube_uploader.py 2>&1 \
+          rm -f /tmp/uploader_status
+          { python -u youtube_uploader.py 2>&1; echo $? > /tmp/uploader_status; } \
             | tee /tmp/uploader.log \
             | sed -u -n -E \
                 -e "s/Video ID: [^ ]+/Video ID: [PROTECTED]/g" \
                 -e "s/from \/[^ ]+//g" \
-                -e "/BULK UPLOAD MODE ACTIVATED|Loaded [0-9]+ verified investigative sources|A\/B Testing Detected|PRE-FLIGHT CHECKLIST COMPLETE|Initiating Resumable Upload to YouTube API|Sanitized YouTube description|Sanitized [0-9]+ YouTube tags|Uploading\.\.\. ([0-9]+0|99)%|Video Upload Complete!|Scheduled for:|Thumbnail successfully attached!|SEO & SOCIAL AUTOPILOT DISTRIBUTION SYSTEM|Successfully loaded ChatGPT SEO Blog|Instant Social Media Distribution Complete|All distribution pipelines triggered|Google Drive sync complete|BULK PUBLISH PIPELINE COMPLETE|\[SHORT/p"; then
+                -e "/BULK UPLOAD MODE ACTIVATED|Loaded [0-9]+ verified investigative sources|A\/B Testing Detected|PRE-FLIGHT CHECKLIST COMPLETE|Initiating Resumable Upload to YouTube API|Sanitized YouTube description|Sanitized [0-9]+ YouTube tags|Uploading\.\.\. ([0-9]+0|99)%|Video Upload Complete!|Scheduled for:|Thumbnail successfully attached!|SEO & SOCIAL AUTOPILOT DISTRIBUTION SYSTEM|Successfully loaded ChatGPT SEO Blog|Instant Social Media Distribution Complete|All distribution pipelines triggered|Google Drive sync complete|BULK PUBLISH PIPELINE COMPLETE|\[SHORT/p"
+          STATUS=$(cat /tmp/uploader_status 2>/dev/null || echo 1)
+          if [ "$STATUS" -eq 0 ]; then
               echo "[+] Video published successfully to YouTube."
           else
-              STATUS=$?
               echo "[!] YouTube Uploader encountered an error (exit code $STATUS)."
               grep -E "(Error|Exception|Traceback|Failed)" /tmp/uploader.log | sed -E "s/'[^']*'/'[PROTECTED]'/g; s/channels\/[^\/]+\/[^\/]+/channels\/[PROTECTED]/g" | tail -n 15 || echo "Details logged privately to Google Drive."
               rclone copyto /tmp/uploader.log "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/logs/error_uploader_${{ github.run_id }}.log" 2>/dev/null || true
@@ -1718,16 +1721,17 @@ jobs:
           for _retry in 1 2 3 4 5; do python -m playwright install chromium && break || { echo "Playwright install failed, retrying..."; sleep 10; }; done
           
           echo "[*] Launching YouTube Uploader (Live Sanitized Progress)..."
-          set -o pipefail
-          if python -u youtube_uploader.py 2>&1 \
+          rm -f /tmp/uploader_status
+          { python -u youtube_uploader.py 2>&1; echo $? > /tmp/uploader_status; } \
             | tee /tmp/uploader.log \
             | sed -u -n -E \
                 -e "s/Video ID: [^ ]+/Video ID: [PROTECTED]/g" \
                 -e "s/from \/[^ ]+//g" \
-                -e "/BULK UPLOAD MODE ACTIVATED|Loaded [0-9]+ verified investigative sources|A\/B Testing Detected|PRE-FLIGHT CHECKLIST COMPLETE|Initiating Resumable Upload to YouTube API|Sanitized YouTube description|Sanitized [0-9]+ YouTube tags|Uploading\.\.\. ([0-9]+0|99)%|Video Upload Complete!|Scheduled for:|Thumbnail successfully attached!|SEO & SOCIAL AUTOPILOT DISTRIBUTION SYSTEM|Successfully loaded ChatGPT SEO Blog|Instant Social Media Distribution Complete|All distribution pipelines triggered|Google Drive sync complete|BULK PUBLISH PIPELINE COMPLETE|\[SHORT/p"; then
+                -e "/BULK UPLOAD MODE ACTIVATED|Loaded [0-9]+ verified investigative sources|A\/B Testing Detected|PRE-FLIGHT CHECKLIST COMPLETE|Initiating Resumable Upload to YouTube API|Sanitized YouTube description|Sanitized [0-9]+ YouTube tags|Uploading\.\.\. ([0-9]+0|99)%|Video Upload Complete!|Scheduled for:|Thumbnail successfully attached!|SEO & SOCIAL AUTOPILOT DISTRIBUTION SYSTEM|Successfully loaded ChatGPT SEO Blog|Instant Social Media Distribution Complete|All distribution pipelines triggered|Google Drive sync complete|BULK PUBLISH PIPELINE COMPLETE|\[SHORT/p"
+          STATUS=$(cat /tmp/uploader_status 2>/dev/null || echo 1)
+          if [ "$STATUS" -eq 0 ]; then
               echo "[+] Video published successfully to YouTube."
           else
-              STATUS=$?
               echo "[!] YouTube Uploader encountered an error (exit code $STATUS)."
               grep -E "(Error|Exception|Traceback|Failed)" /tmp/uploader.log | sed -E "s/'[^']*'/'[PROTECTED]'/g; s/channels\/[^\/]+\/[^\/]+/channels\/[PROTECTED]/g" | tail -n 15 || echo "Details logged privately to Google Drive."
               rclone copyto /tmp/uploader.log "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/logs/error_uploader_${{ github.run_id }}.log" 2>/dev/null || true
