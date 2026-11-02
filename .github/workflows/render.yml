@@ -280,8 +280,7 @@ jobs:
           # Failsafe: if Python failed to write to GITHUB_OUTPUT, Bash will do it directly!
           if [ -f "generated_vault.txt" ]; then
               VAULT_NAME=$(cat generated_vault.txt)
-              echo "::add-mask::$VAULT_NAME"
-              echo "vault_name=$VAULT_NAME" >> $GITHUB_OUTPUT
+              echo "vault_name=$VAULT_NAME" >> "$GITHUB_OUTPUT"
               rclone mkdir "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT_NAME/assets" 2>/dev/null || true
           fi
 
@@ -385,6 +384,11 @@ jobs:
             --include "requirements.txt" \
             --include "gemini_cookies.json" \
             --transfers 8
+          if [ -z "$VAULT" ]; then
+            echo "[!] Notice: VAULT output was empty. Auto-detecting latest vault from Drive..."
+            VAULT=$(rclone lsf "data:Colab_AutoVideoCreator/public/channels/$CHANNEL/" --dirs-only 2>/dev/null | sort -V | tail -n 1 | tr -d '/')
+            echo "[+] Auto-detected VAULT: '$VAULT'"
+          fi
           if [ -n "$VAULT" ]; then
             mkdir -p "public/channels/$CHANNEL/$VAULT"
             # Download the script + any already-generated WAV chunks
@@ -405,6 +409,11 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
+          ACTUAL_VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          if [ -z "$ACTUAL_VAULT" ]; then
+            ACTUAL_VAULT=$(ls -td public/channels/${{ inputs.channel_name }}/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+            echo "[+] Run TTS Worker auto-detected ACTUAL_VAULT='$ACTUAL_VAULT'"
+          fi
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           docker run --rm \
             --net=host \
@@ -415,7 +424,7 @@ jobs:
             -e TTS_WORKER_ID="${{ matrix.worker }}" \
             -e TTS_TOTAL_WORKERS="20" \
             -e CHANNEL_NAME="${{ inputs.channel_name }}" \
-            -e VAULT_NAME="${{ needs.creation_job.outputs.vault_name }}" \
+            -e VAULT_NAME="$ACTUAL_VAULT" \
             -e HF_TOKEN="${{ secrets.HF_TOKEN }}" \
             -e GEMINI_API_KEYS="${{ secrets.GEMINI_API_KEYS }}" \
             ghcr.io/mahdikaibi/videocreator-runner:v1.0 \
@@ -439,7 +448,12 @@ jobs:
       - name: Upload WAV Chunks to Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --include "*.wav"
+          if [ -z "$VAULT" ]; then
+            VAULT=$(ls -td public/channels/${{ inputs.channel_name }}/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+          fi
+          if [ -n "$VAULT" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --include "*.wav"
+          fi
 
 
   # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -498,6 +512,11 @@ jobs:
       - name: Download Scripts & All WAV Chunks
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          if [ -z "$VAULT" ]; then
+            echo "[!] Notice: VAULT output was empty. Auto-detecting latest vault from Drive..."
+            VAULT=$(rclone lsf "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/" --dirs-only 2>/dev/null | sort -V | tail -n 1 | tr -d '/')
+            echo "[+] Auto-detected VAULT: '$VAULT'"
+          fi
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /__pycache__/**" --filter "- /.git/**" --filter "- /global_used_assets/**" --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" --filter "- /ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
             mkdir -p "channels/${{ inputs.channel_name }}/to upload/$VAULT"
@@ -583,6 +602,15 @@ jobs:
           AUTO_TARGET_FOLDER: "channels/${{ inputs.channel_name }}/to upload/${{ needs.creation_job.outputs.vault_name }}"
         run: |
           pip install -q "setuptools<82.0.0"
+          if [ -z "${{ needs.creation_job.outputs.vault_name }}" ]; then
+            DETECTED_VAULT=$(ls -td public/channels/${{ inputs.channel_name }}/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+            if [ -n "$DETECTED_VAULT" ]; then
+              echo "[+] Auto-detected vault for The_Brain: $DETECTED_VAULT"
+              export CURRENT_SAFE_TOPIC="public/channels/${{ inputs.channel_name }}/$DETECTED_VAULT"
+              export AUTO_WORKSPACE_FOLDER="public/channels/${{ inputs.channel_name }}/$DETECTED_VAULT"
+              export AUTO_TARGET_FOLDER="channels/${{ inputs.channel_name }}/to upload/$DETECTED_VAULT"
+            fi
+          fi
           xvfb-run -a python -u The_Brain.py
 
 
@@ -1179,6 +1207,15 @@ jobs:
           AUTO_TARGET_FOLDER: "channels/${{ inputs.channel_name }}/to upload/${{ needs.creation_job.outputs.vault_name }}"
         run: |
           pip install -q "setuptools<82.0.0"
+          if [ -z "${{ needs.creation_job.outputs.vault_name }}" ]; then
+            DETECTED_VAULT=$(ls -td public/channels/${{ inputs.channel_name }}/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+            if [ -n "$DETECTED_VAULT" ]; then
+              echo "[+] Auto-detected vault for The_Brain: $DETECTED_VAULT"
+              export CURRENT_SAFE_TOPIC="public/channels/${{ inputs.channel_name }}/$DETECTED_VAULT"
+              export AUTO_WORKSPACE_FOLDER="public/channels/${{ inputs.channel_name }}/$DETECTED_VAULT"
+              export AUTO_TARGET_FOLDER="channels/${{ inputs.channel_name }}/to upload/$DETECTED_VAULT"
+            fi
+          fi
           xvfb-run -a python -u The_Brain.py
 
       - name: Save Fresh Cookies to Drive
