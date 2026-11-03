@@ -1027,7 +1027,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          pip install --no-cache-dir yt-dlp google-genai requests pillow numpy opencv-python-headless filelock
+          pip install --no-cache-dir yt-dlp google-genai requests pillow numpy opencv-python-headless filelock librosa soundfile duckduckgo_search
 
       - name: Setup Node.js (For yt-dlp JS Runtime)
         uses: actions/setup-node@v4
