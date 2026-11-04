@@ -411,7 +411,8 @@ jobs:
         run: |
           ACTUAL_VAULT="${{ needs.creation_job.outputs.vault_name }}"
           if [ -z "$ACTUAL_VAULT" ]; then
-            ACTUAL_VAULT=$(ls -td public/channels/${{ inputs.channel_name }}/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+            _d=$(ls -td "public/channels/${{ inputs.channel_name }}"/*/ 2>/dev/null | head -n 1)
+            [ -n "$_d" ] && ACTUAL_VAULT=$(basename "$_d")
             echo "[+] Run TTS Worker auto-detected ACTUAL_VAULT='$ACTUAL_VAULT'"
           fi
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -449,7 +450,8 @@ jobs:
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
           if [ -z "$VAULT" ]; then
-            VAULT=$(ls -td public/channels/${{ inputs.channel_name }}/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+            _d=$(ls -td "public/channels/${{ inputs.channel_name }}"/*/ 2>/dev/null | head -n 1)
+            [ -n "$_d" ] && VAULT=$(basename "$_d")
           fi
           if [ -n "$VAULT" ]; then
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --include "*.wav"
@@ -603,7 +605,8 @@ jobs:
         run: |
           pip install -q "setuptools<82.0.0"
           if [ -z "${{ needs.creation_job.outputs.vault_name }}" ]; then
-            DETECTED_VAULT=$(ls -td public/channels/${{ inputs.channel_name }}/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+            _d=$(ls -td "public/channels/${{ inputs.channel_name }}"/*/ 2>/dev/null | head -n 1)
+            [ -n "$_d" ] && DETECTED_VAULT=$(basename "$_d")
             if [ -n "$DETECTED_VAULT" ]; then
               echo "[+] Auto-detected vault for The_Brain: $DETECTED_VAULT"
               export CURRENT_SAFE_TOPIC="public/channels/${{ inputs.channel_name }}/$DETECTED_VAULT"
@@ -1208,7 +1211,8 @@ jobs:
         run: |
           pip install -q "setuptools<82.0.0"
           if [ -z "${{ needs.creation_job.outputs.vault_name }}" ]; then
-            DETECTED_VAULT=$(ls -td public/channels/${{ inputs.channel_name }}/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+            _d=$(ls -td "public/channels/${{ inputs.channel_name }}"/*/ 2>/dev/null | head -n 1)
+            [ -n "$_d" ] && DETECTED_VAULT=$(basename "$_d")
             if [ -n "$DETECTED_VAULT" ]; then
               echo "[+] Auto-detected vault for The_Brain: $DETECTED_VAULT"
               export CURRENT_SAFE_TOPIC="public/channels/${{ inputs.channel_name }}/$DETECTED_VAULT"
