@@ -64,6 +64,15 @@ jobs:
       skip_prep: ${{ steps.checkpoint.outputs.skip_prep }}
       skip_downloads: ${{ steps.checkpoint.outputs.skip_downloads }}
     steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
       - uses: actions/checkout@v4
 
       - name: Configure Git Safe Directory
@@ -467,6 +476,15 @@ jobs:
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
       - uses: actions/checkout@v4
 
       - name: Configure Git Safe Directory
@@ -653,6 +671,15 @@ jobs:
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
       - uses: actions/checkout@v4
 
       - name: Configure Git Safe Directory
@@ -1051,6 +1078,15 @@ jobs:
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
       - uses: actions/checkout@v4
 
       - name: Configure Git Safe Directory
@@ -1681,6 +1717,15 @@ jobs:
     if: inputs.action_type == 'UPLOAD_ONLY'
     runs-on: ubuntu-latest
     steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
       - uses: actions/checkout@v4
 
       - name: Setup Python
