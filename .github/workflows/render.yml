@@ -64,6 +64,15 @@ jobs:
       skip_prep: ${{ steps.checkpoint.outputs.skip_prep }}
       skip_downloads: ${{ steps.checkpoint.outputs.skip_downloads }}
     steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
       - uses: actions/checkout@v4
 
       - name: Configure Git Safe Directory
@@ -469,6 +478,15 @@ jobs:
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
       - uses: actions/checkout@v4
 
       - name: Configure Git Safe Directory
@@ -656,6 +674,15 @@ jobs:
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
       - uses: actions/checkout@v4
 
       - name: Configure Git Safe Directory
@@ -695,6 +722,10 @@ jobs:
       - name: Download Scripts & Workspace from Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          if [ -z "$VAULT" ]; then
+            _d=$(ls -td "public/channels/${{ inputs.channel_name }}"/*/ 2>/dev/null | head -n 1)
+            [ -n "$_d" ] && VAULT=$(basename "$_d")
+          fi
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /__pycache__/**" --filter "- /.git/**" --filter "- /global_used_assets/**" --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" --filter "- /ChatTTS_Models/**" --transfers 16
           mkdir -p "public/channels/${{ inputs.channel_name }}/$VAULT"
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT"  "public/channels/${{ inputs.channel_name }}/$VAULT" --include "master_timeline.json" --include "partial_*.json" --transfers 1 || true
@@ -710,6 +741,10 @@ jobs:
           NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
           GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
         run: |
+          if [ -z "$VAULT_NAME" ]; then
+            _d=$(ls -td "public/channels/${{ inputs.channel_name }}"/*/ 2>/dev/null | head -n 1)
+            [ -n "$_d" ] && export VAULT_NAME=$(basename "$_d")
+          fi
           if [ -f overlay_hunter.py ]; then
             xvfb-run -a python -u overlay_hunter.py || true
           else
@@ -720,6 +755,10 @@ jobs:
         if: always()
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          if [ -z "$VAULT" ]; then
+            _d=$(ls -td "public/channels/${{ inputs.channel_name }}"/*/ 2>/dev/null | head -n 1)
+            [ -n "$_d" ] && VAULT=$(basename "$_d")
+          fi
           if [ -f "public/channels/${{ inputs.channel_name }}/$VAULT/google_image_candidates.json" ]; then
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" --include "google_image_candidates.json" || true
           fi
@@ -955,7 +994,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          pip install --no-cache-dir yt-dlp google-genai requests pillow numpy opencv-python-headless filelock librosa soundfile duckduckgo_search
+          pip install --no-cache-dir yt-dlp google-genai requests pillow numpy opencv-python-headless filelock duckduckgo_search
 
       - name: Setup Node.js (For yt-dlp JS Runtime)
         uses: actions/setup-node@v4
@@ -1068,6 +1107,15 @@ jobs:
     container:
       image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
     steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
       - uses: actions/checkout@v4
 
       - name: Configure Git Safe Directory
@@ -1125,6 +1173,10 @@ jobs:
       - name: Download All Scripts, Assets & Workspace from Drive
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          if [ -z "$VAULT" ]; then
+            _d=$(ls -td "public/channels/${{ inputs.channel_name }}"/*/ 2>/dev/null | head -n 1)
+            [ -n "$_d" ] && VAULT=$(basename "$_d")
+          fi
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:Colab_AutoVideoCreator" . --filter "- /__pycache__/**" --filter "- /.git/**" --filter "- /global_used_assets/**" --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
             --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" \
             --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
@@ -1149,7 +1201,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
-        run: python -u merge_timelines.py
+        run: |
+          if [ -z "$VAULT_NAME" ]; then
+            _d=$(ls -td "public/channels/${{ inputs.channel_name }}"/*/ 2>/dev/null | head -n 1)
+            [ -n "$_d" ] && export VAULT_NAME=$(basename "$_d")
+          fi
+          python -u merge_timelines.py
 
       - name: Start CLIProxyAPI Antigravity Gateway
         env:
@@ -1256,6 +1313,10 @@ jobs:
         if: always()
         run: |
           VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          if [ -z "$VAULT" ]; then
+            _d=$(ls -td "public/channels/${{ inputs.channel_name }}"/*/ 2>/dev/null | head -n 1)
+            [ -n "$_d" ] && VAULT=$(basename "$_d")
+          fi
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/${{ inputs.channel_name }}/$VAULT" \
             "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/$VAULT" \
             --transfers 16 || true
@@ -1699,6 +1760,15 @@ jobs:
     if: inputs.action_type == 'UPLOAD_ONLY'
     runs-on: ubuntu-latest
     steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
       - uses: actions/checkout@v4
 
       - name: Setup Python
