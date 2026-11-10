@@ -19,12 +19,18 @@ action_type = os.environ.get("ACTION_TYPE")
 channel_name = os.environ.get("CHANNEL_NAME")
 if channel_name:
     channel_name = channel_name.strip().strip("'\"")
+drive_base_dir = os.environ.get("DRIVE_BASE_DIR", "Colab_AutoVideoCreator")
+if drive_base_dir:
+    drive_base_dir = drive_base_dir.strip().strip("'\"")
+else:
+    drive_base_dir = "Colab_AutoVideoCreator"
 topic = os.environ.get("TOPIC")
 is_ci = os.environ.get("GITHUB_ACTIONS") == "true" and os.environ.get("DEBUG_ORCHESTRATOR", "false").lower() != "true"
 
 print(f"=== CLOUD ORCHESTRATOR START ===")
 print(f"Action: {action_type}")
 print(f"Channel: {channel_name}")
+print(f"Drive Base: {drive_base_dir}")
 if is_ci:
     print("Topic: [PROTECTED RUNNER EXECUTION]")
 else:
@@ -47,9 +53,9 @@ if ready_to_render:
     
     # Try to read the timeline directly from Drive to count frames
     try:
-        result = subprocess.run(["rclone", "cat", f"data:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=False)
+        result = subprocess.run(["rclone", "cat", f"data:{drive_base_dir}/channels/{channel_name}/to upload/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=False)
         if result.returncode != 0:
-            subprocess.run(["rclone", "cat", f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=True)
+            subprocess.run(["rclone", "cat", f"data:{drive_base_dir}/public/channels/{channel_name}/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=True)
             
         with open("timeline.json", "r") as f:
             data = json.load(f)
@@ -82,9 +88,9 @@ if skip_prep:
     total_frames = "0"
     
     try:
-        result = subprocess.run(["rclone", "cat", f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=False)
+        result = subprocess.run(["rclone", "cat", f"data:{drive_base_dir}/public/channels/{channel_name}/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=False)
         if result.returncode != 0:
-            subprocess.run(["rclone", "cat", f"data:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=True)
+            subprocess.run(["rclone", "cat", f"data:{drive_base_dir}/channels/{channel_name}/to upload/{topic}/master_timeline.json"], stdout=open("timeline.json", "w"), check=True)
             
         with open("timeline.json", "r") as f:
             data = json.load(f)
@@ -111,7 +117,7 @@ if skip_prep:
     sys.exit(0)
 
 rclone_cmd = [
-    "rclone", "copy", f"engine:Colab_AutoVideoCreator", ".",
+    "rclone", "copy", f"engine:{drive_base_dir}", ".",
     "--exclude", "topics.txt", "--exclude", "*.bak",
     "--exclude", "node_modules/**", "--exclude", "out/**", "--exclude", "src/**", "--exclude", "*.mp4", "--exclude", "requirements.txt",
     "--exclude", "DELETE_THIS_WHEN_SELLING_firefox_profile/**", "--exclude", "firefox_stealth_profile/**", "--exclude", "gemini_selenium_profile/**", "--exclude", "ChatTTS_Models/**",
@@ -153,7 +159,7 @@ if not topic and action_type in ["CREATE_FRESH", "CREATE_AUTOMATIC"]:
     # Strictly copy the target channel's own topics.txt using copyto
     subprocess.run([
         "rclone", "copyto",
-        f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt",
+        f"data:{drive_base_dir}/channels/{channel_name}/topics.txt",
         "topics.txt",
         "--retries", "3", "--contimeout", "30s"
     ], check=False)
@@ -177,7 +183,7 @@ if not topic and action_type in ["CREATE_FRESH", "CREATE_AUTOMATIC"]:
         subprocess.run([
             "rclone", "copyto",
             "topics.txt",
-            f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt",
+            f"data:{drive_base_dir}/channels/{channel_name}/topics.txt",
             "--retries", "3", "--contimeout", "30s"
         ], check=True)
         print("[+] Channel queue file successfully updated on Google Drive.")
@@ -223,9 +229,9 @@ if topic:
     # Pre-create the directory on Drive AND locally so rclone doesn't error on fresh creations
     local_ws = f"public/channels/{channel_name}/{safe_topic}"
     os.makedirs(local_ws, exist_ok=True)
-    subprocess.run(["rclone", "mkdir", f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{safe_topic}"], check=False)
+    subprocess.run(["rclone", "mkdir", f"data:{drive_base_dir}/public/channels/{channel_name}/{safe_topic}"], check=False)
     # Now safely download whatever exists (will be empty on fresh, populated on resume)
-    subprocess.run(["rclone", "copy", f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{safe_topic}", local_ws], check=False)
+    subprocess.run(["rclone", "copy", f"data:{drive_base_dir}/public/channels/{channel_name}/{safe_topic}", local_ws], check=False)
 
 
 # 4. Execute the pipeline
@@ -261,7 +267,7 @@ try:
     ws_path = f"public/channels/{channel_name}/{vault_name}"
     if os.path.isdir(ws_path):
         subprocess.run(["rclone", "copy", ws_path,
-                        f"data:Colab_AutoVideoCreator/public/channels/{channel_name}/{vault_name}",
+                        f"data:{drive_base_dir}/public/channels/{channel_name}/{vault_name}",
                         "--transfers", "16", "-v"], check=False)
         print(f"[+] Uploaded public workspace to Drive.")
 
@@ -269,14 +275,14 @@ try:
     vault_meta = f"channels/{channel_name}/to upload/{vault_name}"
     if os.path.isdir(vault_meta):
         subprocess.run(["rclone", "copy", vault_meta,
-                        f"data:Colab_AutoVideoCreator/channels/{channel_name}/to upload/{vault_name}",
+                        f"data:{drive_base_dir}/channels/{channel_name}/to upload/{vault_name}",
                         "--transfers", "16", "-v"], check=False)
         print(f"[+] Uploaded vault metadata to Drive.")
 
     # Sync topics.txt if it was modified
     if os.path.exists("topics.txt"):
         subprocess.run(["rclone", "copyto", "topics.txt",
-                        f"data:Colab_AutoVideoCreator/channels/{channel_name}/topics.txt"], check=False)
+                        f"data:{drive_base_dir}/channels/{channel_name}/topics.txt"], check=False)
         print(f"[+] Synced topics.txt to Drive.")
 except Exception as e:
     print(f"[!] Drive sync warning: {e}")

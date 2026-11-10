@@ -1,4 +1,5 @@
 node_modules/
+scratch/
 
 # Safety Shield: Prevent proprietary Python engine files and cache from being committed
 *.py

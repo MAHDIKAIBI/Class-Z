@@ -8,6 +8,7 @@ import { GlassStatGrid } from './components/GlassStatGrid';
 import { GlobalFinisher } from './components/GlobalFinisher';
 import { KineticStack } from './components/KineticStack';
 import { OrganicCamera } from './components/OrganicCamera';
+import { AnimatedExplanation } from './components/AnimatedExplanation';
 
 export const AnimatedNumberShowcase = () => (
     <AbsoluteFill style={{ backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' }}>
@@ -356,8 +357,47 @@ export const Floating3DCardsShowcase = () => (
     </AbsoluteFill>
 );
 
+export const AnimatedExplanationHoneycombShowcase = () => (
+    <AbsoluteFill style={{ backgroundColor: '#020306' }}>
+        <AnimatedExplanation 
+            payload={{
+                blueprint_mode: 'network_grid_propagation',
+                accentColor: '#00F0FF',
+                steps: [
+                    { step_index: 1, trigger_word: 'tower', trigger_start_ms: 0, action: 'spawn_center', icon_key: 'radio-tower', label_text: '0G BASE' },
+                    { step_index: 2, trigger_word: 'honeycomb', trigger_start_ms: 1200, action: 'draw_grid', icon_key: 'hexagon', label_text: 'CELLS' },
+                    { step_index: 3, trigger_word: 'nodes', trigger_start_ms: 2500, action: 'populate_cells', icon_key: 'radio-tower', label_text: 'GRID' },
+                    { step_index: 4, trigger_word: 'handed', trigger_start_ms: 3800, action: 'transfer_node', icon_key: 'phone-call', label_text: 'HANDOFF' }
+                ]
+            }}
+            sceneStartMs={0}
+            durationInFrames={180}
+        />
+    </AbsoluteFill>
+);
+
+export const AnimatedExplanationSlotShowcase = () => (
+    <AbsoluteFill style={{ backgroundColor: '#020306' }}>
+        <AnimatedExplanation 
+            payload={{
+                blueprint_mode: 'sequential_slot_replace',
+                accentColor: '#E5C07B',
+                steps: [
+                    { step_index: 1, trigger_word: 'house', trigger_start_ms: 0, action: 'slot_drop', icon_key: 'home', label_text: 'HOUSE' },
+                    { step_index: 2, trigger_word: 'office', trigger_start_ms: 1200, action: 'slot_drop', icon_key: 'building-2', label_text: 'OFFICE' },
+                    { step_index: 3, trigger_word: 'desk', trigger_start_ms: 2400, action: 'slot_drop', icon_key: 'desk', label_text: 'DESK' }
+                ]
+            }}
+            sceneStartMs={0}
+            durationInFrames={150}
+        />
+    </AbsoluteFill>
+);
+
 export const ShowcaseRegistry = () => (
     <>
+        <Composition id="Preview-AnimatedExplanation-Honeycomb" component={AnimatedExplanationHoneycombShowcase} durationInFrames={180} fps={30} width={2560} height={1333} />
+        <Composition id="Preview-AnimatedExplanation-Slot" component={AnimatedExplanationSlotShowcase} durationInFrames={150} fps={30} width={2560} height={1333} />
         <Composition id="Preview-Floating3DCards" component={Floating3DCardsShowcase} durationInFrames={240} fps={30} width={2560} height={1333} />
         <Composition id="Preview-ProceduralEvidence" component={ProceduralEvidenceShowcase} durationInFrames={120} fps={30} width={2560} height={1333} />
         <Composition id="Preview-MagnatesStage-TwoPart" component={MagnatesStage_TwoPartShowcase} durationInFrames={210} fps={30} width={2560} height={1333} />

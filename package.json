@@ -16,6 +16,7 @@
     "@remotion/three": "4.0.483",
     "@remotion/transitions": "4.0.483",
     "@types/three": "^0.170.0",
+    "lucide-react": "^1.71.0",
     "puppeteer": "^25.2.1",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",

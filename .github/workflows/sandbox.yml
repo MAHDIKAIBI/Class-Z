@@ -1,0 +1,1679 @@
+name: "Sandbox Pipeline (Test & Inspect)"
+
+
+on:
+  workflow_dispatch:
+    inputs:
+      action_type:
+        description: 'Action Type'
+        required: true
+        default: 'CREATE_FRESH'
+        type: choice
+        options:
+          - CREATE_FRESH
+          - CREATE_AUTOMATIC
+          - RESUME
+          - RENDER_ONLY
+          - STITCH_ONLY
+      topic:
+        description: 'Topic Name'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      action_type:
+        required: true
+        type: string
+      topic:
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  packages: read
+
+env:
+  INPUT_TOPIC: ${{ inputs.topic }}
+  CHANNEL_NAME: 'sandbox'
+  DRIVE_BASE_DIR: 'sandbox'
+
+jobs:
+
+  creation_job:
+    if: inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
+    outputs:
+      vault_name: ${{ steps.orchestrator.outputs.vault_name }}
+      total_frames: ${{ steps.orchestrator.outputs.total_frames }}
+      skip_tts: ${{ steps.checkpoint.outputs.skip_tts }}
+      skip_prep: ${{ steps.checkpoint.outputs.skip_prep }}
+      skip_downloads: ${{ steps.checkpoint.outputs.skip_downloads }}
+    steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          
+          # Engine Token
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          
+          # Data Token
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Check Checkpoints (Universal Smart Exclusion)
+        id: checkpoint
+        run: |
+          echo "SKIP_PROFILE=false" >> $GITHUB_ENV
+          echo "READY_TO_RENDER=false" >> $GITHUB_ENV
+          echo "skip_tts=false" >> $GITHUB_OUTPUT
+          echo "skip_prep=false" >> $GITHUB_OUTPUT
+          echo "skip_downloads=false" >> $GITHUB_OUTPUT
+          
+          echo "Probing Google Drive for checkpoints..."
+          VAULT="$INPUT_TOPIC"
+          CHANNEL="sandbox"
+          TIMELINE_JSON=""
+          
+          # Check public/channels workspace first (modern RESUME path)
+          if [ -n "$VAULT" ]; then
+            if rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:sandbox/public/channels/$CHANNEL/$VAULT/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
+              echo "Found master_timeline.json in public/channels workspace."
+              TIMELINE_JSON="master_timeline.json"
+            # Fall back to legacy to upload path
+            elif rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:sandbox/channels/$CHANNEL/to upload/$VAULT/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
+              echo "Found master_timeline.json in to upload workspace."
+              TIMELINE_JSON="master_timeline.json"
+            fi
+            
+            # Probe for completed voiceover if timeline isn't found yet
+            if [ -z "$TIMELINE_JSON" ]; then
+              if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:sandbox/public/channels/$CHANNEL/$VAULT/voiceover.wav" >/dev/null 2>&1 || rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:sandbox/channels/$CHANNEL/to upload/$VAULT/voiceover.wav" >/dev/null 2>&1; then
+                echo "[+] Detected complete voiceover.wav on Drive! Bypassing 15 parallel TTS workers."
+                echo "skip_tts=true" >> $GITHUB_OUTPUT
+              fi
+            fi
+          else
+            echo "[*] CREATE_AUTOMATIC: No topic provided. Bypassing checkpoints to allow Orchestrator to pull from queue."
+          fi
+          
+          if [ -n "$TIMELINE_JSON" ]; then
+             echo "Analyzing completion status..."
+             echo "[+] Valid master_timeline.json detected. Bypassing TTS matrix and Brain Prep!"
+             echo "skip_tts=true" >> $GITHUB_OUTPUT
+             echo "skip_prep=true" >> $GITHUB_OUTPUT
+             echo "SKIP_PREP=true" >> $GITHUB_ENV
+             
+             # Count scenes without downloaded_video
+             MISSING_VIDEOS=$(jq '[.timeline[] | select((.media_path == null or .media_path == "" or (.media_path | length) == 0) and (.media_paths == null or .media_paths == [] or (.media_paths | length) == 0))] | length' "$TIMELINE_JSON")
+             
+             # Count scenes that requested an overlay but haven't downloaded it
+             MISSING_OVERLAYS=$(jq '[.timeline[] | select(.overlay_image_query != null and .overlay_image_query != "" and (.overlay_image_query | ascii_downcase) != "none" and (.overlay_image == null or .overlay_image == ""))] | length' "$TIMELINE_JSON")
+             
+             echo "Missing Videos: $MISSING_VIDEOS"
+             echo "Missing Overlays: $MISSING_OVERLAYS"
+             
+             if [ "$MISSING_VIDEOS" -eq 0 ] && [ "$MISSING_OVERLAYS" -eq 0 ]; then
+                 echo "100% READY TO RENDER! Bypassing Ollama and Playwright entirely."
+                 echo "READY_TO_RENDER=true" >> $GITHUB_ENV
+                 echo "SKIP_PROFILE=true" >> $GITHUB_ENV
+                 echo "skip_downloads=true" >> $GITHUB_OUTPUT
+             fi
+          fi
+          
+          # If not completely ready, check if we can at least skip Playwright
+          if [ "$READY_TO_RENDER" != "true" ] && [ -n "$VAULT" ]; then
+             if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:sandbox/public/channels/sandbox/$VAULT/script.txt" >/dev/null 2>&1 || rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 2 --retries-sleep 2s --contimeout 10s "data:sandbox/channels/sandbox/to upload/$VAULT/script.txt" >/dev/null 2>&1; then
+                 echo "Detected script.txt. ChatGPT phase is done. Bypassing Playwright profile."
+                 echo "SKIP_PROFILE=true" >> $GITHUB_ENV
+             fi
+          fi
+
+
+      - name: Start CLIProxyAPI Antigravity Gateway
+        env:
+          CLIPROXY_AUTH_TOKENS: ${{ secrets.CLIPROXY_AUTH_TOKENS }}
+        run: |
+          echo "[*] Setting up CLIProxyAPI Antigravity Gateway..."
+          BIN=""
+          CFG=""
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching antigravity_gateway from engine drive..."
+            rclone copy --tpslimit 10 --retries 3 --contimeout 30s "engine:sandbox/antigravity_gateway" antigravity_gateway || true
+          fi
+
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching CLIProxyAPI from GitHub releases fallback..."
+            curl -fsSL https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.31/CLIProxyAPI_8.0.31_linux_amd64.tar.gz | tar -xz || true
+            if [ -f "cli-proxy-api" ]; then
+              chmod +x cli-proxy-api
+              BIN="./cli-proxy-api"
+              echo "port: 8317" > cliproxy_config.yaml
+              echo "debug: false" >> cliproxy_config.yaml
+              echo "request-retry: 5" >> cliproxy_config.yaml
+              echo "antigravity:" >> cliproxy_config.yaml
+              echo "  enabled: true" >> cliproxy_config.yaml
+              CFG="cliproxy_config.yaml"
+            fi
+          else
+            chmod +x antigravity_gateway/cli-proxy-api
+            BIN="antigravity_gateway/cli-proxy-api"
+            CFG="antigravity_gateway/config.yaml"
+          fi
+
+          mkdir -p ~/.cli-proxy-api
+          if [ -d "antigravity_gateway/accounts" ]; then
+            cp -f antigravity_gateway/accounts/*.json ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+          if [ -n "$CLIPROXY_AUTH_TOKENS" ]; then
+            echo "$CLIPROXY_AUTH_TOKENS" | base64 -d | tar -xz -C ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+
+          if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+            echo "[+] Antigravity Gateway is already running on port 8317!"
+          elif [ -n "$BIN" ] && [ -x "$BIN" ]; then
+            echo "[*] Starting CLIProxyAPI Antigravity Gateway daemon on port 8317..."
+            nohup $BIN -config $CFG > /tmp/cliproxy.log 2>&1 &
+            for i in $(seq 1 10); do
+              if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+                echo "[+] Antigravity Gateway is LIVE on port 8317!"
+                break
+              fi
+              sleep 1
+            done
+            if ! curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+              echo "[!] Warning: Antigravity Gateway did not respond within 10s. Log output:"
+              cat /tmp/cliproxy.log 2>/dev/null || true
+            fi
+          else
+            echo "[!] Warning: CLIProxyAPI binary not found or not executable. Bypassing."
+          fi
+
+      - name: Run Python Orchestrator
+        id: orchestrator
+        env:
+          ACTION_TYPE: ${{ inputs.action_type }}
+          CHANNEL_NAME: "sandbox"
+          DRIVE_BASE_DIR: "sandbox"
+          TOPIC: ${{ inputs.topic }}
+          CLOUD_TTS_PARALLEL: "1"
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+        shell: bash
+        run: |
+          echo "[*] Launching Autonomous Video Creation Engine (Live Sanitized Progress)..."
+          # Stream sanitized phase progress to public GitHub logs while teeing full log privately
+          rm -f /tmp/orch_status
+          { xvfb-run -a --server-args="-screen 0 1920x1080x24" env GITHUB_OUTPUT="$GITHUB_OUTPUT" python -u .github/scripts/orchestrator.py 2>&1; echo $? > /tmp/orch_status; } \
+            | tee /tmp/orchestrator.log \
+            | sed -u -n -E \
+                -e "s/(for ['\"])[^'\"]+(['\"])/\1[PROTECTED]\2/g" \
+                -e "s/, Key [^,)]+//g" \
+                -e "s/(Blueprint confirmed:).*\|/\1/g" \
+                -e "s/(Generating Chapter [0-9]+ \/ [0-9]+):.*/\1.../g" \
+                -e "s/(Showrunner \+ Ledger \+ Qwen3-TTS Polish on Section [0-9]+ \/ [0-9]+):.*/\1.../g" \
+                -e "s/'(Chapter [0-9]+|Section [0-9]+|Polish Section [0-9]+|Expand Chapter [0-9]+):[^']*'/'\1'/g" \
+                -e "s/-> .*//g" \
+                -e "s/\| Overused:.*//g" \
+                -e "s/(Caught [0-9]+ mechanical sentence violations|Flagged [0-9]+ sentences for unsourced claims\/hedges).*/\1.../g" \
+                -e "/=== CLOUD ORCHESTRATOR|^Action:|^Downloading core scripts|^Installing Python dependencies|Successfully popped topic|Immortal Queue Engine|QUARANTINE ENGINE|Antigravity Title Engine|LOCKED IN NEW WINNING TOPIC|^Executing Video Creation Pipeline|\[PHASE |\[TRI-PASS |\[Search Grounding\]|Pass [0-9]+ Success|Aggregated [0-9]+ unique|\[LEGIT SOURCES LOCKED\]|Intercepting '|Returned valid JSON for '|Generated elite text for '|Successfully handled '|Claim Ledger saved|Channel Runtime Calibrated|Generating Blueprint JSON|Blueprint confirmed|Running Elite Niche Voice|Niche-Adaptive Hook Engine|Topic Contract Locked|Generating Chapter [0-9]+|came in short|expanded from|Phase 2c Complete|Showrunner \+ Ledger \+ Qwen3-TTS Polish on Section|Unified Showrunner \+ Qwen3-TTS Pass complete|Script passed local TTS|\[Rhythm & Lexical|\[FINAL MECHANICAL NUMBER|Mechanical Regex Number|Multi-Batch Cross-Model Claim Audit|\[SURGICAL REWRITER\]|\[FINAL GATE COMPLETE\]|\[Mechanical Fact & Number Gate\]|\[Cross-Model Claim Gate\]|Final Mechanically Verified Script Locked|metadata\.json updated with 5-Pillar|Waiting for ChatGPT|ChatGPT interface ready|Reference image injected|Polling for Thumbnail|SUCCESS: Both thumbnails|\[CLOUD MODE\]|Uploaded public workspace|Uploaded vault metadata/p"
+          STATUS=$(cat /tmp/orch_status 2>/dev/null || echo 1)
+          if [ "$STATUS" -eq 0 ]; then
+              echo "[+] Video Creation Pipeline completed successfully."
+          else
+              echo "[!] Pipeline encountered an error (exit code $STATUS)."
+              grep -E "(Error|Exception|Traceback|Failed)" /tmp/orchestrator.log | sed -E "s/'[^']*'/'[PROTECTED]'/g; s/channels\/[^\/]+\/[^\/]+/channels\/[PROTECTED]/g" | tail -n 15 || echo "Details logged privately to Google Drive."
+              rclone copyto /tmp/orchestrator.log "data:sandbox/channels/sandbox/logs/error_orchestrator_${{ github.run_id }}.log" 2>/dev/null || true
+              exit $STATUS
+          fi
+
+          # Silently sync full execution log to owner's Google Drive for private review
+          rclone copyto /tmp/orchestrator.log "data:sandbox/channels/sandbox/logs/run_${{ github.run_id }}.log" 2>/dev/null || true
+
+          # Failsafe: if Python failed to write to GITHUB_OUTPUT, Bash will do it directly!
+          if [ -f "generated_vault.txt" ]; then
+              VAULT_NAME=$(cat generated_vault.txt)
+              echo "vault_name=$VAULT_NAME" >> "$GITHUB_OUTPUT"
+              rclone mkdir "data:sandbox/public/channels/sandbox/$VAULT_NAME/assets" 2>/dev/null || true
+          fi
+
+          if [ -f "timeline.json" ]; then
+              TOTAL_FRAMES=$(jq '([(.meta // .metadata // {}).total_duration_ms // 0, ([.timeline[]? | (.timing.start_ms // 0) + (.timing.duration_ms // 0)] | max // 0)] | max) | if . > 0 then ((. / 1000) * 30 | round) + 60 else 0 end' timeline.json 2>/dev/null || echo "0")
+          else
+              TOTAL_FRAMES="0"
+          fi
+          echo "total_frames=$TOTAL_FRAMES" >> $GITHUB_OUTPUT
+          
+      - name: Sync Refreshed ChatGPT Cookies to Engine Drive
+        if: success()
+        run: |
+          echo "Syncing refreshed ChatGPT cookies back to engine drive..."
+          if [ -f chatgpt_cookies.json ]; then
+            rclone copyto --update --tpslimit 5 --retries 3 --contimeout 30s \
+                "chatgpt_cookies.json" "engine:sandbox/chatgpt_cookies.json"
+            echo "[+] ChatGPT cookies synced back to engine drive."
+          else
+            echo "[!] No refreshed cookies found to sync (Playwright may have been skipped)."
+          fi
+
+      # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
+      # finishes, because The_Brain.py needs Ollama for footage/image search queries.
+
+  tts_matrix:
+    needs: [creation_job]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && needs.creation_job.outputs.skip_tts != 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Install Host Tools (rclone & jq)
+        run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          for _apt in 1 2 3; do sudo apt-get update && sudo apt-get install -y rclone jq && break || sleep 10; done
+
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          
+          # Engine Token
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          
+          # Data Token
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Download Scripts & Workspace
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          CHANNEL="sandbox"
+          # Only download what tts_worker.py actually needs — no mp4s, no bulk folders
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:sandbox" . --filter "- /__pycache__/**" --filter "- /.git/**" --filter "- /global_used_assets/**" --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" \
+            --include "tts_worker.py" \
+            --include "local_voice_engine.py" \
+            --include "smart_gemini_keyring.py" \
+            --include "requirements.txt" \
+            --include "gemini_cookies.json" \
+            --transfers 8
+          if [ -z "$VAULT" ]; then
+            echo "[!] Notice: VAULT output was empty. Auto-detecting latest vault from Drive..."
+            VAULT=$(rclone lsf "data:sandbox/public/channels/$CHANNEL/" --dirs-only 2>/dev/null | sort -V | tail -n 1 | tr -d '/')
+            echo "[+] Auto-detected VAULT: '$VAULT'"
+          fi
+          if [ -n "$VAULT" ]; then
+            mkdir -p "public/channels/$CHANNEL/$VAULT"
+            # Download the script + any already-generated WAV chunks
+              rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/$CHANNEL/to upload/$VAULT" "public/channels/$CHANNEL/$VAULT" --include "script.txt" --include "*.wav" --transfers 16 || true
+              rclone mkdir "data:sandbox/public/channels/$CHANNEL/$VAULT" || true
+              rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" --include "script.txt" --include "*.wav" --transfers 16 || true
+          fi
+          # Download master reference voice if present
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/$CHANNEL/voice" "channels/$CHANNEL/voice/" || true
+
+
+      - name: Run TTS Worker in Container
+        env:
+          TTS_WORKER_ID: ${{ matrix.worker }}
+          TTS_TOTAL_WORKERS: "20"
+          CHANNEL_NAME: "sandbox"
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+        run: |
+          ACTUAL_VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          if [ -z "$ACTUAL_VAULT" ]; then
+            ACTUAL_VAULT=$(ls -td public/channels/sandbox/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+            echo "[+] Run TTS Worker auto-detected ACTUAL_VAULT='$ACTUAL_VAULT'"
+          fi
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker run --rm \
+            --net=host \
+            -v "$GITHUB_WORKSPACE":"$GITHUB_WORKSPACE" \
+            -v "$HOME/.config/rclone:/root/.config/rclone:ro" \
+            -v /tmp:/tmp \
+            -w "$GITHUB_WORKSPACE" \
+            -e TTS_WORKER_ID="${{ matrix.worker }}" \
+            -e TTS_TOTAL_WORKERS="20" \
+            -e CHANNEL_NAME="sandbox" \
+            -e VAULT_NAME="$ACTUAL_VAULT" \
+            -e HF_TOKEN="${{ secrets.HF_TOKEN }}" \
+            -e GEMINI_API_KEYS="${{ secrets.GEMINI_API_KEYS }}" \
+            ghcr.io/mahdikaibi/videocreator-runner:v1.0 \
+            bash -c "
+              pip install -q 'setuptools<82.0.0'
+              FAILED=1
+              for i in {1..10}; do
+                if python -u tts_worker.py; then
+                  FAILED=0
+                  break
+                fi
+                echo '[!] Worker crashed or hit 429. Rebooting instantly (Attempt \$i/10)...'
+                sleep 5
+              done
+              if [ \"\$FAILED\" -eq 1 ]; then
+                echo '[!] FATAL: tts_worker.py failed all 10 attempts!'
+                exit 1
+              fi
+            "
+
+      - name: Upload WAV Chunks to Drive
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          if [ -z "$VAULT" ]; then
+            VAULT=$(ls -td public/channels/sandbox/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+          fi
+          if [ -n "$VAULT" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/sandbox/$VAULT" "data:sandbox/public/channels/sandbox/$VAULT" --include "*.wav"
+          fi
+
+
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # PHASE 2a: brain_prep_job â€” Audio processing + scene alignment + timeline save
+  # Does NOT download clips. Hands off to download_matrix workers.
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  brain_prep_job:
+    needs: [creation_job, tts_matrix]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && needs.creation_job.outputs.skip_prep != 'true'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
+    steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          
+          # Engine Token
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          
+          # Data Token
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Download Scripts & All WAV Chunks
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          if [ -z "$VAULT" ]; then
+            echo "[!] Notice: VAULT output was empty. Auto-detecting latest vault from Drive..."
+            VAULT=$(rclone lsf "data:sandbox/public/channels/sandbox/" --dirs-only 2>/dev/null | sort -V | tail -n 1 | tr -d '/')
+            echo "[+] Auto-detected VAULT: '$VAULT'"
+          fi
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:sandbox" . --filter "- /__pycache__/**" --filter "- /.git/**" --filter "- /global_used_assets/**" --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" --filter "- /ChatTTS_Models/**" --transfers 16
+          mkdir -p "public/channels/sandbox/$VAULT"
+          mkdir -p "channels/sandbox/to upload/$VAULT"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/sandbox/to upload/$VAULT" "public/channels/sandbox/$VAULT" || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/sandbox/to upload/$VAULT" "channels/sandbox/to upload/$VAULT" --transfers 16 || true
+          rclone mkdir "data:sandbox/public/channels/sandbox/$VAULT" || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/sandbox/$VAULT" "public/channels/sandbox/$VAULT" || true
+
+
+
+
+      - name: Start CLIProxyAPI Antigravity Gateway
+        env:
+          CLIPROXY_AUTH_TOKENS: ${{ secrets.CLIPROXY_AUTH_TOKENS }}
+        run: |
+          echo "[*] Setting up CLIProxyAPI Antigravity Gateway..."
+          BIN=""
+          CFG=""
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching antigravity_gateway from engine drive..."
+            rclone copy --tpslimit 10 --retries 3 --contimeout 30s "engine:sandbox/antigravity_gateway" antigravity_gateway || true
+          fi
+
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching CLIProxyAPI from GitHub releases fallback..."
+            curl -fsSL https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.31/CLIProxyAPI_8.0.31_linux_amd64.tar.gz | tar -xz || true
+            if [ -f "cli-proxy-api" ]; then
+              chmod +x cli-proxy-api
+              BIN="./cli-proxy-api"
+              echo "port: 8317" > cliproxy_config.yaml
+              echo "debug: false" >> cliproxy_config.yaml
+              echo "request-retry: 5" >> cliproxy_config.yaml
+              echo "antigravity:" >> cliproxy_config.yaml
+              echo "  enabled: true" >> cliproxy_config.yaml
+              CFG="cliproxy_config.yaml"
+            fi
+          else
+            chmod +x antigravity_gateway/cli-proxy-api
+            BIN="antigravity_gateway/cli-proxy-api"
+            CFG="antigravity_gateway/config.yaml"
+          fi
+
+          mkdir -p ~/.cli-proxy-api
+          if [ -d "antigravity_gateway/accounts" ]; then
+            cp -f antigravity_gateway/accounts/*.json ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+          if [ -n "$CLIPROXY_AUTH_TOKENS" ]; then
+            echo "$CLIPROXY_AUTH_TOKENS" | base64 -d | tar -xz -C ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+
+          if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+            echo "[+] Antigravity Gateway is already running on port 8317!"
+          elif [ -n "$BIN" ] && [ -x "$BIN" ]; then
+            echo "[*] Starting CLIProxyAPI Antigravity Gateway daemon on port 8317..."
+            nohup $BIN -config $CFG > /tmp/cliproxy.log 2>&1 &
+            for i in $(seq 1 10); do
+              if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+                echo "[+] Antigravity Gateway is LIVE on port 8317!"
+                break
+              fi
+              sleep 1
+            done
+            if ! curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+              echo "[!] Warning: Antigravity Gateway did not respond within 10s. Log output:"
+              cat /tmp/cliproxy.log 2>/dev/null || true
+            fi
+          else
+            echo "[!] Warning: CLIProxyAPI binary not found or not executable. Bypassing."
+          fi
+
+      - name: Run The_Brain PREP phase (audio + timeline, no clip downloads)
+        env:
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
+          BRAIN_PHASE: "prep"
+          CURRENT_AUTO_MODE: "1"
+          CURRENT_SAFE_TOPIC: "public/channels/sandbox/${{ needs.creation_job.outputs.vault_name }}"
+          AUTO_GEMINI_MODE: "1"
+          CLOUD_TTS_PARALLEL: "0"
+          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
+          AUTO_WORKSPACE_FOLDER: "public/channels/sandbox/${{ needs.creation_job.outputs.vault_name }}"
+          AUTO_TARGET_FOLDER: "channels/sandbox/to upload/${{ needs.creation_job.outputs.vault_name }}"
+        run: |
+          pip install -q "setuptools<82.0.0"
+          if [ -z "${{ needs.creation_job.outputs.vault_name }}" ]; then
+            DETECTED_VAULT=$(ls -td public/channels/sandbox/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+            if [ -n "$DETECTED_VAULT" ]; then
+              echo "[+] Auto-detected vault for The_Brain: $DETECTED_VAULT"
+              export CURRENT_SAFE_TOPIC="public/channels/sandbox/$DETECTED_VAULT"
+              export AUTO_WORKSPACE_FOLDER="public/channels/sandbox/$DETECTED_VAULT"
+              export AUTO_TARGET_FOLDER="channels/sandbox/to upload/$DETECTED_VAULT"
+            fi
+          fi
+          xvfb-run -a python -u The_Brain.py
+
+
+      - name: Save Fresh Cookies to Drive
+        if: success()
+        run: |
+          if [ -f gemini_cookies.json ] && [ -s gemini_cookies.json ]; then
+            echo "[+] Uploading fresh gemini_cookies.json..."
+            rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:sandbox/gemini_cookies.json" || true
+          else
+            echo "[!] gemini_cookies.json missing or empty. Nothing to upload."
+          fi
+          # MotionArray cookies (always safe to overwrite)
+          rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:sandbox/motionarray_cookies.json" || true
+          if [ -f google_cookies.json ] && [ -s google_cookies.json ]; then
+            echo "[+] Uploading fresh google_cookies.json..."
+            rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s google_cookies.json "engine:sandbox/google_cookies.json" || true
+          fi
+
+      - name: Upload Timeline to Drive
+        if: always()
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          
+          # CRITICAL FIX: Pre-create the assets folder on Drive before the 8 parallel download workers start.
+          # Because Google Drive allows duplicate folder names, 8 parallel rclone instances writing to a non-existent path will create 8 duplicate "assets" folders.
+          rclone mkdir "data:sandbox/public/channels/sandbox/$VAULT/assets" || true
+          
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/sandbox/$VAULT" "data:sandbox/public/channels/sandbox/$VAULT" --transfers 16 || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/sandbox/to upload/$VAULT" "data:sandbox/channels/sandbox/to upload/$VAULT" --transfers 16 || true
+
+  # ---------------------------------------------------------
+  # PHASE 2b (Parallel): overlay_hunter_job
+  # Scrapes Google Images while download_matrix is busy with video b-rolls.
+  # ---------------------------------------------------------
+  overlay_hunter_job:
+    needs: [creation_job, brain_prep_job, tts_matrix]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Install Host Tools (rclone, jq & python packages)
+        run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          for _apt in 1 2 3; do sudo apt-get update && sudo apt-get install -y rclone jq && break || sleep 10; done
+          pip install -q requests ddgs duckduckgo_search
+
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Download Scripts & Workspace from Drive
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          CHANNEL="sandbox"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:sandbox" . --filter "- /__pycache__/**" --filter "- /.git/**" --filter "- /global_used_assets/**" --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" --filter "- /ChatTTS_Models/**" --transfers 16
+          if [ -z "$VAULT" ]; then
+            echo "[!] Notice: VAULT output was empty. Auto-detecting latest vault from Drive..."
+            VAULT=$(rclone lsf "data:sandbox/public/channels/$CHANNEL/" --dirs-only 2>/dev/null | sort -V | tail -n 1 | tr -d '/')
+            echo "[+] Auto-detected VAULT: '$VAULT'"
+          fi
+          if [ -n "$VAULT" ]; then
+            mkdir -p "public/channels/$CHANNEL/$VAULT"
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/$CHANNEL/$VAULT"  "public/channels/$CHANNEL/$VAULT" --include "master_timeline.json" --include "partial_*.json" --transfers 1 || true
+          fi
+
+      - name: Run Master Hunter (Google Images)
+        env:
+          CHANNEL_NAME: "sandbox"
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GH_TOKEN: ${{ github.token }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+        run: |
+          if [ -z "$VAULT_NAME" ]; then
+            LATEST_DIR=$(ls -td "public/channels/sandbox"/*/ 2>/dev/null | head -n 1)
+            VAULT_NAME=$(basename "$LATEST_DIR")
+            export VAULT_NAME
+          fi
+          if [ -f overlay_hunter.py ]; then
+            python -u overlay_hunter.py || true
+          else
+            echo "[!] overlay_hunter.py not found on engine drive. Bypassing."
+          fi
+
+      - name: Upload Candidates Map to Drive
+        if: always()
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          if [ -z "$VAULT" ]; then
+            LATEST_DIR=$(ls -td "public/channels/sandbox"/*/ 2>/dev/null | head -n 1)
+            VAULT=$(basename "$LATEST_DIR")
+          fi
+          if [ -n "$VAULT" ] && [ -f "public/channels/sandbox/$VAULT/google_image_candidates.json" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/sandbox/$VAULT" "data:sandbox/public/channels/sandbox/$VAULT" --include "google_image_candidates.json" || true
+          fi
+
+      - name: Save Fresh Google Cookies to Drive
+        if: always()
+        run: |
+          if [ -f google_cookies.json ] && [ -s google_cookies.json ]; then
+            echo "[+] Uploading fresh google_cookies.json..."
+            rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s google_cookies.json "engine:sandbox/google_cookies.json" || true
+          fi
+
+  download_matrix:
+    needs: [creation_job, brain_prep_job, tts_matrix]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: [0, 1, 2, 3, 4, 5]
+    steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Install Host Tools (rclone & jq)
+        run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          for _apt in 1 2 3; do sudo apt-get update && sudo apt-get install -y rclone jq && break || sleep 10; done
+
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          
+          # Engine Token
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          
+          # Data Token
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Download All Scripts & Workspace from Drive
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:sandbox" . --filter "- /__pycache__/**" --filter "- /.git/**" --filter "- /global_used_assets/**" --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
+            --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" \
+            --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
+            --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" \
+            --filter "- /ChatTTS_Models/**" --transfers 16
+          mkdir -p "public/channels/sandbox/$VAULT"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/sandbox/to upload/$VAULT"  "public/channels/sandbox/$VAULT" --transfers 16 || true
+          rclone mkdir "data:sandbox/public/channels/sandbox/$VAULT" || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/sandbox/$VAULT"  "public/channels/sandbox/$VAULT" --transfers 16 || true
+
+      - name: Run Download & Overlay Workers in Container
+        env:
+          DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
+          DOWNLOAD_TOTAL_WORKERS: "6"
+          YOUTUBE_TOTAL_WORKERS: "13"
+          CHANNEL_NAME: "sandbox"
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GH_TOKEN: ${{ github.token }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker run --rm \
+            --net=host \
+            -v "$GITHUB_WORKSPACE":"$GITHUB_WORKSPACE" \
+            -v "$HOME/.config/rclone:/root/.config/rclone:ro" \
+            -v /tmp:/tmp \
+            -w "$GITHUB_WORKSPACE" \
+            -e DOWNLOAD_WORKER_ID="${{ matrix.worker }}" \
+            -e DOWNLOAD_TOTAL_WORKERS="6" \
+            -e YOUTUBE_TOTAL_WORKERS="13" \
+            -e CHANNEL_NAME="sandbox" \
+            -e VAULT_NAME="${{ needs.creation_job.outputs.vault_name }}" \
+            -e GITHUB_RUN_ID="${{ github.run_id }}" \
+            -e GH_TOKEN="${{ github.token }}" \
+            -e NVIDIA_API_KEY="${{ secrets.NVIDIA_API_KEY }}" \
+            -e NVIDIA_API_KEY_2="${{ secrets.NVIDIA_API_KEY_2 }}" \
+            -e GEMINI_API_KEYS="${{ secrets.GEMINI_API_KEYS }}" \
+            ghcr.io/mahdikaibi/videocreator-runner:v1.0 \
+            bash -c "
+              echo '[*] Launching pre-baked Ollama server...'
+              OLLAMA_HOST='127.0.0.1' OLLAMA_ORIGINS='*' ollama serve > ollama.log 2>&1 &
+              for i in {1..15}; do ollama list >/dev/null 2>&1 && break || sleep 1; done
+              ollama --version
+
+              echo '[*] Pulling deepseek-r1:8b for text processing...'
+              for i in {1..5}; do ollama pull deepseek-r1:8b && break || sleep 5; done
+              echo '[*] Pulling qwen2.5vl for vision processing...'
+              for i in {1..5}; do ollama pull qwen2.5vl && break || sleep 5; done
+              for r in {1..3}; do xvfb-run -a python -u download_worker.py && break || { echo 'Crash (Attempt \$r), retrying...'; sleep 5; }; done || true
+              echo '[*] Removing deepseek-r1:8b to free SSD space...'
+              ollama rm deepseek-r1:8b || true
+              echo '[*] Removing qwen2.5vl to free SSD space...'
+              ollama rm qwen2.5vl || true
+
+              echo '[+] Fetching google_image_candidates.json if available...'
+              rm -f 'public/channels/sandbox/\$VAULT_NAME/google_image_candidates.json'
+              rclone copy --tpslimit 10 --retries 10 'data:sandbox/public/channels/sandbox/\$VAULT_NAME' 'public/channels/sandbox/\$VAULT_NAME' --include 'google_image_candidates.json' || true
+              if [ -f overlay_worker.py ]; then
+                echo '[*] Pulling qwen2.5vl for vision processing...'
+                for i in {1..5}; do ollama pull qwen2.5vl && break || sleep 5; done
+                for r in {1..3}; do xvfb-run -a python -u overlay_worker.py && break || { echo 'Crash (Attempt \$r), retrying...'; sleep 5; }; done || true
+                echo '[*] Removing qwen2.5vl to free SSD space...'
+                ollama rm qwen2.5vl || true
+              else
+                echo '[!] overlay_worker.py not found. Creating empty partial to prevent merge stall.'
+                python3 -c 'import json; json.dump({\"worker_id\": ${{ matrix.worker }}, \"scenes\": {}}, open(\"partial_overlay_${{ matrix.worker }}.json\", \"w\"))' || true
+              fi
+            "
+
+      - name: Batch Upload Assets and Partial Timeline to Drive
+        if: always()
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          PARTIAL_VID="partial_timeline_${{ matrix.worker }}.json"
+          PARTIAL_OVL="partial_overlay_${{ matrix.worker }}.json"
+          
+          echo "Batch uploading downloaded assets..."
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/sandbox/$VAULT/assets" \
+            "data:sandbox/public/channels/sandbox/$VAULT/assets" \
+            --transfers 16 || true
+            
+          if [ -f "$PARTIAL_VID" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "$PARTIAL_VID" \
+              "data:sandbox/public/channels/sandbox/$VAULT" \
+              --transfers 1 || true
+            echo "[+] Uploaded $PARTIAL_VID to Drive."
+          fi
+
+          if [ -f "public/channels/sandbox/$VAULT/$PARTIAL_VID" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/sandbox/$VAULT/$PARTIAL_VID" \
+              "data:sandbox/public/channels/sandbox/$VAULT" \
+              --transfers 1 || true
+            echo "[+] Uploaded public/.../$PARTIAL_VID to Drive."
+          fi
+          
+          if [ -f "$PARTIAL_OVL" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "$PARTIAL_OVL" \
+              "data:sandbox/public/channels/sandbox/$VAULT" \
+              --transfers 1 || true
+            echo "[+] Uploaded $PARTIAL_OVL to Drive."
+          fi
+
+          if [ -f "public/channels/sandbox/$VAULT/$PARTIAL_OVL" ]; then
+            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 5 --contimeout 60s "public/channels/sandbox/$VAULT/$PARTIAL_OVL" \
+              "data:sandbox/public/channels/sandbox/$VAULT" \
+              --transfers 1 || true
+            echo "[+] Uploaded public/.../$PARTIAL_OVL to Drive."
+          fi
+
+  youtube_download_matrix:
+    needs: [creation_job, brain_prep_job, tts_matrix]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    steps:
+      - name: Free Runner Disk Space & Expand RAM (Swap)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Creating 16GB NVMe Swapfile ==="
+          sudo fallocate -l 16G /swapfile_extra 2>/dev/null || sudo dd if=/dev/zero of=/swapfile_extra bs=1M count=16384
+          sudo chmod 600 /swapfile_extra
+          sudo mkswap /swapfile_extra
+          sudo swapon /swapfile_extra
+          echo "=== Storage & Memory Status ==="
+          df -h /
+          free -h
+
+      - uses: actions/checkout@v4
+
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Install System Dependencies & Tools
+        run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          for _apt in 1 2 3; do sudo apt-get update && sudo apt-get install -y rclone jq ffmpeg xvfb && break || sleep 10; done
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python Dependencies
+        run: |
+          pip install --no-cache-dir yt-dlp google-genai requests pillow numpy opencv-python-headless filelock
+
+      - name: Setup Node.js (For yt-dlp JS Runtime)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Download Scripts & Workspace from Drive
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          rclone copy --tpslimit 10 --retries 5 "engine:sandbox" . --include "ai_upscaler.py" --include "youtube_worker.py" --include "yt_downloader.py" --include "smart_gemini_keyring.py" --include "requirements.txt" --include "youtube_cookies.txt" --include "po_token.txt" --include "motionarray_downloader.py" --include "distributed_lock.py" --include "utils.py" --include "motionarray_cookies.json"
+          
+          mkdir -p "public/channels/sandbox/$VAULT/assets"
+          rclone copy --tpslimit 10 --retries 5 "data:sandbox/public/channels/sandbox/$VAULT" "public/channels/sandbox/$VAULT" --include "master_timeline.json" --include "partial_*.json" || true
+          rclone copy --tpslimit 10 --retries 5 "data:sandbox/channels/sandbox/to upload/$VAULT" "public/channels/sandbox/$VAULT" --include "master_timeline.json" --include "partial_*.json" || true
+
+
+      - name: Run YouTube Download Worker
+        env:
+          YOUTUBE_WORKER_ID: ${{ matrix.worker }}
+          YOUTUBE_TOTAL_WORKERS: 13
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+          YOUTUBE_PO_TOKEN: ${{ secrets.YOUTUBE_PO_TOKEN }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
+          CHANNEL_NAME: "sandbox"
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+        run: |
+          for r in {1..3}; do xvfb-run -a python -u youtube_worker.py && break || { echo "Crash (Attempt $r), retrying..."; sleep 5; }; done || true
+
+      - name: Batch Upload YouTube Assets and Partial Timeline to Drive
+        if: always()
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          PARTIAL_YT="partial_youtube_${{ matrix.worker }}.json"
+          echo "Batch uploading downloaded YouTube assets..."
+          rclone copy --tpslimit 10 --retries 5 "public/channels/sandbox/$VAULT/assets" \
+            "data:sandbox/public/channels/sandbox/$VAULT/assets" || true
+            
+          if [ -f "$PARTIAL_YT" ]; then
+            rclone copy --tpslimit 10 --retries 5 "$PARTIAL_YT" \
+              "data:sandbox/public/channels/sandbox/$VAULT" || true
+            echo "[+] Uploaded $PARTIAL_YT to Drive."
+          fi
+
+          if [ -f "public/channels/sandbox/$VAULT/$PARTIAL_YT" ]; then
+            rclone copy --tpslimit 10 --retries 5 "public/channels/sandbox/$VAULT/$PARTIAL_YT" \
+              "data:sandbox/public/channels/sandbox/$VAULT" || true
+            echo "[+] Uploaded public/.../$PARTIAL_YT to Drive."
+          fi
+
+          if [ -d "channels/sandbox/to upload/$VAULT" ]; then
+            rclone copy --tpslimit 10 --retries 5 "channels/sandbox/to upload/$VAULT" \
+              "data:sandbox/channels/sandbox/to upload/$VAULT" || true
+            echo "[+] Uploaded channels/.../$VAULT to Drive."
+          fi
+
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # PHASE 2d: brain_finish_job â€” Merge partials, overlay, audio master, git push
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  brain_finish_job:
+    needs: [creation_job, brain_prep_job, download_matrix, youtube_download_matrix]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY'
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/mahdikaibi/videocreator-runner:v1.0
+    steps:
+      - name: Free Runner Disk Space (Pre-Pull)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Storage After Cleanup ==="
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      - name: Configure Git Safe Directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          
+          # Engine Token
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          
+          # Data Token
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Configure Git for auto-push
+        run: |
+          git config --global user.email "pipeline@github-actions.com"
+          git config --global user.name "Pipeline Bot"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+
+      - name: Nuke Global Assets Residue
+        run: |
+          echo "[*] Nuking global_used_assets residue from Drive..."
+          rclone purge "data:sandbox/global_used_assets" || true
+          rclone mkdir "data:sandbox/global_used_assets" || true
+
+      - name: Download All Scripts, Assets & Workspace from Drive
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:sandbox" . --filter "- /__pycache__/**" --filter "- /.git/**" --filter "- /global_used_assets/**" --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
+            --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" \
+            --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
+            --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" \
+            --filter "- /ChatTTS_Models/**" --transfers 16
+          mkdir -p "public/channels/sandbox/$VAULT"
+          mkdir -p "channels/sandbox/to upload/$VAULT"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/sandbox/to upload/$VAULT" "public/channels/sandbox/$VAULT" --transfers 16 || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/sandbox/to upload/$VAULT" "channels/sandbox/to upload/$VAULT" --transfers 16 || true
+          rclone mkdir "data:sandbox/public/channels/sandbox/$VAULT" || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/sandbox/$VAULT" "public/channels/sandbox/$VAULT" --transfers 16 || true
+
+
+      - name: Merge Partial Timelines
+        if: needs.creation_job.outputs.skip_downloads != 'true'
+        env:
+          CHANNEL_NAME: "sandbox"
+          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
+          DOWNLOAD_TOTAL_WORKERS: "6"
+          YOUTUBE_TOTAL_WORKERS: "13"
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GH_TOKEN: ${{ github.token }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
+        run: python -u merge_timelines.py
+
+      - name: Start CLIProxyAPI Antigravity Gateway
+        env:
+          CLIPROXY_AUTH_TOKENS: ${{ secrets.CLIPROXY_AUTH_TOKENS }}
+        run: |
+          echo "[*] Setting up CLIProxyAPI Antigravity Gateway..."
+          BIN=""
+          CFG=""
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching antigravity_gateway from engine drive..."
+            rclone copy --tpslimit 10 --retries 3 --contimeout 30s "engine:sandbox/antigravity_gateway" antigravity_gateway || true
+          fi
+
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            echo "[*] Fetching CLIProxyAPI from GitHub releases fallback..."
+            curl -fsSL https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.31/CLIProxyAPI_8.0.31_linux_amd64.tar.gz | tar -xz || true
+            if [ -f "cli-proxy-api" ]; then
+              chmod +x cli-proxy-api
+              BIN="./cli-proxy-api"
+              echo "port: 8317" > cliproxy_config.yaml
+              echo "debug: false" >> cliproxy_config.yaml
+              echo "request-retry: 5" >> cliproxy_config.yaml
+              echo "antigravity:" >> cliproxy_config.yaml
+              echo "  enabled: true" >> cliproxy_config.yaml
+              CFG="cliproxy_config.yaml"
+            fi
+          else
+            chmod +x antigravity_gateway/cli-proxy-api
+            BIN="antigravity_gateway/cli-proxy-api"
+            CFG="antigravity_gateway/config.yaml"
+          fi
+
+          mkdir -p ~/.cli-proxy-api
+          if [ -d "antigravity_gateway/accounts" ]; then
+            cp -f antigravity_gateway/accounts/*.json ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+          if [ -n "$CLIPROXY_AUTH_TOKENS" ]; then
+            echo "$CLIPROXY_AUTH_TOKENS" | base64 -d | tar -xz -C ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+
+          if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+            echo "[+] Antigravity Gateway is already running on port 8317!"
+          elif [ -n "$BIN" ] && [ -x "$BIN" ]; then
+            echo "[*] Starting CLIProxyAPI Antigravity Gateway daemon on port 8317..."
+            nohup $BIN -config $CFG > /tmp/cliproxy.log 2>&1 &
+            for i in $(seq 1 10); do
+              if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+                echo "[+] Antigravity Gateway is LIVE on port 8317!"
+                break
+              fi
+              sleep 1
+            done
+            if ! curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+              echo "[!] Warning: Antigravity Gateway did not respond within 10s. Log output:"
+              cat /tmp/cliproxy.log 2>/dev/null || true
+            fi
+          else
+            echo "[!] Warning: CLIProxyAPI binary not found or not executable. Bypassing."
+          fi
+
+      - name: Run The_Brain FINISH phase (overlay + audio master + git push)
+        env:
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_API_KEY_2: ${{ secrets.NVIDIA_API_KEY_2 }}
+          BRAIN_PHASE: "finish"
+          CURRENT_AUTO_MODE: "1"
+          CURRENT_SAFE_TOPIC: "public/channels/sandbox/${{ needs.creation_job.outputs.vault_name }}"
+          AUTO_GEMINI_MODE: "1"
+          CLOUD_TTS_PARALLEL: "0"
+          AUTO_WORKSPACE_FOLDER: "public/channels/sandbox/${{ needs.creation_job.outputs.vault_name }}"
+          AUTO_TARGET_FOLDER: "channels/sandbox/to upload/${{ needs.creation_job.outputs.vault_name }}"
+        run: |
+          pip install -q "setuptools<82.0.0"
+          if [ -z "${{ needs.creation_job.outputs.vault_name }}" ]; then
+            DETECTED_VAULT=$(ls -td public/channels/sandbox/*/ 2>/dev/null | head -n 1 | xargs -r basename)
+            if [ -n "$DETECTED_VAULT" ]; then
+              echo "[+] Auto-detected vault for The_Brain: $DETECTED_VAULT"
+              export CURRENT_SAFE_TOPIC="public/channels/sandbox/$DETECTED_VAULT"
+              export AUTO_WORKSPACE_FOLDER="public/channels/sandbox/$DETECTED_VAULT"
+              export AUTO_TARGET_FOLDER="channels/sandbox/to upload/$DETECTED_VAULT"
+            fi
+          fi
+          xvfb-run -a python -u The_Brain.py
+
+      - name: Save Fresh Cookies to Drive
+        if: success()
+        run: |
+          if [ -f gemini_cookies.json ] && [ -s gemini_cookies.json ]; then
+            echo "[+] Uploading fresh gemini_cookies.json..."
+            rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s gemini_cookies.json "engine:sandbox/gemini_cookies.json" || true
+          else
+            echo "[!] gemini_cookies.json missing or empty. Nothing to upload."
+          fi
+          # MotionArray cookies (always safe to overwrite)
+          rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s motionarray_cookies.json "engine:sandbox/motionarray_cookies.json" || true
+          if [ -f google_cookies.json ] && [ -s google_cookies.json ]; then
+            echo "[+] Uploading fresh google_cookies.json..."
+            rclone copyto --update --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s google_cookies.json "engine:sandbox/google_cookies.json" || true
+          fi
+
+      - name: Upload Final Assets to Drive
+        if: always()
+        run: |
+          VAULT="${{ needs.creation_job.outputs.vault_name }}"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "public/channels/sandbox/$VAULT" \
+            "data:sandbox/public/channels/sandbox/$VAULT" \
+            --transfers 16 || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/sandbox/to upload/$VAULT" \
+            "data:sandbox/channels/sandbox/to upload/$VAULT" \
+            --transfers 16 || true
+          # Pre-create chunks folder atomically before parallel render_matrix launches
+          rclone mkdir "data:sandbox/public/channels/sandbox/$VAULT/chunks" || true
+
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  # PHASE 3: render_matrix â€” unchanged, now depends on brain_finish_job
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  render_matrix:
+    needs: [creation_job, brain_finish_job]
+    if: always() && !cancelled() && !failure() && inputs.action_type != 'STITCH_ONLY'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    steps:
+      - name: Free Runner Disk Space & Expand RAM (Swap)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Creating 16GB NVMe Swapfile ==="
+          sudo fallocate -l 16G /swapfile_extra 2>/dev/null || sudo dd if=/dev/zero of=/swapfile_extra bs=1M count=16384
+          sudo chmod 600 /swapfile_extra
+          sudo mkswap /swapfile_extra
+          sudo swapon /swapfile_extra
+          echo "=== Storage & Memory Status ==="
+          df -h /
+          free -h
+
+      - uses: actions/checkout@v4
+
+      - name: Install rclone
+        run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install rclone jq -y && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          
+          # Engine Token
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          
+          # Data Token
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Set Vault Inputs
+        id: vault_inputs
+        run: |
+          if [ "${{ inputs.action_type }}" == "RENDER_ONLY" ]; then
+             VAULT_NAME="$INPUT_TOPIC"
+          else
+             VAULT_NAME="${{ needs.creation_job.outputs.vault_name }}"
+          fi
+          echo "vault_name=$VAULT_NAME" >> $GITHUB_ENV
+          
+          # Always recalculate total_frames directly from Drive â€” never trust the Python chain
+          # Try public/channels workspace first (RESUME path), then to upload (legacy path)
+          TIMELINE_FOUND=false
+          
+          if rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/sandbox/$VAULT_NAME/master_timeline.json" . --transfers 4 2>/dev/null && [ -s master_timeline.json ]; then
+            TIMELINE_FOUND=true
+            echo "[+] Timeline found in public/channels workspace."
+          elif rclone cat --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/sandbox/to upload/$VAULT_NAME/master_timeline.json" > master_timeline.json 2>/dev/null && [ -s master_timeline.json ]; then
+            TIMELINE_FOUND=true
+            echo "[+] Timeline found in to upload workspace."
+          fi
+          
+          if [ "$TIMELINE_FOUND" == "true" ]; then
+            TOTAL=$(jq '([(.meta // .metadata // {}).total_duration_ms // 0, ([.timeline[]? | (.timing.start_ms // 0) + (.timing.duration_ms // 0)] | max // 0)] | max) | if . > 0 then ((. / 1000) * 30 | round) + 60 else 0 end' master_timeline.json)
+            echo "[+] Calculated TOTAL_FRAMES=$TOTAL from master_timeline.json"
+          else
+            TOTAL=360
+            echo "[!] WARNING: master_timeline.json not found on Drive. Defaulting to TOTAL_FRAMES=360."
+          fi
+          echo "total_frames=$TOTAL" >> $GITHUB_ENV
+
+      - name: Download Asset Chunk from GDrive
+        run: |
+          mkdir -p public/channels/sandbox/"${{ env.vault_name }}"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/sandbox/to upload/${{ env.vault_name }}" "public/channels/sandbox/${{ env.vault_name }}" || true
+          rclone mkdir "data:sandbox/public/channels/sandbox/${{ env.vault_name }}" || true
+          rclone mkdir "data:sandbox/public/channels/sandbox/${{ env.vault_name }}/chunks" || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/sandbox/${{ env.vault_name }}" "public/channels/sandbox/${{ env.vault_name }}" --transfers 16 || true
+          # Remotion's src/ does: import '../master_timeline.json' — must be at repo root
+          cp "public/channels/sandbox/${{ env.vault_name }}/master_timeline.json" master_timeline.json
+
+      - name: Auto-Heal Missing Assets Pre-Flight
+        run: |
+          python3 -c "
+          import json, os, shutil
+
+          channel = 'sandbox'
+          vault = '${{ env.vault_name }}'
+          vault_dir = f'public/channels/{channel}/{vault}'
+          assets_dir = os.path.join(vault_dir, 'assets')
+          os.makedirs(assets_dir, exist_ok=True)
+          tl_path = 'master_timeline.json'
+
+          if os.path.exists(tl_path):
+              with open(tl_path, 'r', encoding='utf-8') as f:
+                  data = json.load(f)
+              timeline = data.get('timeline', [])
+              valid_clips = [
+                  os.path.join(assets_dir, f) for f in os.listdir(assets_dir)
+                  if f.lower().endswith(('.mp4', '.mov', '.webm')) and os.path.getsize(os.path.join(assets_dir, f)) > 1024
+              ]
+              if not valid_clips:
+                  print('[AUTO-HEAL] No valid video clips found in assets to use as donor pool.')
+              else:
+                  healed = 0
+                  for s in timeline:
+                      paths = []
+                      if s.get('media_path'): paths.append(s['media_path'])
+                      if s.get('media_paths'): paths.extend(s['media_paths'])
+                      if isinstance(s.get('monolith_payload'), dict) and s['monolith_payload'].get('bgVideoSrc'):
+                          paths.append(s['monolith_payload']['bgVideoSrc'])
+                      if isinstance(s.get('floating_cards_payload'), dict) and s['floating_cards_payload'].get('bgVideoSrc'):
+                          paths.append(s['floating_cards_payload']['bgVideoSrc'])
+                      for p in paths:
+                          if not p: continue
+                          fname = os.path.basename(p.split('?')[0].split('#')[0])
+                          if not fname.lower().endswith(('.mp4', '.mov', '.webm')): continue
+                          target_path = os.path.join(assets_dir, fname)
+                          if not os.path.exists(target_path) or os.path.getsize(target_path) <= 1024:
+                              donor = valid_clips[healed % len(valid_clips)]
+                              shutil.copyfile(donor, target_path)
+                              print(f'[AUTO-HEAL] Rescued missing asset: {fname} <- {os.path.basename(donor)}')
+                              healed += 1
+                  if healed > 0:
+                      print(f'[AUTO-HEAL] Successfully rescued {healed} missing media files.')
+                  else:
+                      print('[AUTO-HEAL] All media assets verified present and valid.')
+          "
+
+      - name: Install Dependencies
+        run: for _retry in 1 2 3 4 5; do npm ci && break || { echo "Command failed, retrying..."; sleep 15; }; done
+
+      - name: Calculate Chunk Frames
+        id: calc
+        run: |
+          # Always read directly from the local master_timeline.json (downloaded in previous step)
+          # Never trust env vars which may have failed to fetch from Drive
+          TOTAL_FRAMES=$(jq '([(.meta // .metadata // {}).total_duration_ms // 0, ([.timeline[]? | (.timing.start_ms // 0) + (.timing.duration_ms // 0)] | max // 0)] | max) | if . > 0 then ((. / 1000) * 30 | round) + 60 else 0 end' master_timeline.json 2>/dev/null)
+          
+          if [ -z "$TOTAL_FRAMES" ] || [ "$TOTAL_FRAMES" -le 60 ]; then
+            echo "[!] FATAL: Could not read valid total_frames from master_timeline.json (got: '$TOTAL_FRAMES')"
+            echo "[!] Dumping master_timeline.json metadata for debug:"
+            jq '{meta: .meta, metadata: .metadata}' master_timeline.json 2>/dev/null || echo "master_timeline.json missing or invalid"
+            exit 1
+          fi
+          
+          echo "[+] TOTAL_FRAMES=$TOTAL_FRAMES (read from master_timeline.json)"
+          
+          CHUNK_IDX=${{ matrix.chunk }}
+          NUM_CHUNKS=20
+          
+          FRAMES_PER_CHUNK=$((TOTAL_FRAMES / NUM_CHUNKS))
+          START_FRAME=$((CHUNK_IDX * FRAMES_PER_CHUNK))
+          
+          if [ $CHUNK_IDX -eq $((NUM_CHUNKS - 1)) ]; then
+            END_FRAME=$((TOTAL_FRAMES - 1))
+          else
+            END_FRAME=$((START_FRAME + FRAMES_PER_CHUNK - 1))
+          fi
+          
+          echo "[+] Chunk $CHUNK_IDX: frames $START_FRAME-$END_FRAME (of $TOTAL_FRAMES total)"
+          echo "start=$START_FRAME" >> $GITHUB_OUTPUT
+          echo "end=$END_FRAME" >> $GITHUB_OUTPUT
+
+      - name: Render Video Chunk
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
+        run: |
+          if rclone lsf --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/sandbox/${{ env.vault_name }}/chunks/chunk_${{ matrix.chunk }}.mp4" 2>/dev/null | grep -q "chunk_${{ matrix.chunk }}.mp4"; then
+            echo "[+] Chunk ${{ matrix.chunk }} already exists on Drive, skipping render!"
+          else
+            for _render_try in 1 2 3; do
+              echo "[*] Starting render attempt $_render_try/3 for chunk ${{ matrix.chunk }}..."
+              if npx remotion render src/index.tsx AutomatedDocumentary chunk_${{ matrix.chunk }}.mp4 --muted --frames=${{ steps.calc.outputs.start }}-${{ steps.calc.outputs.end }} --concurrency=1 --timeout=300000 --crf=14 --pixel-format=yuv444p --env CHANNEL_NAME=sandbox --env VAULT_NAME="${{ env.vault_name }}"; then
+                echo "[+] Render attempt $_render_try succeeded!"
+                break
+              else
+                echo "[!] Render attempt $_render_try failed! Purging temp cache and retrying in 10s..."
+                rm -rf chunk_${{ matrix.chunk }}.mp4 /tmp/remotion* ~/.cache/remotion* 2>/dev/null || true
+                if [ $_render_try -eq 3 ]; then
+                  echo "[!] All 3 render attempts failed for chunk ${{ matrix.chunk }}."
+                  exit 1
+                fi
+                sleep 10
+              fi
+            done
+          fi
+      - name: Upload Chunk to G Drive
+        run: |
+          if [ -f "chunk_${{ matrix.chunk }}.mp4" ]; then
+            rclone copy chunk_${{ matrix.chunk }}.mp4 "data:sandbox/public/channels/sandbox/${{ env.vault_name }}/chunks" --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s
+          fi
+
+  stitch_and_inspect:
+    needs: [creation_job, brain_finish_job, render_matrix]
+    if: always() && !cancelled() && !failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free Runner Disk Space & Expand RAM (Swap)
+        run: |
+          echo "=== Freeing Host SSD Bloat ==="
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
+          sudo docker system prune -af 2>/dev/null || true
+          echo "=== Creating 16GB NVMe Swapfile ==="
+          sudo fallocate -l 16G /swapfile_extra 2>/dev/null || sudo dd if=/dev/zero of=/swapfile_extra bs=1M count=16384
+          sudo chmod 600 /swapfile_extra
+          sudo mkswap /swapfile_extra
+          sudo swapon /swapfile_extra
+          echo "=== Storage & Memory Status ==="
+          df -h /
+          free -h
+
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install System Dependencies
+        run: |
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
+          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
+          echo "http://archive.ubuntu.com/ubuntu/" | sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          for _apt_try in 1 2 3; do sudo apt-get update && sudo apt-get install -y ffmpeg rclone jq && break || { echo "apt retry $_apt_try/3..."; sleep 15; }; done
+
+      - name: Configure rclone Silently
+        env:
+          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          mkdir -p ~/.config/rclone
+          
+          # Engine Token
+          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
+          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
+          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
+          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
+          
+          # Data Token
+          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
+          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
+          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
+          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
+          
+          cat << EOF > ~/.config/rclone/rclone.conf
+          [engine]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $ENGINE_TOKEN
+          
+          [data]
+          type = drive
+          client_id = $CLIENT_ID
+          client_secret = $CLIENT_SECRET
+          scope = drive
+          token = $DATA_TOKEN
+          EOF
+
+      - name: Set Vault Inputs
+        id: vault_inputs
+        run: |
+          if [ "${{ inputs.action_type }}" = "RENDER_ONLY" ] || [ "${{ inputs.action_type }}" = "STITCH_ONLY" ]; then
+             echo "vault_name=$INPUT_TOPIC" >> $GITHUB_ENV
+          else
+             echo "vault_name=${{ needs.creation_job.outputs.vault_name }}" >> $GITHUB_ENV
+          fi
+
+      - name: Download Audio Assets from GDrive
+        run: |
+          mkdir -p public/channels/sandbox/"${{ env.vault_name }}"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/sandbox/to upload/${{ env.vault_name }}" "public/channels/sandbox/${{ env.vault_name }}" --include "master_audio.wav" --include "engine_master.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
+          rclone mkdir "data:sandbox/public/channels/sandbox/${{ env.vault_name }}" || true
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/sandbox/${{ env.vault_name }}" "public/channels/sandbox/${{ env.vault_name }}" --include "master_audio.wav" --include "engine_master.wav" --include "voiceover.wav" --include "metadata.json" --include "blog_post.json" --include "thumbnail.png" || true
+
+      - name: Download all chunks from G Drive
+        run: |
+          mkdir -p chunks
+          # Deduplicate any duplicate chunks folders in Google Drive before copying
+          rclone dedupe --dedupe-mode newest "data:sandbox/public/channels/sandbox/${{ env.vault_name }}" || true
+          rclone dedupe --dedupe-mode newest "data:sandbox/public/channels/sandbox/${{ env.vault_name }}/chunks" || true
+          rclone copy "data:sandbox/public/channels/sandbox/${{ env.vault_name }}/chunks" chunks/ --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s
+
+      - name: Concatenate and Mix Audio
+        run: |
+          echo "Downloading 'to upload' metadata folder..."
+          mkdir -p "channels/sandbox/to upload/${{ env.vault_name }}"
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/sandbox/to upload/${{ env.vault_name }}" "channels/sandbox/to upload/${{ env.vault_name }}" || true
+          
+          > file_list.txt
+          for i in $(seq 0 19); do
+            if [ -f "chunks/chunk_$i.mp4" ]; then
+              echo "file 'chunks/chunk_$i.mp4'" >> file_list.txt
+            fi
+          done
+
+          if [ ! -s file_list.txt ]; then
+            echo "[!] ERROR: file_list.txt is empty! No chunks were found in chunks/ directory."
+            ls -la chunks/ || true
+            exit 1
+          fi
+
+          AUDIO_INPUT=""
+          for candidate in "public/channels/sandbox/${{ env.vault_name }}/master_audio.wav" \
+                           "public/channels/sandbox/${{ env.vault_name }}/engine_master.wav" \
+                           "public/channels/sandbox/${{ env.vault_name }}/voiceover.wav"; do
+            if [ -s "$candidate" ]; then
+              AUDIO_INPUT="$candidate"
+              echo "[+] Selected master audio track: $AUDIO_INPUT"
+              break
+            fi
+          done
+
+          if [ -z "$AUDIO_INPUT" ]; then
+            echo "[!] ERROR: No audio track found in public/channels/sandbox/${{ env.vault_name }}/!"
+            exit 1
+          fi
+          
+          ffmpeg -f concat -safe 0 -i file_list.txt -i "$AUDIO_INPUT" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 320k -shortest "channels/sandbox/to upload/${{ env.vault_name }}/final_video.mp4"
+
+      - name: Preserve All Assets for Inspection
+        run: |
+          echo "[+] Sandbox mode: Retaining all chunks, audio files, and timelines in Google Drive for user inspection."
+
+      - name: Sync Final Video to Google Drive
+        run: |
+          echo "Saving final video to Google Drive 'to upload' folder for inspection..."
+          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/sandbox/to upload/${{ env.vault_name }}/final_video.mp4" "data:sandbox/channels/sandbox/to upload/${{ env.vault_name }}"
+          echo "[+] Final video successfully saved to data:sandbox/channels/sandbox/to upload/${{ env.vault_name }}/final_video.mp4"
+
+
+
+
+
+
+
+
