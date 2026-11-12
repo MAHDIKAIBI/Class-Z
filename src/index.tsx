@@ -1,4 +1,4 @@
-import { AbsoluteFill, Sequence, Audio, useVideoConfig, useCurrentFrame, staticFile as remotionStaticFile, registerRoot, Composition, interpolate, spring, Easing, random as seededRandom, Freeze } from 'remotion';
+import { AbsoluteFill, Sequence, Audio, OffthreadVideo, useVideoConfig, useCurrentFrame, staticFile as remotionStaticFile, registerRoot, Composition, interpolate, spring, Easing, random as seededRandom, Freeze } from 'remotion';
 import { SafeImage as Img } from './components/SafeImage';
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
@@ -275,11 +275,19 @@ const SceneContent = ({ scene, index }: any) => {
             ) : (scene.scene_type === 'magnates_2.5d' || scene.visual?.scene_type === 'magnates_2.5d' || scene.scene_type === 'two_part_whip' || scene.visual?.scene_type === 'two_part_whip') ? (
                 <MagnatesStage payload={scene.visual || {}} durationInFrames={Math.max(1, scene.visualDurFrames || 1)} />
             ) : isExplanation ? (
-                <AnimatedExplanation 
-                    payload={scene.explanation_payload || scene.visual?.explanation_payload || {}} 
-                    sceneStartMs={scene.timing?.start_ms || 0} 
-                    durationInFrames={scene.visualDurFrames || Math.max(1, scene.audioDurFrames - scene.overlapFrames)} 
-                />
+                (scene.explanation_video_ready || String(scene.media_paths?.[0] || scene.media_path || '').includes('explain_')) ? (
+                    <OffthreadVideo
+                        muted
+                        src={staticFile(scene.media_paths?.[0] || scene.media_path || '')}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                ) : (
+                    <AnimatedExplanation 
+                        payload={scene.explanation_payload || scene.visual?.explanation_payload || {}} 
+                        sceneStartMs={scene.timing?.start_ms || 0} 
+                        durationInFrames={scene.visualDurFrames || Math.max(1, scene.audioDurFrames - scene.overlapFrames)} 
+                    />
+                )
             ) : isLiquidGrid ? (
                 <DynamicLiquidGrid 
                     bgVideoUrl={scene.media_paths?.[0] || scene.media_path || ''} 
