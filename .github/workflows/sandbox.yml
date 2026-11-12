@@ -845,12 +845,62 @@ jobs:
           rclone mkdir "data:sandbox/public/channels/sandbox/$VAULT" || true
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/sandbox/$VAULT"  "public/channels/sandbox/$VAULT" --transfers 16 || true
 
-      - name: Run Download & Overlay Workers in Container
+      - name: Start CLIProxyAPI Antigravity Gateway
+        env:
+          CLIPROXY_AUTH_TOKENS: ${{ secrets.CLIPROXY_AUTH_TOKENS }}
+        run: |
+          echo "[*] Setting up CLIProxyAPI Antigravity Gateway..."
+          BIN=""
+          CFG=""
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            rclone copy --tpslimit 10 --retries 3 --contimeout 30s "engine:sandbox/antigravity_gateway" antigravity_gateway || true
+          fi
+          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
+            curl -fsSL https://github.com/router-for-me/CLIProxyAPI/releases/download/v8.0.31/CLIProxyAPI_8.0.31_linux_amd64.tar.gz | tar -xz || true
+            if [ -f "cli-proxy-api" ]; then
+              chmod +x cli-proxy-api
+              BIN="./cli-proxy-api"
+              echo "port: 8317" > cliproxy_config.yaml
+              echo "debug: false" >> cliproxy_config.yaml
+              echo "request-retry: 5" >> cliproxy_config.yaml
+              echo "antigravity:" >> cliproxy_config.yaml
+              echo "  enabled: true" >> cliproxy_config.yaml
+              CFG="cliproxy_config.yaml"
+            fi
+          else
+            chmod +x antigravity_gateway/cli-proxy-api
+            BIN="antigravity_gateway/cli-proxy-api"
+            CFG="antigravity_gateway/config.yaml"
+          fi
+          mkdir -p ~/.cli-proxy-api
+          if [ -d "antigravity_gateway/accounts" ]; then
+            cp -f antigravity_gateway/accounts/*.json ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+          if [ -n "$CLIPROXY_AUTH_TOKENS" ]; then
+            echo "$CLIPROXY_AUTH_TOKENS" | base64 -d | tar -xz -C ~/.cli-proxy-api/ 2>/dev/null || true
+          fi
+          if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+            echo "[+] Antigravity Gateway is already running on port 8317!"
+          elif [ -n "$BIN" ] && [ -x "$BIN" ]; then
+            nohup $BIN -config $CFG > /tmp/cliproxy.log 2>&1 &
+            for i in $(seq 1 10); do
+              if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
+                echo "[+] Antigravity Gateway is LIVE on port 8317!"
+                break
+              fi
+              sleep 1
+            done
+          fi
+
+      - name: Run Download, Overlay & Explanation Workers in Container
         env:
           DOWNLOAD_WORKER_ID: ${{ matrix.worker }}
           DOWNLOAD_TOTAL_WORKERS: "6"
+          EXPLAIN_WORKER_ID: ${{ matrix.worker }}
+          EXPLAIN_TOTAL_WORKERS: "6"
           YOUTUBE_TOTAL_WORKERS: "13"
           CHANNEL_NAME: "sandbox"
+          DRIVE_BASE_DIR: "sandbox"
           VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
           GITHUB_RUN_ID: ${{ github.run_id }}
           GH_TOKEN: ${{ github.token }}
@@ -863,18 +913,23 @@ jobs:
             --net=host \
             -v "$GITHUB_WORKSPACE":"$GITHUB_WORKSPACE" \
             -v "$HOME/.config/rclone:/root/.config/rclone:ro" \
+            -v "$HOME/.cli-proxy-api:/root/.cli-proxy-api:rw" \
             -v /tmp:/tmp \
             -w "$GITHUB_WORKSPACE" \
             -e DOWNLOAD_WORKER_ID="${{ matrix.worker }}" \
             -e DOWNLOAD_TOTAL_WORKERS="6" \
+            -e EXPLAIN_WORKER_ID="${{ matrix.worker }}" \
+            -e EXPLAIN_TOTAL_WORKERS="6" \
             -e YOUTUBE_TOTAL_WORKERS="13" \
             -e CHANNEL_NAME="sandbox" \
+            -e DRIVE_BASE_DIR="sandbox" \
             -e VAULT_NAME="${{ needs.creation_job.outputs.vault_name }}" \
             -e GITHUB_RUN_ID="${{ github.run_id }}" \
             -e GH_TOKEN="${{ github.token }}" \
             -e NVIDIA_API_KEY="${{ secrets.NVIDIA_API_KEY }}" \
             -e NVIDIA_API_KEY_2="${{ secrets.NVIDIA_API_KEY_2 }}" \
             -e GEMINI_API_KEYS="${{ secrets.GEMINI_API_KEYS }}" \
+            -e OPENAI_BASE_URL="http://127.0.0.1:8317/v1" \
             ghcr.io/mahdikaibi/videocreator-runner:v1.0 \
             bash -c "
               echo '[*] Launching pre-baked Ollama server...'
@@ -904,6 +959,14 @@ jobs:
               else
                 echo '[!] overlay_worker.py not found. Creating empty partial to prevent merge stall.'
                 python3 -c 'import json; json.dump({\"worker_id\": ${{ matrix.worker }}, \"scenes\": {}}, open(\"partial_overlay_${{ matrix.worker }}.json\", \"w\"))' || true
+              fi
+
+              if [ -f explanation_worker.py ]; then
+                echo '[*] Building animated_explanation scenes (clean 2.5D motion)...'
+                python -c 'import playwright' >/dev/null 2>&1 || { pip install -q playwright pillow && python -m playwright install chromium --with-deps >/dev/null 2>&1 || python -m playwright install chromium; }
+                python -u explanation_worker.py || true
+              else
+                python3 -c 'import json; json.dump({\"worker_id\": ${{ matrix.worker }}, \"scenes\": {}}, open(\"partial_explanation_${{ matrix.worker }}.json\", \"w\"))' || true
               fi
             "
 
@@ -946,6 +1009,14 @@ jobs:
               --transfers 1 || true
             echo "[+] Uploaded public/.../$PARTIAL_OVL to Drive."
           fi
+
+          PARTIAL_EX="partial_explanation_${{ matrix.worker }}.json"
+          for PEX_FILE in "$PARTIAL_EX" "public/channels/sandbox/$VAULT/$PARTIAL_EX"; do
+            if [ -f "$PEX_FILE" ]; then
+              rclone copyto --retries 10 "$PEX_FILE" "data:sandbox/public/channels/sandbox/$VAULT/$PARTIAL_EX" || true
+              echo "[+] Uploaded $PEX_FILE to Drive."
+            fi
+          done
 
   youtube_download_matrix:
     needs: [creation_job, brain_prep_job, tts_matrix]
@@ -1078,157 +1149,8 @@ jobs:
             echo "[+] Uploaded channels/.../$VAULT to Drive."
           fi
 
-  # -----------------------------------------------------------------------------
-  # PHASE 2e (Parallel): explanation_matrix -- Bespoke 2.5D Motion Graphics
-  # Runs alongside download_matrix & youtube_download_matrix; builds explain_*.mp4
-  # -----------------------------------------------------------------------------
-  explanation_matrix:
-    needs: [creation_job, brain_prep_job, tts_matrix]
-    if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY' && needs.creation_job.outputs.skip_downloads != 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        worker: [0, 1, 2, 3, 4, 5]
-    steps:
-      - name: Free Runner Disk Space (Pre-Pull)
-        run: |
-          df -h /
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" 2>/dev/null || true
-          sudo docker system prune -af 2>/dev/null || true
-
-      - uses: actions/checkout@v4
-
-      - name: Install Host Tools (rclone & jq)
-        run: |
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || true
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list 2>/dev/null || true
-          for _apt in 1 2 3; do sudo apt-get update && sudo apt-get install -y rclone jq && break || sleep 10; done
-
-      - name: Configure rclone Silently
-        env:
-          ENGINE_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          DATA_TOKEN_RAW: ${{ secrets.G_DRIVE_TOKEN }}
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-        run: |
-          mkdir -p ~/.config/rclone
-          E_ACCESS=$(echo $ENGINE_TOKEN_RAW | jq -r '.token')
-          E_REFRESH=$(echo $ENGINE_TOKEN_RAW | jq -r '.refresh_token')
-          E_EXPIRY=$(echo $ENGINE_TOKEN_RAW | jq -r '.expiry')
-          ENGINE_TOKEN="{\"access_token\":\"$E_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$E_REFRESH\",\"expiry\":\"$E_EXPIRY\"}"
-          D_ACCESS=$(echo $DATA_TOKEN_RAW | jq -r '.token')
-          D_REFRESH=$(echo $DATA_TOKEN_RAW | jq -r '.refresh_token')
-          D_EXPIRY=$(echo $DATA_TOKEN_RAW | jq -r '.expiry')
-          DATA_TOKEN="{\"access_token\":\"$D_ACCESS\",\"token_type\":\"Bearer\",\"refresh_token\":\"$D_REFRESH\",\"expiry\":\"$D_EXPIRY\"}"
-          cat << EOF > ~/.config/rclone/rclone.conf
-          [engine]
-          type = drive
-          client_id = $CLIENT_ID
-          client_secret = $CLIENT_SECRET
-          scope = drive
-          token = $ENGINE_TOKEN
-
-          [data]
-          type = drive
-          client_id = $CLIENT_ID
-          client_secret = $CLIENT_SECRET
-          scope = drive
-          token = $DATA_TOKEN
-          EOF
-
-      - name: Download Engine Scripts & Master Timeline from Drive
-        run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "engine:sandbox" . --filter "- /__pycache__/**" --filter "- /.git/**" --filter "- /global_used_assets/**" --filter "- /channels/**" --filter "- /public/channels/**" --filter "- /error_dumps/**" \
-            --filter "- /node_modules/**" --filter "- /out/**" --filter "- /*.mp4" \
-            --filter "- /requirements.txt" --filter "- /DELETE_THIS_WHEN_SELLING_firefox_profile/**" \
-            --filter "- /firefox_stealth_profile/**" --filter "- /gemini_selenium_profile/**" \
-            --filter "- /ChatTTS_Models/**" --transfers 16
-          mkdir -p "public/channels/sandbox/$VAULT/assets"
-          rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/sandbox/$VAULT" "public/channels/sandbox/$VAULT" --include "master_timeline.json" --transfers 4 || true
-
-      - name: Start CLIProxyAPI Antigravity Gateway
-        env:
-          CLIPROXY_AUTH_TOKENS: ${{ secrets.CLIPROXY_AUTH_TOKENS }}
-        run: |
-          BIN=""
-          CFG=""
-          if [ ! -f "antigravity_gateway/cli-proxy-api" ]; then
-            rclone copy --tpslimit 10 --retries 3 --contimeout 30s "engine:sandbox/antigravity_gateway" antigravity_gateway || true
-          fi
-          if [ -f "antigravity_gateway/cli-proxy-api" ]; then
-            chmod +x antigravity_gateway/cli-proxy-api
-            BIN="antigravity_gateway/cli-proxy-api"
-            CFG="antigravity_gateway/config.yaml"
-          fi
-          mkdir -p ~/.cli-proxy-api
-          if [ -d "antigravity_gateway/accounts" ]; then
-            cp -f antigravity_gateway/accounts/*.json ~/.cli-proxy-api/ 2>/dev/null || true
-          fi
-          if [ -n "$CLIPROXY_AUTH_TOKENS" ]; then
-            echo "$CLIPROXY_AUTH_TOKENS" | base64 -d | tar -xz -C ~/.cli-proxy-api/ 2>/dev/null || true
-          fi
-          if [ -n "$BIN" ] && [ -x "$BIN" ]; then
-            nohup $BIN -config $CFG > /tmp/cliproxy.log 2>&1 &
-            for i in $(seq 1 10); do
-              if curl -s http://127.0.0.1:8317/v1/models > /dev/null 2>&1; then
-                echo "[+] Antigravity Gateway LIVE on port 8317!"
-                break
-              fi
-              sleep 1
-            done
-          fi
-
-      - name: Build Motion Explanation Scenes in Container
-        env:
-          EXPLAIN_WORKER_ID: ${{ matrix.worker }}
-          EXPLAIN_TOTAL_WORKERS: "6"
-          CHANNEL_NAME: "sandbox"
-          VAULT_NAME: ${{ needs.creation_job.outputs.vault_name }}
-          DRIVE_BASE_DIR: "sandbox"
-          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          docker run --rm \
-            --net=host \
-            -v "$GITHUB_WORKSPACE":"$GITHUB_WORKSPACE" \
-            -v "$HOME/.config/rclone:/root/.config/rclone:ro" \
-            -v "$HOME/.cli-proxy-api:/root/.cli-proxy-api:rw" \
-            -v /tmp:/tmp \
-            -w "$GITHUB_WORKSPACE" \
-            -e EXPLAIN_WORKER_ID="${{ matrix.worker }}" \
-            -e EXPLAIN_TOTAL_WORKERS="6" \
-            -e CHANNEL_NAME="sandbox" \
-            -e VAULT_NAME="${{ needs.creation_job.outputs.vault_name }}" \
-            -e DRIVE_BASE_DIR="sandbox" \
-            -e GEMINI_API_KEYS="${{ secrets.GEMINI_API_KEYS }}" \
-            -e OPENAI_BASE_URL="http://127.0.0.1:8317/v1" \
-            ghcr.io/mahdikaibi/videocreator-runner:v1.0 \
-            bash -c "
-              python -c 'import playwright' >/dev/null 2>&1 || { pip install -q playwright pillow && python -m playwright install chromium --with-deps >/dev/null 2>&1 || python -m playwright install chromium; }
-              python -u explanation_worker.py
-            "
-
-      - name: Upload Explanation Assets & Partial to Drive
-        if: always()
-        run: |
-          VAULT="${{ needs.creation_job.outputs.vault_name }}"
-          PARTIAL_EX="partial_explanation_${{ matrix.worker }}.json"
-          if [ -d "public/channels/sandbox/$VAULT/assets" ]; then
-            rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 10 "public/channels/sandbox/$VAULT/assets" "data:sandbox/public/channels/sandbox/$VAULT/assets" --include "explain_*.mp4" --transfers 8 || true
-          fi
-          for PFILE in "$PARTIAL_EX" "public/channels/sandbox/$VAULT/$PARTIAL_EX"; do
-            if [ -f "$PFILE" ]; then
-              rclone copyto --retries 10 "$PFILE" "data:sandbox/public/channels/sandbox/$VAULT/$PARTIAL_EX" || true
-            fi
-          done
-
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  # PHASE 2d: brain_finish_job â€” Merge partials, overlay, audio master, git push
-  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   brain_finish_job:
-    needs: [creation_job, brain_prep_job, download_matrix, youtube_download_matrix, explanation_matrix]
+    needs: [creation_job, brain_prep_job, download_matrix, youtube_download_matrix]
     if: always() && !cancelled() && !failure() && inputs.action_type != 'RENDER_ONLY' && inputs.action_type != 'STITCH_ONLY'
     runs-on: ubuntu-latest
     container:
