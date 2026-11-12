@@ -586,7 +586,7 @@ export const AnimatedExplanation: React.FC<AnimatedExplanationProps> = ({
   const steps = payload?.steps && payload.steps.length > 0 ? payload.steps : [];
 
   return (
-    <BlueprintCanvas accentColor={accent} subHeader={`MODE: ${mode.toUpperCase()}`}>
+    <BlueprintCanvas accentColor={accent}>
       {mode === 'network_grid_propagation' ? (
         <NetworkGridPropagation
           steps={steps}

@@ -10,8 +10,6 @@ interface BlueprintCanvasProps {
 }
 
 export const BlueprintCanvas: React.FC<BlueprintCanvasProps> = ({
-  accentColor = '#00F0FF',
-  subHeader,
   gridOpacity = 1.0,
   showScanlines = true,
   children,
@@ -118,56 +116,7 @@ export const BlueprintCanvas: React.FC<BlueprintCanvasProps> = ({
         />
       )}
 
-      {/* 5. Minimal Engineering Corner Badges */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 36,
-          left: 48,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          fontFamily: 'monospace',
-          fontSize: 13,
-          color: 'rgba(230, 213, 184, 0.5)',
-          letterSpacing: 2,
-          textTransform: 'uppercase',
-          pointerEvents: 'none',
-          zIndex: 10,
-        }}
-      >
-        <div
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            backgroundColor: accentColor,
-            boxShadow: `0 0 10px ${accentColor}`,
-          }}
-        />
-        <span>[SYS.BLUEPRINT // ARCHITECTURE]</span>
-      </div>
-
-      {subHeader && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 36,
-            right: 48,
-            fontFamily: 'monospace',
-            fontSize: 13,
-            color: 'rgba(230, 213, 184, 0.4)',
-            letterSpacing: 2,
-            textTransform: 'uppercase',
-            pointerEvents: 'none',
-            zIndex: 10,
-          }}
-        >
-          {subHeader}
-        </div>
-      )}
-
-      {/* 6. Active Canvas Children */}
+      {/* 5. Active Canvas Children */}
       <AbsoluteFill
         style={{
           transform: `scale(${driftScale}) translateY(${driftY}px)`,
