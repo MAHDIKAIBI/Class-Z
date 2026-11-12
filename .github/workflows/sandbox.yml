@@ -380,6 +380,7 @@ jobs:
             --include "smart_gemini_keyring.py" \
             --include "requirements.txt" \
             --include "gemini_cookies.json" \
+            --include "pronunciations.json" \
             --transfers 8
           if [ -z "$VAULT" ]; then
             echo "[!] Notice: VAULT output was empty. Auto-detecting latest vault from Drive..."
@@ -388,10 +389,10 @@ jobs:
           fi
           if [ -n "$VAULT" ]; then
             mkdir -p "public/channels/$CHANNEL/$VAULT"
-            # Download the script + any already-generated WAV chunks
-              rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/$CHANNEL/to upload/$VAULT" "public/channels/$CHANNEL/$VAULT" --include "script.txt" --include "*.wav" --transfers 16 || true
+            # Download the script + any already-generated WAV chunks + optional per-video pronunciation map
+              rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/$CHANNEL/to upload/$VAULT" "public/channels/$CHANNEL/$VAULT" --include "script.txt" --include "pronunciation_map.json" --include "*.wav" --transfers 16 || true
               rclone mkdir "data:sandbox/public/channels/$CHANNEL/$VAULT" || true
-              rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" --include "script.txt" --include "*.wav" --transfers 16 || true
+              rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/public/channels/$CHANNEL/$VAULT" "public/channels/$CHANNEL/$VAULT" --include "script.txt" --include "pronunciation_map.json" --include "*.wav" --transfers 16 || true
           fi
           # Download master reference voice if present
           rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "data:sandbox/channels/$CHANNEL/voice" "channels/$CHANNEL/voice/" || true
