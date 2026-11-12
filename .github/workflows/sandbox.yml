@@ -1500,7 +1500,7 @@ jobs:
               timeline = data.get('timeline', [])
               valid_clips = [
                   os.path.join(assets_dir, f) for f in os.listdir(assets_dir)
-                  if f.lower().endswith(('.mp4', '.mov', '.webm')) and os.path.getsize(os.path.join(assets_dir, f)) > 1024
+                  if f.lower().endswith(('.mp4', '.mov', '.webm')) and not f.lower().startswith('explain_') and os.path.getsize(os.path.join(assets_dir, f)) > 1024
               ]
               if not valid_clips:
                   print('[AUTO-HEAL] No valid video clips found in assets to use as donor pool.')
