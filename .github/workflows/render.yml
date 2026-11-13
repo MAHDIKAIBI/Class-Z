@@ -171,7 +171,7 @@ jobs:
              echo "Missing Overlays: $MISSING_OVERLAYS"
              
              if [ "$MISSING_VIDEOS" -eq 0 ] && [ "$MISSING_OVERLAYS" -eq 0 ]; then
-                 echo "100% READY TO RENDER! Bypassing Ollama and Playwright entirely."
+                 echo "100% READY TO RENDER! Bypassing downloads and Playwright entirely."
                  echo "READY_TO_RENDER=true" >> $GITHUB_ENV
                  echo "SKIP_PROFILE=true" >> $GITHUB_ENV
                  echo "skip_downloads=true" >> $GITHUB_OUTPUT
@@ -313,9 +313,6 @@ jobs:
           else
             echo "[!] No refreshed cookies found to sync (Playwright may have been skipped)."
           fi
-
-      # NOTE: Shutdown signal is intentionally sent in brain_job AFTER The_Brain.py
-      # finishes, because The_Brain.py needs Ollama for footage/image search queries.
 
   tts_matrix:
     needs: [creation_job]
@@ -618,7 +615,6 @@ jobs:
           CURRENT_SAFE_TOPIC: "public/channels/${{ inputs.channel_name }}/${{ needs.creation_job.outputs.vault_name }}"
           AUTO_GEMINI_MODE: "1"
           CLOUD_TTS_PARALLEL: "0"
-          OLLAMA_BASE_URL: ${{ env.OLLAMA_BASE_URL }}
           AUTO_WORKSPACE_FOLDER: "public/channels/${{ inputs.channel_name }}/${{ needs.creation_job.outputs.vault_name }}"
           AUTO_TARGET_FOLDER: "channels/${{ inputs.channel_name }}/to upload/${{ needs.creation_job.outputs.vault_name }}"
         run: |
@@ -946,30 +942,13 @@ jobs:
             -e OPENAI_BASE_URL="http://127.0.0.1:8317/v1" \
             ghcr.io/mahdikaibi/videocreator-runner:v1.0 \
             bash -c "
-              echo '[*] Launching pre-baked Ollama server...'
-              OLLAMA_HOST='127.0.0.1' OLLAMA_ORIGINS='*' ollama serve > ollama.log 2>&1 &
-              for i in {1..15}; do ollama list >/dev/null 2>&1 && break || sleep 1; done
-              ollama --version
-
-              echo '[*] Pulling deepseek-r1:8b for text processing...'
-              for i in {1..5}; do ollama pull deepseek-r1:8b && break || sleep 5; done
-              echo '[*] Pulling qwen2.5vl for vision processing...'
-              for i in {1..5}; do ollama pull qwen2.5vl && break || sleep 5; done
               for r in {1..3}; do xvfb-run -a python -u download_worker.py && break || { echo 'Crash (Attempt \$r), retrying...'; sleep 5; }; done || true
-              echo '[*] Removing deepseek-r1:8b to free SSD space...'
-              ollama rm deepseek-r1:8b || true
-              echo '[*] Removing qwen2.5vl to free SSD space...'
-              ollama rm qwen2.5vl || true
 
               echo '[+] Fetching google_image_candidates.json if available...'
               rm -f 'public/channels/${{ inputs.channel_name }}/\$VAULT_NAME/google_image_candidates.json'
               rclone copy --tpslimit 10 --retries 10 'data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/\$VAULT_NAME' 'public/channels/${{ inputs.channel_name }}/\$VAULT_NAME' --include 'google_image_candidates.json' || true
               if [ -f overlay_worker.py ]; then
-                echo '[*] Pulling qwen2.5vl for vision processing...'
-                for i in {1..5}; do ollama pull qwen2.5vl && break || sleep 5; done
                 for r in {1..3}; do xvfb-run -a python -u overlay_worker.py && break || { echo 'Crash (Attempt \$r), retrying...'; sleep 5; }; done || true
-                echo '[*] Removing qwen2.5vl to free SSD space...'
-                ollama rm qwen2.5vl || true
               else
                 echo '[!] overlay_worker.py not found. Creating empty partial to prevent merge stall.'
                 python3 -c 'import json; json.dump({\"worker_id\": ${{ matrix.worker }}, \"scenes\": {}}, open(\"partial_overlay_${{ matrix.worker }}.json\", \"w\"))' || true
