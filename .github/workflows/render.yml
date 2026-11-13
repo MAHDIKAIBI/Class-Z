@@ -1747,12 +1747,6 @@ jobs:
           
           ffmpeg -f concat -safe 0 -i file_list.txt -i "$AUDIO_INPUT" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 320k -shortest "channels/${{ inputs.channel_name }}/to upload/${{ env.vault_name }}/final_video.mp4"
 
-      - name: Clean Up Public Assets Folder
-        run: |
-          echo "Purging raw rendering assets from Google Drive to save space..."
-          rclone purge --drive-use-trash=false "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
-          
-
       - name: Sync Final Video to Google Drive
         run: |
           echo "Saving final video to Google Drive 'to upload' folder..."
@@ -1811,6 +1805,11 @@ jobs:
             echo "Persisting updated shorts registry to Google Drive..."
             rclone copy --tpslimit 10 --tpslimit-burst 10 --retries 15 --retries-sleep 30s --contimeout 60s "channels/${{ inputs.channel_name }}/shorts_registry.json" "data:Colab_AutoVideoCreator/channels/${{ inputs.channel_name }}/" || true
           fi
+
+      - name: Clean Up Public Assets Folder
+        run: |
+          echo "Moving raw rendering assets to Google Drive Trash to save space..."
+          rclone purge "data:Colab_AutoVideoCreator/public/channels/${{ inputs.channel_name }}/${{ env.vault_name }}" || true
 
   upload_only:
     if: inputs.action_type == 'UPLOAD_ONLY'

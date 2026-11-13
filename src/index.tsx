@@ -3,6 +3,7 @@ import { SafeImage as Img } from './components/SafeImage';
 const TRANSPARENT_PIXEL = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 const staticFile = (path: string) => {
     if (!path || typeof path !== 'string') return TRANSPARENT_PIXEL;
+    if (/^(https?:|data:|blob:)/i.test(path.trim())) return path.trim();
     const cleanPath = path.replace(/^\/?public\//, '');
     if (cleanPath.trim() === '' || cleanPath.endsWith('/')) return TRANSPARENT_PIXEL;
     return remotionStaticFile(cleanPath);
@@ -29,6 +30,7 @@ import { MotionGraphicsRouter } from './components/MotionGraphics';
 import { EffectsDirector } from './components/Effects';
 import { CaptionDirector } from './components/CaptionDirector';
 import { DynamicLiquidGrid } from './components/DynamicLiquidGrid';
+import { DynamicIslandNotch, LiquidGlassShowcaseCard } from './components/AppleGlassMedia';
 import { MonolithEngine } from './components/MonolithEngine';
 import { Floating3DCardsCanvas } from './components/Floating3DCards';
 import { GlobalFinisher } from './components/GlobalFinisher';
@@ -213,43 +215,64 @@ const DynamicElement = ({ src, duration, motion, continuousMotion, delay, treatm
 const CinematicOverlay = ({ src, durationInFrames }: { src: string, durationInFrames: number }) => {
     if (!src) return null;
     const frame = useCurrentFrame();
-    const safeDuration = Number(durationInFrames) || 150;
-    
-    // Smooth fade in over half a second
-    const opacity = interpolate(frame, [0, 15], [0, 1], { extrapolateRight: 'clamp' });
-    
-    // Slow cinematic zoom - gently scale slightly more
-    const scale = interpolate(frame, [0, safeDuration], [1.05, 1.18]);
-    
-    // 3D parallax tilt (drifting slowly across the scene)
-    const rotateX = Math.sin(frame * 0.02) * 4; // -4 to 4 degrees
-    const rotateY = Math.cos(frame * 0.02) * 5; // -5 to 5 degrees
-    
+    const safeDuration = Math.max(15, Number(durationInFrames) || 90);
+    const triggerFrame = 2;
+    const dt = frame - triggerFrame;
+    const activePulse = dt >= -3 && dt <= 22 ? Math.exp(-Math.pow((dt - 4) / 7.0, 2)) : 0;
+    const backdropFade = interpolate(frame, [0, 12], [0, 1], { extrapolateRight: 'clamp' });
+    const exitFade = safeDuration > 24
+        ? interpolate(frame, [safeDuration - 8, safeDuration], [1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
+        : 1;
+
     return (
-        <AbsoluteFill style={{ justifyContent: 'center', alignItems: 'center', perspective: 1000, pointerEvents: 'none', zIndex: 50 }}>
-            <Img 
-                src={staticFile(src)} 
+        <AbsoluteFill style={{ pointerEvents: 'none', zIndex: 50, opacity: exitFade }}>
+            <AbsoluteFill
                 style={{
-                    maxWidth: '70%', 
-                    maxHeight: '70%', 
-                    objectFit: 'contain',
-                    opacity: opacity,
-                    transform: `scale(${scale}) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`,
-                    boxShadow: '0 30px 60px rgba(0,0,0,0.8)',
-                    borderRadius: '8px'
-                }} 
+                    background: 'radial-gradient(ellipse at 50% 48%, rgba(4,7,14,0.42) 0%, rgba(2,4,9,0.72) 100%)',
+                    backdropFilter: `blur(${backdropFade * 16}px) saturate(130%)`,
+                    WebkitBackdropFilter: `blur(${backdropFade * 16}px) saturate(130%)`,
+                    opacity: backdropFade,
+                }}
             />
+            <DynamicIslandNotch firstTrigger={triggerFrame} lastTrigger={triggerFrame} activePulse={activePulse} />
+            <AbsoluteFill
+                style={{
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    padding: '64px 120px',
+                    boxSizing: 'border-box',
+                }}
+            >
+                <div style={{ width: 'min(60vw, 1320px)', height: 'min(68vh, 840px)' }}>
+                    <LiquidGlassShowcaseCard
+                        src={staticFile(src)}
+                        triggerFrame={triggerFrame}
+                        originOffsetX={0}
+                        tiltDegY={0}
+                        index={0}
+                    />
+                </div>
+            </AbsoluteFill>
         </AbsoluteFill>
     );
 };
 
+
+const hasNonEmptyObject = (val: any): boolean =>
+    Boolean(val && typeof val === 'object' && !Array.isArray(val) && Object.keys(val).length > 0);
 
 const SceneContent = ({ scene, index }: any) => {
     const { fps } = useVideoConfig();
     const isLiquidGrid = ((scene.scene_type === 'dynamic_grid' || scene.visual?.scene_type === 'dynamic_grid') && (scene.visual?.assets || scene.assets || []).some((a: any) => (a.local_path || a.downloaded_path) && a.layer !== 'background' && a.type !== 'video'));
     const isAnimatedNumber = scene.graphics && ['animatednumber', 'animated_number'].includes(String(scene.graphics.graphics_type || '').toLowerCase());
     const isYouTube = scene.scene_type === 'youtube' || scene.visual?.scene_type === 'youtube' || (scene.media_paths?.[0] && String(scene.media_paths[0]).toLowerCase().includes('youtube')) || (scene.media_path && String(scene.media_path).toLowerCase().includes('youtube')) || Boolean(scene.visual?.youtube_query) || Boolean(scene.youtube_query);
-    const isExplanation = scene.scene_type === 'animated_explanation' || scene.visual?.scene_type === 'animated_explanation' || Boolean(scene.explanation_payload) || Boolean(scene.visual?.explanation_payload);
+    const explicitExplanationType = scene.scene_type === 'animated_explanation' || scene.visual?.scene_type === 'animated_explanation';
+    const explanationPayloadObj = hasNonEmptyObject(scene.explanation_payload)
+        ? scene.explanation_payload
+        : hasNonEmptyObject(scene.visual?.explanation_payload)
+            ? scene.visual.explanation_payload
+            : null;
+    const isExplanation = !isLiquidGrid && (explicitExplanationType || (!isYouTube && Boolean(explanationPayloadObj)));
 
     return (
         <AbsoluteFill>
